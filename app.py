@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V4.7 Railway Final
+قراءة الخريطة الشخصية - V4.8 Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -3296,6 +3296,82 @@ HTML = r"""
       gtag('config', 'G-2XZSMG55TG');
     </script>
 
+
+    <style>
+      body, body * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+
+      input, textarea, select, option, button {
+        -webkit-user-select: auto !important;
+        -moz-user-select: auto !important;
+        -ms-user-select: auto !important;
+        user-select: auto !important;
+        -webkit-touch-callout: default !important;
+      }
+
+      .no-copy-note {
+        font-size: 13px;
+        opacity: 0.75;
+        margin-top: 8px;
+      }
+    </style>
+
+    <script>
+      (function () {
+        function blockEvent(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+
+        document.addEventListener('contextmenu', blockEvent, true);
+        document.addEventListener('copy', blockEvent, true);
+        document.addEventListener('cut', blockEvent, true);
+
+        document.addEventListener('paste', function(e) {
+          const tag = (e.target && e.target.tagName || '').toLowerCase();
+          if (!['input', 'textarea', 'select'].includes(tag)) {
+            return blockEvent(e);
+          }
+        }, true);
+
+        document.addEventListener('selectstart', function(e) {
+          const tag = (e.target && e.target.tagName || '').toLowerCase();
+          if (!['input', 'textarea', 'select', 'option'].includes(tag)) {
+            return blockEvent(e);
+          }
+        }, true);
+
+        document.addEventListener('dragstart', blockEvent, true);
+
+        document.addEventListener('keydown', function(e) {
+          const key = (e.key || '').toLowerCase();
+          const ctrl = e.ctrlKey || e.metaKey;
+
+          if (ctrl && ['a', 'c', 'x', 's', 'u', 'p'].includes(key)) {
+            return blockEvent(e);
+          }
+
+          if (key === 'printscreen') {
+            return blockEvent(e);
+          }
+
+          if (key === 'f12') {
+            return blockEvent(e);
+          }
+
+          if (ctrl && e.shiftKey && ['i', 'j', 'c'].includes(key)) {
+            return blockEvent(e);
+          }
+        }, true);
+      })();
+    </script>
+
 </head>
 <body>
 <div class="container">
@@ -3414,7 +3490,7 @@ HTML = r"""
     {% if report %}
     <div class="card">
         <h2>التقرير الشخصي</h2>
-        <button type="button" class="copy-report-btn" onclick="copyReportText()">نسخ التقرير</button>
+        
 
         <div id="report_copy_area">
         <div class="section">
@@ -3632,6 +3708,7 @@ HTML = r"""
     </div>
     {% endif %}
 </div>
+<div class="no-copy-note" style="text-align:center;">حقوق القراءة محفوظة. النسخ اليدوي غير متاح داخل الموقع.</div>
 </body>
 </html>
 """
@@ -3769,6 +3846,6 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.7 Railway Final")
+    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.8 Railway Final")
     print(f"افتح الرابط المحلي: http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
