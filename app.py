@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V4.8 Railway Final
+قراءة الخريطة الشخصية - V4.9 Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -3119,6 +3119,44 @@ HTML = r"""
             font-weight: 700;
         }
 
+
+      .report-watermark {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .report-watermark::before {
+        content: "جميع الحقوق محفوظة للمطور astrologer.ab@";
+        position: absolute;
+        top: 8%;
+        right: -10%;
+        width: 120%;
+        height: 120%;
+        transform: rotate(-24deg);
+        font-size: 28px;
+        line-height: 3.2;
+        color: rgba(80, 55, 35, 0.075);
+        white-space: pre-wrap;
+        pointer-events: none;
+        z-index: 0;
+        text-align: center;
+      }
+
+      .report-watermark > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .rights-footer {
+        text-align: center;
+        margin: 18px 0 8px 0;
+        padding: 10px;
+        font-size: 14px;
+        color: #5f4936;
+        font-weight: 700;
+        border-top: 1px solid rgba(95, 73, 54, 0.18);
+      }
+
 </style>
 
     <script>
@@ -3492,7 +3530,7 @@ HTML = r"""
         <h2>التقرير الشخصي</h2>
         
 
-        <div id="report_copy_area">
+        <div id="report_copy_area" class="report-watermark">
         <div class="section">
             <h3>{{ report.welcome_message.line1 }}</h3>
             <p><strong>{{ report.welcome_message.line2 }}</strong></p>
@@ -3709,6 +3747,7 @@ HTML = r"""
     {% endif %}
 </div>
 <div class="no-copy-note" style="text-align:center;">حقوق القراءة محفوظة. النسخ اليدوي غير متاح داخل الموقع.</div>
+<div class="rights-footer">جميع الحقوق محفوظة للمطور astrologer.ab@</div>
 </body>
 </html>
 """
@@ -3846,6 +3885,6 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.8 Railway Final")
+    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.9 Railway Final")
     print(f"افتح الرابط المحلي: http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
