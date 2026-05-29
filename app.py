@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V4.6 Railway Final
+قراءة الخريطة الشخصية - V4.7 Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -3286,6 +3286,16 @@ HTML = r"""
     </script>
     {% endif %}
 
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2XZSMG55TG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-2XZSMG55TG');
+    </script>
+
 </head>
 <body>
 <div class="container">
@@ -3759,6 +3769,6 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.6 Railway Final")
+    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.7 Railway Final")
     print(f"افتح الرابط المحلي: http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
