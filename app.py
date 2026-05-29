@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V4.5 Railway Final
+قراءة الخريطة الشخصية - V4.6 Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -3380,7 +3380,7 @@ HTML = r"""
                 <div>
                     <label>نظام البيوت</label>
                     <select name="house_system">
-                        <option value="P" {% if form.house_system == "P" %}selected{% endif %}>Placidus</option>
+                        <option value="P" {% if form.house_system == "P" or not form.house_system %}selected{% endif %}>Placidus</option>
                         <option value="W" {% if form.house_system == "W" %}selected{% endif %}>Whole Sign</option>
                     </select>
                 </div>
@@ -3759,6 +3759,6 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.5 Railway Final")
+    print("تشغيل تطبيق قراءة الخريطة الشخصية V4.6 Railway Final")
     print(f"افتح الرابط المحلي: http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
