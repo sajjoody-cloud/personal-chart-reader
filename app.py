@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V5.1 Railway Final
+قراءة الخريطة الشخصية - V6.0 Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -2849,6 +2849,129 @@ def generate_welcome_message(name: str, gender: str, positions, angles) -> Dict[
     }
 
 
+
+
+# ============================================================
+# تقرير V6.0 المبسط التفاعلي
+# ============================================================
+
+MODALITIES = {
+    "الحمل": "مبادر", "السرطان": "مبادر", "الميزان": "مبادر", "الجدي": "مبادر",
+    "الثور": "ثابت", "الأسد": "ثابت", "العقرب": "ثابت", "الدلو": "ثابت",
+    "الجوزاء": "متغير", "العذراء": "متغير", "القوس": "متغير", "الحوت": "متغير",
+}
+
+def analyze_modalities(positions: Dict[str, BodyPosition]) -> Dict[str, int]:
+    weights = {
+        "Sun": 3, "Moon": 3, "Mercury": 2, "Venus": 2,
+        "Mars": 2, "Jupiter": 1, "Saturn": 1
+    }
+    scores = {"مبادر": 0, "ثابت": 0, "متغير": 0}
+    for key, weight in weights.items():
+        sign = positions[key].sign
+        scores[MODALITIES[sign]] += weight
+    return scores
+
+def strongest_modality(scores: Dict[str, int]) -> str:
+    return max(scores, key=lambda k: scores[k])
+
+def planet_power_rows(positions: Dict[str, BodyPosition], aspects) -> List[Dict[str, object]]:
+    """
+    ترتيب تقريبي لقوة تأثير الكواكب على الشخصية، بصيغة مئوية سهلة للقارئ.
+    ليست درجة مطلقة، بل مؤشر يساعد على فهم الكواكب الأبرز.
+    """
+    rows = []
+    personal_bonus = {"Sun": 14, "Moon": 14, "Mercury": 10, "Venus": 10, "Mars": 10}
+    angular_bonus = {1: 16, 4: 14, 7: 14, 10: 16}
+    aspect_counts = {}
+    for a, b, asp, orb in aspects:
+        aspect_counts[a] = aspect_counts.get(a, 0) + 1
+        aspect_counts[b] = aspect_counts.get(b, 0) + 1
+
+    for key in ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"]:
+        p = positions[key]
+        info = planet_constitution_analysis(key, p)
+        raw = 50 + int(info["score"])
+        raw += personal_bonus.get(key, 4)
+        raw += angular_bonus.get(p.house, 0)
+        raw += min(12, aspect_counts.get(p.name_ar, 0) * 3)
+        percent = max(5, min(100, raw))
+        rows.append({
+            "name": p.name_ar,
+            "percent": percent,
+            "level": info["level"],
+            "reason": f"{p.name_ar} في {p.sign} والبيت {p.house}، وتأثيره العام: {info['level']}."
+        })
+    rows.sort(key=lambda r: int(r["percent"]), reverse=True)
+    return rows
+
+def aspect_badge(asp: str) -> Dict[str, str]:
+    if asp in ["تربيع", "مقابلة"]:
+        return {"symbol": "🔴", "label": "ضاغطة", "class": "hard"}
+    if asp in ["تثليث", "تسديس"]:
+        return {"symbol": "🟢", "label": "داعمة", "class": "soft"}
+    return {"symbol": "🟡", "label": "مركّزة", "class": "focus"}
+
+def generate_important_aspects_cards(aspects) -> List[Dict[str, object]]:
+    if not aspects:
+        return [{"symbol": "—", "label": "لا توجد", "title": "لا توجد زوايا رئيسية واضحة", "text": "لا توجد اتصالات رئيسية ضمن الأورب المعتمد في هذه النسخة.", "class": "neutral"}]
+
+    rows = []
+    for a, b, asp, orb in aspects:
+        rows.append((aspect_priority_score(a, b, asp, float(orb)), a, b, asp, float(orb)))
+    rows.sort(key=lambda x: x[0], reverse=True)
+
+    cards = []
+    for score, a, b, asp, orb in rows[:12]:
+        badge = aspect_badge(asp)
+        pair_meaning = PLANET_PAIR_MEANINGS.get(pair_key(a, b), "هذا الاتصال يربط دلالتين مهمتين في الخريطة ويظهر أثره حسب طبيعة الكوكبين.")
+        cards.append({
+            "symbol": badge["symbol"],
+            "label": badge["label"],
+            "class": badge["class"],
+            "title": f"{a} {asp} {b}",
+            "orb": f"{orb:.2f}°",
+            "text": pair_meaning,
+        })
+    return cards
+
+def generate_fingerprint(positions, angles, element_scores, aspects, chart_pattern) -> List[str]:
+    modality_scores = analyze_modalities(positions)
+    dominant_element = strongest_element(element_scores)
+    dominant_modality = strongest_modality(modality_scores)
+    powers = planet_power_rows(positions, aspects)
+    strongest = powers[:3]
+    weakest = powers[-3:]
+    asc_sign = str(angles["ASC_sign"])
+
+    items = [
+        f"العنصر الغالب: {dominant_element}. هذا يوضح المزاج العام للطاقة في الخريطة.",
+        f"الطبيعة الغالبة: {dominant_modality}. هذا يوضح طريقة الحركة: هل تبدأ، تثبت، أم تتكيف.",
+        f"نوع الخريطة: {chart_pattern.get('ar_name', '')}. {chart_pattern.get('text', '')}",
+        "أقوى الكواكب تأثيرًا: " + "، ".join([f"{r['name']} ({r['percent']}%)" for r in strongest]) + ".",
+        "الكواكب الأكثر حاجة إلى وعي: " + "، ".join([f"{r['name']} ({r['level']})" for r in weakest]) + ".",
+        f"الطالع في {asc_sign}، وحاكمه {SIGN_RULERS.get(asc_sign, '')}. هذا يحدد مفتاح الظهور وطريقة الدخول إلى الحياة.",
+    ]
+    return items
+
+def generate_quick_summary(strengths, notes, creativity, challenges, summary) -> List[str]:
+    """
+    خلاصة قصيرة جدًا؛ لا تستبدل التفاصيل، بل تمنح القارئ نتيجة مباشرة.
+    """
+    items = []
+    for source in [strengths, notes, creativity, challenges]:
+        for x in source[:2]:
+            if x and x not in items:
+                items.append(x)
+            if len(items) >= 8:
+                break
+        if len(items) >= 8:
+            break
+    if len(items) < 5:
+        items.append(summary)
+    return items[:8]
+
+
 def build_report(name: str, gender: str, positions, cusps, angles, jd_ut: float = None) -> Dict[str, object]:
     element_scores = analyze_elements(positions)
     aspects = detect_major_aspects(positions)
@@ -2864,6 +2987,7 @@ def build_report(name: str, gender: str, positions, cusps, angles, jd_ut: float 
     houses_analysis = generate_houses_analysis(cusps, positions)
     dignity_summary = generate_dignity_summary(positions)
     aspects_analysis = generate_aspects_analysis(aspects)
+    important_aspects_cards = generate_important_aspects_cards(aspects)
     midpoints_analysis = generate_midpoints_analysis(positions, cusps, angles)
     supporting_techniques = generate_supporting_techniques(positions, cusps, angles, aspects, element_scores)
 
@@ -2871,6 +2995,8 @@ def build_report(name: str, gender: str, positions, cusps, angles, jd_ut: float 
     notes = generate_growth_notes(positions, element_scores, aspects)
     creativity = generate_creativity(positions, angles, element_scores)
     challenges = generate_challenges(positions, aspects)
+    planet_powers = planet_power_rows(positions, aspects)
+    fingerprint = generate_fingerprint(positions, angles, element_scores, aspects, chart_pattern)
 
     sun = positions["Sun"]
     moon = positions["Moon"]
@@ -2910,6 +3036,10 @@ def build_report(name: str, gender: str, positions, cusps, angles, jd_ut: float 
     houses_analysis = personalize_list(houses_analysis, gender)
     dignity_summary = personalize_list(dignity_summary, gender)
     aspects_analysis = personalize_list(aspects_analysis, gender)
+    important_aspects_cards = [
+        {**card, "text": personalize_text(str(card.get("text", "")), gender)}
+        for card in important_aspects_cards
+    ]
     midpoints_analysis = [
         {
             "title": group["title"],
@@ -2922,7 +3052,9 @@ def build_report(name: str, gender: str, positions, cusps, angles, jd_ut: float 
     notes = personalize_list(notes, gender)
     creativity = personalize_list(creativity, gender)
     challenges = personalize_list(challenges, gender)
+    fingerprint = personalize_list(fingerprint, gender)
     summary = personalize_text(summary, gender)
+    quick_summary = generate_quick_summary(strengths, notes, creativity, challenges, summary)
 
     return {
         "welcome_message": welcome_message,
@@ -2936,7 +3068,11 @@ def build_report(name: str, gender: str, positions, cusps, angles, jd_ut: float 
         "asteroids_points_analysis": asteroids_points_analysis,
         "houses_analysis": houses_analysis,
         "dignity_summary": dignity_summary,
+        "planet_powers": planet_powers,
         "aspects_analysis": aspects_analysis,
+        "important_aspects_cards": important_aspects_cards,
+        "fingerprint": fingerprint,
+        "quick_summary": quick_summary,
         "midpoints_analysis": midpoints_analysis,
         "supporting_techniques": supporting_techniques,
         "strengths": strengths,
@@ -3182,6 +3318,95 @@ HTML = r"""
       .rights-text {
         display: inline-block;
         line-height: 1.8;
+      }
+
+
+      .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .quick-box {
+        background: #faf6ef;
+        border: 1px solid #eadfce;
+        border-radius: 12px;
+        padding: 11px;
+        line-height: 1.8;
+      }
+      .aspect-card {
+        background: #faf6ef;
+        border-radius: 12px;
+        border: 1px solid #eadfce;
+        padding: 12px;
+        margin: 9px 0;
+      }
+      .aspect-head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        font-weight: bold;
+      }
+      .aspect-label {
+        font-size: 13px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #efe5d6;
+      }
+      .power-row {
+        margin: 10px 0;
+      }
+      .power-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-weight: bold;
+      }
+      .power-bar {
+        height: 9px;
+        border-radius: 99px;
+        background: #eadfce;
+        overflow: hidden;
+        margin-top: 5px;
+      }
+      .power-fill {
+        height: 100%;
+        background: #8b6f47;
+        border-radius: 99px;
+      }
+      details.accordion {
+        background: #fff;
+        border: 1px solid #e6dccb;
+        border-radius: 14px;
+        margin: 12px 0;
+        overflow: hidden;
+      }
+      details.accordion summary {
+        cursor: pointer;
+        padding: 14px;
+        font-weight: bold;
+        color: #3b2f2f;
+        background: #fbf6ef;
+        list-style: none;
+      }
+      details.accordion summary::-webkit-details-marker {
+        display: none;
+      }
+      details.accordion summary:before {
+        content: "▶ ";
+        color: #8b6f47;
+      }
+      details.accordion[open] summary:before {
+        content: "▼ ";
+      }
+      .accordion-content {
+        padding: 12px 14px 14px;
+      }
+      @media (max-width: 700px) {
+        .quick-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
 </style>
@@ -3552,226 +3777,211 @@ HTML = r"""
     </div>
     {% endif %}
 
-    {% if report %}
+    
+{% if report %}
     <div class="card">
         <h2>التقرير الشخصي</h2>
-        
 
         <div id="report_copy_area" class="report-watermark">
-        <div class="section">
-            <h3>{{ report.welcome_message.line1 }}</h3>
-            <p><strong>{{ report.welcome_message.line2 }}</strong></p>
-            <p>{{ report.welcome_message.line3 }}</p>
-            <p>{{ report.welcome_message.line4 }}</p>
-        </div>
 
-        <div class="section">
-            <h3>المقدمة</h3>
-            <p>{{ report.intro }}</p>
-        </div>
-
-        <div class="section">
-            <h3>التحليل العام للخريطة</h3>
-            <p>{{ report.general_analysis }}</p>
-        </div>
-
-        <div class="section">
-            <h3>نمط توزيع الكواكب في الخريطة</h3>
-            <p>{{ report.chart_pattern["text"] }}</p>
-        </div>
-
-        <div class="section">
-            <h3>جدول مواقع الكواكب الأساسية</h3>
-            <div class="data-table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>الكوكب</th>
-                            <th>البرج</th>
-                            <th>الدرجة</th>
-                            <th>البيت</th>
-                            <th>الحد</th>
-                            <th>الحركة / الحالة</th>
-                            <th>الدستورية</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in report.planets_table %}
-                        <tr>
-                            <td>{{ row.name }}</td>
-                            <td>{{ row.sign }}</td>
-                            <td>{{ row.degree }}</td>
-                            <td>{{ row.house }}</td>
-                            <td>{{ row.term }}</td>
-                            <td>{{ row.retro }}</td>
-                            <td>{{ row.dignity }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="section">
+                <h3>{{ report.welcome_message.line1 }}</h3>
+                <p><strong>{{ report.welcome_message.line2 }}</strong></p>
+                <p>{{ report.welcome_message.line3 }}</p>
+                <p>{{ report.welcome_message.line4 }}</p>
             </div>
-        </div>
 
-        {% if report.asteroids_table %}
-        <div class="section">
-            <h3>جدول الكويكبات والنقاط المهمة</h3>
-            <div class="data-table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>النقطة</th>
-                            <th>البرج</th>
-                            <th>الدرجة</th>
-                            <th>البيت</th>
-                            <th>الحد</th>
-                            <th>الحركة / الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in report.asteroids_table %}
-                        <tr>
-                            <td>{{ row.name }}</td>
-                            <td>{{ row.sign }}</td>
-                            <td>{{ row.degree }}</td>
-                            <td>{{ row.house }}</td>
-                            <td>{{ row.term }}</td>
-                            <td>{{ row.retro }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="section">
+                <h3>بيانات الخريطة الفلكية</h3>
+                <h4>مواقع الكواكب الأساسية</h4>
+                <div class="data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الكوكب</th>
+                                <th>البرج</th>
+                                <th>الدرجة</th>
+                                <th>البيت</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.planets_table %}
+                            <tr>
+                                <td>{{ row.name }}</td>
+                                <td>{{ row.sign }}</td>
+                                <td>{{ row.degree }}</td>
+                                <td>{{ row.house }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if report.asteroids_table %}
+                <h4>مواقع الكويكبات والنقاط المهمة</h4>
+                <div class="data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>النقطة</th>
+                                <th>البرج</th>
+                                <th>الدرجة</th>
+                                <th>البيت</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.asteroids_table %}
+                            <tr>
+                                <td>{{ row.name }}</td>
+                                <td>{{ row.sign }}</td>
+                                <td>{{ row.degree }}</td>
+                                <td>{{ row.house }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
             </div>
-        </div>
-        {% endif %}
 
-        <div class="section">
-            <h3>الطالع</h3>
-            <p>{{ report.core_analysis.asc }}</p>
-        </div>
-
-        <div class="section">
-            <h3>الشمس</h3>
-            <p>{{ report.core_analysis.sun }}</p>
-        </div>
-
-        <div class="section">
-            <h3>القمر</h3>
-            <p>{{ report.core_analysis.moon }}</p>
-        </div>
-
-        <div class="section">
-            <h3>تحليل الكواكب واحدًا تلو الآخر</h3>
-            {% for item in report.planetary_analysis %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
-
-        <div class="section">
-            <h3>تحليل الكويكبات والنقاط المهمة</h3>
-            {% for item in report.asteroids_points_analysis %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
-
-        <div class="section">
-            <h3>خلاصة دستورية الكواكب وانعكاسها على الشخصية</h3>
-            {% for item in report.dignity_summary %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
-
-        <div class="section">
-            <h3>تحليل البيوت الفلكية</h3>
-            {% for item in report.houses_analysis %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
-
-        <div class="section">
-            <h3>نقاط المنتصف حسب الموضوع</h3>
-            {% for group in report.midpoints_analysis %}
-                <h4>{{ group["title"] }}</h4>
-                {% for item in group["items"] %}
-                    <div class="item">{{ item }}</div>
+            <div class="section">
+                <h3>أهم الزوايا المؤثرة</h3>
+                {% for item in report.important_aspects_cards %}
+                    <div class="aspect-card">
+                        <div class="aspect-head">
+                            <span>{{ item.symbol }} {{ item.title }}</span>
+                            <span class="aspect-label">{{ item.label }} — الفارق {{ item.orb }}</span>
+                        </div>
+                        <div>{{ item.text }}</div>
+                    </div>
                 {% endfor %}
-            {% endfor %}
-        </div>
+            </div>
 
-        <div class="section">
-            <h3>تحليل الاتصالات الرئيسية</h3>
-            {% for item in report.aspects_analysis %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
+            <div class="section">
+                <h3>البصمة الفلكية</h3>
+                <div class="quick-grid">
+                    {% for item in report.fingerprint %}
+                        <div class="quick-box">{{ item }}</div>
+                    {% endfor %}
+                </div>
 
-        <div class="section">
-            <h3>التقنيات المساندة في القراءة</h3>
-            {% for item in report.supporting_techniques %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
+                <h4>ترتيب الكواكب حسب التأثير</h4>
+                {% for row in report.planet_powers %}
+                    <div class="power-row">
+                        <div class="power-top">
+                            <span>{{ loop.index }}. {{ row.name }}</span>
+                            <span>{{ row.percent }}%</span>
+                        </div>
+                        <div class="power-bar"><div class="power-fill" style="width: {{ row.percent }}%;"></div></div>
+                    </div>
+                {% endfor %}
+            </div>
 
-        <div class="section">
-            <h3>الصفات الإيجابية في الخريطة</h3>
-            {% for item in report.strengths %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
+            <div class="section">
+                <h3>الخلاصة السريعة</h3>
+                <div class="quick-grid">
+                    {% for item in report.quick_summary %}
+                        <div class="quick-box">{{ item }}</div>
+                    {% endfor %}
+                </div>
+            </div>
 
-        <div class="section">
-            <h3>صفات تحتاج إلى اهتمام ووعي</h3>
-            {% for item in report.notes %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
+            <details class="accordion">
+                <summary>تحليل الكواكب واحدًا تلو الآخر (10 كواكب)</summary>
+                <div class="accordion-content">
+                    {% for item in report.planetary_analysis %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                </div>
+            </details>
 
-        <div class="section">
-            <h3>أين يمكن أن يكون الشخص مبدعًا؟</h3>
-            {% for item in report.creativity %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
+            <details class="accordion">
+                <summary>تحليل الكويكبات والنقاط المهمة ({{ report.asteroids_points_analysis|length }} عناصر)</summary>
+                <div class="accordion-content">
+                    {% for item in report.asteroids_points_analysis %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                </div>
+            </details>
 
-        <div class="section">
-            <h3>التحديات التي نخشى عليه منها</h3>
-            {% for item in report.challenges %}
-                <div class="item">{{ item }}</div>
-            {% endfor %}
-        </div>
+            <details class="accordion">
+                <summary>تحليل الشخصية والطالع والشمس والقمر</summary>
+                <div class="accordion-content">
+                    <div class="item">{{ report.general_analysis }}</div>
+                    <div class="item">{{ report.core_analysis.asc }}</div>
+                    <div class="item">{{ report.core_analysis.sun }}</div>
+                    <div class="item">{{ report.core_analysis.moon }}</div>
+                    <div class="item">{{ report.chart_pattern["text"] }}</div>
+                </div>
+            </details>
 
-        <div class="section">
-            <h3>نصيحة النمو الذاتي</h3>
-            <p>{{ report.summary }}</p>
+            <details class="accordion">
+                <summary>الجانب العاطفي</summary>
+                <div class="accordion-content">
+                    {% for group in report.midpoints_analysis %}
+                        {% if group["title"] == "عاطفيًا" %}
+                            {% for item in group["items"] %}
+                                <div class="item">{{ item }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </details>
+
+            <details class="accordion">
+                <summary>الجانب المهني والمالي</summary>
+                <div class="accordion-content">
+                    {% for group in report.midpoints_analysis %}
+                        {% if group["title"] == "مهنيًا" or group["title"] == "ماليًا" %}
+                            <h4>{{ group["title"] }}</h4>
+                            {% for item in group["items"] %}
+                                <div class="item">{{ item }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </details>
+
+            <details class="accordion">
+                <summary>الجانب النفسي والزوايا العميقة</summary>
+                <div class="accordion-content">
+                    {% for item in report.aspects_analysis %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                    {% for item in report.dignity_summary %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                </div>
+            </details>
+
+            <details class="accordion">
+                <summary>المواهب والقدرات</summary>
+                <div class="accordion-content">
+                    {% for item in report.creativity %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                    {% for item in report.strengths %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                </div>
+            </details>
+
+            <details class="accordion">
+                <summary>التحديات والدروس</summary>
+                <div class="accordion-content">
+                    {% for item in report.notes %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                    {% for item in report.challenges %}
+                        <div class="item">{{ item }}</div>
+                    {% endfor %}
+                    <div class="item">{{ report.summary }}</div>
+                </div>
+            </details>
+
         </div>
     </div>
-
-    <div class="card">
-        <h2>ملخص فني مختصر</h2>
-        <div class="technical">
-            <p><b>الطالع:</b> {{ report.technical.asc }}</p>
-            <p><b>العاشر:</b> {{ report.technical.mc }}</p>
-            <p><b>الشمس:</b> {{ report.technical.sun }}</p>
-            <p><b>القمر:</b> {{ report.technical.moon }}</p>
-            <p><b>العناصر:</b>
-                نار {{ report.technical.elements["نار"] }} /
-                تراب {{ report.technical.elements["تراب"] }} /
-                هواء {{ report.technical.elements["هواء"] }} /
-                ماء {{ report.technical.elements["ماء"] }}
-            </p>
-
-            <p><b>الاتصالات المختصرة:</b></p>
-            {% if report.technical.aspects %}
-                {% for a, b, asp, orb in report.technical.aspects %}
-                    <div>{{ a }} {{ asp }} {{ b }} - الفارق {{ orb }}°</div>
-                {% endfor %}
-            {% else %}
-                <div>لا توجد اتصالات رئيسية ضمن الأورب المعتمد في هذه النسخة.</div>
-        
-        </div>
-    {% endif %}
-        </div>
-    </div>
-    {% endif %}
+{% endif %}
 </div>
 <div class="no-copy-note" style="text-align:center;">حقوق القراءة محفوظة. النسخ اليدوي غير متاح داخل الموقع.</div>
 <div class="rights-footer"><img class="developer-avatar" src="data:image/png;base64,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" alt="المطور"><span class="rights-text">جميع الحقوق محفوظة للمطور astrologer.ab@</span></div>
@@ -3912,6 +4122,6 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    print("تشغيل تطبيق قراءة الخريطة الشخصية V5.1 Railway Final")
+    print("تشغيل تطبيق قراءة الخريطة الشخصية V6.0 Railway Final")
     print(f"افتح الرابط المحلي: http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
