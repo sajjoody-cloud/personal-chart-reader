@@ -4638,26 +4638,77 @@ def api_cities():
 def zodiac_wheel_svg(positions: Optional[Dict[str, BodyPosition]] = None, angles: Optional[Dict[str, float]] = None) -> str:
     """يرسم دائرة فلكية مبسطة للواجهة الرئيسية.
 
-    التصحيح المهم:
-    عند توفر الطالع، تُدار الدائرة كلها بحيث يكون AC على يسار المستخدم
-    عند موضع الساعة 9، كما هو شائع في عرض الخرائط الفلكية.
+    التصحيح المهم في هذه النسخة:
+    - AC / الطالع يظهر على يسار الدائرة.
+    - MC / وسط السماء يظهر أعلى الدائرة.
+    - لا نكتفي بتدوير بسيط للدائرة، بل نستخدم تحويلًا زاويًا مبسطًا
+      يثبت النقاط الأربع الرئيسة: AC, IC, DC, MC في مواضعها البصرية
+      الشائعة، ويجعل التسلسل يهبط من AC إلى الأسفل.
     """
     signs = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"]
 
     asc_lon = None
+    mc_lon = None
     if angles and angles.get("ASC") is not None:
         try:
             asc_lon = float(angles.get("ASC"))
         except Exception:
             asc_lon = None
+    if angles and angles.get("MC") is not None:
+        try:
+            mc_lon = float(angles.get("MC"))
+        except Exception:
+            mc_lon = None
 
     def angle_for_lon(lon: float) -> float:
-        if asc_lon is None:
+        lon = float(lon) % 360
+        if asc_lon is None or mc_lon is None:
             # الوضع الافتراضي قبل إدخال البيانات: الحمل أعلى الدائرة.
-            return math.radians(float(lon) - 90)
-        # عند إدخال البيانات: ندوّر كل شيء حتى يكون الطالع يسار الدائرة.
-        # في SVG: 180° = يسار، لذلك نجعل longitude == ASC يعطي 180°.
-        return math.radians((float(lon) - asc_lon + 180) % 360)
+            return math.radians(lon - 90)
+
+        # نثبت المحاور الأساسية بصريًا كالتالي:
+        # AC = يسار، IC = أسفل، DC = يمين، MC = أعلى.
+        # الأهم: التسلسل بعد AC يجب أن ينزل نحو البيت الأول أسفل اليسار،
+        # لذلك يكون مسار الطول الصاعد: ASC → IC → DSC → MC → ASC.
+        dsc_lon = (asc_lon + 180.0) % 360.0
+        ic_lon = (mc_lon + 180.0) % 360.0
+
+        anchor_lons = [asc_lon % 360.0, ic_lon, dsc_lon, mc_lon % 360.0]
+        # زوايا SVG: 180 يسار، 90 أسفل، 0 يمين، -90 أعلى، -180 يسار.
+        # هذا يجعل التسلسل يهبط من AC إلى الأسفل كما في الخرائط الشائعة.
+        anchor_disp = [180.0, 90.0, 0.0, -90.0]
+
+        # نفك الالتفاف بحيث تصبح نقاط ASC→IC→DSC→MC→ASC متصاعدة فلكيًا.
+        unwrapped_lons = [anchor_lons[0]]
+        for value in anchor_lons[1:]:
+            v = value
+            while v <= unwrapped_lons[-1]:
+                v += 360.0
+            unwrapped_lons.append(v)
+        unwrapped_lons.append(unwrapped_lons[0] + 360.0)
+        unwrapped_disp = anchor_disp + [anchor_disp[0] - 360.0]
+
+        # نضع طول الجرم ضمن نفس الدورة غير الملفوفة.
+        lon_u = lon
+        while lon_u < unwrapped_lons[0]:
+            lon_u += 360.0
+        while lon_u > unwrapped_lons[-1]:
+            lon_u -= 360.0
+        if lon_u < unwrapped_lons[0]:
+            lon_u += 360.0
+
+        # استيفاء خطي داخل الربع المناسب بين AC→MC→DC→IC→AC.
+        disp = 180.0
+        for i in range(4):
+            left_lon = unwrapped_lons[i]
+            right_lon = unwrapped_lons[i + 1]
+            if left_lon <= lon_u <= right_lon:
+                span = right_lon - left_lon
+                t = 0.0 if span == 0 else (lon_u - left_lon) / span
+                disp = unwrapped_disp[i] + t * (unwrapped_disp[i + 1] - unwrapped_disp[i])
+                break
+
+        return math.radians(disp % 360.0)
 
     svg = []
     svg.append('<svg viewBox="0 0 320 320" role="img" aria-label="دائرة الخريطة الفلكية">')
@@ -4697,7 +4748,7 @@ def zodiac_wheel_svg(positions: Optional[Dict[str, BodyPosition]] = None, angles
             svg.append(f'<text x="{x:.1f}" y="{y+1:.1f}" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#2c2038">{planet_symbols.get(key,"•")}</text>')
 
         if angles:
-            # AC على اليسار، DC على اليمين، وMC في موضعه الفلكي بعد التدوير.
+            # AC يسار، DC يمين، MC أعلى، والتسلسل يهبط من AC نحو الأسفل.
             angle_points = [("AC", angles.get("ASC")), ("DC", (float(angles.get("ASC")) + 180) % 360 if angles.get("ASC") is not None else None), ("MC", angles.get("MC"))]
             for label, lon in angle_points:
                 if lon is None:
