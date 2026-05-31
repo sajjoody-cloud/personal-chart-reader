@@ -4245,20 +4245,44 @@ HOME_HTML = r"""
         }
         .planet-summary {
             margin-top: 12px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 4px 6px;
             direction: rtl;
+            align-items: start;
         }
         .planet-summary span {
-            background: rgba(255,255,255,.78);
-            border: 1px solid #e1d3bb;
-            border-radius: 999px;
-            padding: 6px 10px;
-            font-size: 14px;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 2px 1px;
             color: #3c3027;
+            text-align: center;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            line-height: 1.25;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .planet-summary b {
+            display: block;
+            font-size: 11px;
+            font-weight: 900;
+            line-height: 1.15;
+            color: #2d251f;
+        }
+        .planet-summary small {
+            display: block;
+            margin-top: 2px;
+            font-size: 10px;
             font-weight: 700;
+            line-height: 1.15;
+            color: #5f4a36;
+            direction: rtl;
         }
         .footer {
             margin: 14px auto 0;
@@ -4282,6 +4306,9 @@ HOME_HTML = r"""
             .tool-icon { width: 30px; height: 30px; font-size: 19px; }
             .tool-text { font-size: 19px; }
             .tool-badge { min-width: 64px; padding: 5px 8px; font-size: 13px; }
+            .planet-summary { gap: 4px 5px; }
+            .planet-summary b { font-size: 10.5px; }
+            .planet-summary small { font-size: 9.5px; }
         }
         @media (max-width: 430px) {
             .brand-title h1 { font-size: 30px; }
@@ -4291,6 +4318,9 @@ HOME_HTML = r"""
             .tagline-box .supervisor { font-size: 16px; }
             .tagline-box .motto { font-size: 24px; }
             .tool-text { font-size: 18px; }
+            .planet-summary { gap: 3px 4px; }
+            .planet-summary b { font-size: 10px; }
+            .planet-summary small { font-size: 9px; }
         }
     </style>
 </head>
@@ -4767,9 +4797,16 @@ def zodiac_wheel_svg(positions: Optional[Dict[str, BodyPosition]] = None, angles
 
 def home_preview_from_saved_profile() -> Tuple[str, str]:
     """يعيد SVG وملخص مواقع الكواكب للصفحة الرئيسية."""
+
+    def placeholder_summary() -> str:
+        labels = [
+            "الشمس", "القمر", "عطارد", "الزهرة", "المريخ", "المشتري",
+            "زحل", "أورانوس", "نبتون", "بلوتو", "كايرون", "الطالع"
+        ]
+        return "".join(f'<span><b>{label}</b><small>—</small></span>' for label in labels)
+
     if not profile_is_complete():
-        summary = '<span>الشمس —</span><span>القمر —</span><span>الطالع —</span><span>عطارد —</span><span>الزهرة —</span><span>المريخ —</span>'
-        return zodiac_wheel_svg(), summary
+        return zodiac_wheel_svg(), placeholder_summary()
     try:
         saved = session.get("astro_profile", {})
         year = int(saved.get("year", "0"))
@@ -4786,13 +4823,45 @@ def home_preview_from_saved_profile() -> Tuple[str, str]:
         lon_geo = float(city_info["lon"])
         timezone = get_selected_timezone_offset(saved, city_info, year, month, day, hour, minute)
         positions, cusps, angles = calculate_chart(year, month, day, hour, minute, timezone, lat, lon_geo, saved.get("house_system", "P") or "P")
+
+        # كايرون لا يدخل ضمن الكواكب العشرة الأساسية في محرك قراءة الخريطة،
+        # لذلك نحسبه هنا خصيصًا لملخص الخريطة المختصرة أسفل الدائرة.
+        try:
+            ensure_asteroid_ephemeris_ready()
+            setup_swiss_ephemeris_path()
+            chiron_result, chiron_retflag = swe.calc_ut(float(angles["JD_UT"]), swe.CHIRON, swe.FLG_SWIEPH | swe.FLG_SPEED)
+            chiron_lon = normalize_deg(float(chiron_result[0]))
+            chiron_speed = float(chiron_result[3]) if len(chiron_result) > 3 else 0.0
+            chiron_sign, chiron_degree = sign_from_lon(chiron_lon)
+            positions["Chiron"] = BodyPosition(
+                name_en="Chiron",
+                name_ar="كايرون",
+                lon=chiron_lon,
+                sign=chiron_sign,
+                degree=chiron_degree,
+                house=house_from_cusps(chiron_lon, cusps),
+                term=get_ptolemy_term(chiron_sign, chiron_degree),
+                retrograde=chiron_speed < 0,
+            )
+        except Exception:
+            pass
+
+        ordered_keys = [
+            "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter",
+            "Saturn", "Uranus", "Neptune", "Pluto", "Chiron"
+        ]
         parts = []
-        for key in ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"]:
-            p = positions[key]
-            parts.append(f'<span>{p.name_ar}: {p.sign} {format_degree(p.degree)}</span>')
+        for key in ordered_keys:
+            p = positions.get(key)
+            if p:
+                parts.append(f'<span><b>{p.name_ar}</b><small>{p.sign} {format_degree(p.degree)}</small></span>')
+            elif key == "Chiron":
+                parts.append('<span><b>كايرون</b><small>غير متاح</small></span>')
+
         asc_sign = str(angles["ASC_sign"])
         asc_degree = float(angles["ASC_degree"])
-        parts.insert(2, f'<span>الطالع: {asc_sign} {format_degree(asc_degree)}</span>')
+        # الطالع يبقى آخر عنصر بعد كايرون، ليكتمل السطر الثاني بست خانات.
+        parts.append(f'<span><b>الطالع</b><small>{asc_sign} {format_degree(asc_degree)}</small></span>')
         return zodiac_wheel_svg(positions, angles), "".join(parts)
     except Exception:
         summary = '<span>تعذر رسم الخريطة المختصرة مؤقتًا</span><span>أكمل البيانات أو افتح قراءة الخريطة</span>'
