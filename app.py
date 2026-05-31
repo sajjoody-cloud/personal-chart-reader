@@ -4071,7 +4071,7 @@ HOME_HTML = r"""
             overflow: hidden;
             position: relative;
         }
-        .brand-card { padding: 18px 16px 18px; }
+        .brand-card { padding: 18px 16px 20px; }
         .brand-title {
             text-align: center;
             padding: 4px 0 0;
@@ -4095,16 +4095,19 @@ HOME_HTML = r"""
             letter-spacing: 0;
         }
         .identity-strip {
-            margin: 16px 4px 10px;
-            display: grid;
-            grid-template-columns: 118px 1fr;
-            gap: 14px;
-            align-items: stretch;
-            direction: ltr;
+            margin: 12px auto 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            direction: rtl;
+            text-align: center;
+            width: 100%;
         }
         .brand-logo-box {
-            width: 112px;
-            height: 112px;
+            width: 126px;
+            height: 126px;
             background: #050505;
             border-radius: 50%;
             border: 2px solid #b99a5b;
@@ -4112,7 +4115,7 @@ HOME_HTML = r"""
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            box-shadow: 0 5px 14px rgba(0,0,0,.15);
+            box-shadow: 0 7px 18px rgba(0,0,0,.18);
             margin: 0 auto;
         }
         .brand-logo {
@@ -4124,30 +4127,34 @@ HOME_HTML = r"""
         }
         .tagline-box {
             direction: rtl;
-            background: rgba(255,255,255,.64);
-            border: 1px solid rgba(224, 210, 185, .9);
-            border-radius: 17px;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 10px 12px;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+            padding: 0;
+            box-shadow: none;
+            width: 100%;
         }
         .tagline-box .supervisor {
-            font-size: 20px;
-            color: #111;
+            font-size: 18px;
+            color: #221a14;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin-top: 2px;
+            opacity: .95;
         }
         .tagline-box .motto {
             font-family: 'SFSultanBlack', Tahoma, Arial, sans-serif;
-            font-size: 29px;
+            font-size: clamp(24px, 6.6vw, 31px);
             color: #17120e;
             font-weight: 700;
             letter-spacing: 0;
-            line-height: 1.35;
+            line-height: 1.2;
+            white-space: nowrap;
+            max-width: 100%;
         }
         .tools-title {
             margin: 18px 4px 12px;
@@ -4284,10 +4291,10 @@ HOME_HTML = r"""
             .brand-title { padding: 2px 0 0; }
             .brand-title h1 { font-size: 34px; letter-spacing: 2px; }
             .brand-title h2 { font-size: 32px; margin-top: 7px; }
-            .identity-strip { grid-template-columns: 104px 1fr; gap: 10px; margin: 14px 0 8px; }
-            .brand-logo-box { width: 104px; height: 104px; }
-            .tagline-box .supervisor { font-size: 18px; }
-            .tagline-box .motto { font-size: 27px; }
+            .identity-strip { gap: 7px; margin: 10px auto 10px; }
+            .brand-logo-box { width: 116px; height: 116px; }
+            .tagline-box .supervisor { font-size: 16px; }
+            .tagline-box .motto { font-size: clamp(23px, 6.3vw, 29px); white-space: nowrap; }
             .tools-title { font-size: 19px; margin-top: 16px; }
             .tool-item { min-height: 66px; padding: 12px; grid-template-columns: 36px 1fr auto; }
             .tool-icon { width: 30px; height: 30px; font-size: 19px; }
@@ -4300,10 +4307,10 @@ HOME_HTML = r"""
         @media (max-width: 430px) {
             .brand-title h1 { font-size: 30px; }
             .brand-title h2 { font-size: 29px; }
-            .identity-strip { grid-template-columns: 92px 1fr; }
-            .brand-logo-box { width: 92px; height: 92px; }
-            .tagline-box .supervisor { font-size: 16px; }
-            .tagline-box .motto { font-size: 24px; }
+            .identity-strip { gap: 6px; }
+            .brand-logo-box { width: 104px; height: 104px; }
+            .tagline-box .supervisor { font-size: 14px; }
+            .tagline-box .motto { font-size: clamp(21px, 6vw, 25px); white-space: nowrap; }
             .tool-text { font-size: 18px; }
             .planet-summary { gap: 3px 4px; }
             .planet-summary b { font-size: 10px; }
@@ -4324,8 +4331,8 @@ HOME_HTML = r"""
                 <img class="brand-logo" src="data:image/jpeg;base64,{{ logo_b64 }}" alt="astrologer.ab">
             </div>
             <div class="tagline-box">
-                <div class="supervisor">بإشراف الخبير الفلكي عباس الشباني</div>
                 <div class="motto">رؤى كونية وحكمة خالدة</div>
+                <div class="supervisor">بإشراف الخبير الفلكي عباس الشباني</div>
             </div>
         </div>
 
