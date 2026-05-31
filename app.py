@@ -4072,21 +4072,9 @@ HOME_HTML = r"""
             position: relative;
         }
         .brand-card { padding: 18px 16px 18px; }
-        .brand-avatar {
-            position: absolute;
-            top: 18px;
-            right: 22px;
-            width: 74px;
-            height: 74px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #b99a5b;
-            box-shadow: 0 5px 14px rgba(0,0,0,.15);
-            background: #fff;
-        }
         .brand-title {
             text-align: center;
-            padding: 4px 88px 0 88px;
+            padding: 4px 0 0;
         }
         .brand-title h1 {
             margin: 0;
@@ -4293,8 +4281,7 @@ HOME_HTML = r"""
         @media (max-width: 620px) {
             .page { padding: 12px 10px 24px; }
             .brand-card { border-radius: 22px; padding: 14px 12px; }
-            .brand-avatar { width: 62px; height: 62px; right: 17px; top: 15px; }
-            .brand-title { padding: 2px 72px 0 72px; }
+            .brand-title { padding: 2px 0 0; }
             .brand-title h1 { font-size: 34px; letter-spacing: 2px; }
             .brand-title h2 { font-size: 32px; margin-top: 7px; }
             .identity-strip { grid-template-columns: 104px 1fr; gap: 10px; margin: 14px 0 8px; }
@@ -4327,7 +4314,6 @@ HOME_HTML = r"""
 <body>
 <div class="page">
     <section class="brand-card">
-        <img class="brand-avatar" src="data:image/jpeg;base64,{{ avatar_b64 }}" alt="عباس الشباني">
         <div class="brand-title">
             <h1>ASTROGATE</h1>
             <h2>بوابة التحليل الفلكي</h2>
@@ -4878,7 +4864,6 @@ def home():
     return render_template_string(
         HOME_HTML,
         profile_status=profile_status,
-        avatar_b64=PLATFORM_AVATAR_B64,
         logo_b64=PLATFORM_LOGO_B64,
         sultan_font_b64=PLATFORM_SULTAN_FONT_B64,
         chart_svg=chart_svg,
