@@ -4535,6 +4535,14 @@ COMING_SOON_HTML = r"""
 # ============================================================
 
 app = Flask(__name__)
+
+
+@app.route("/ads.txt")
+def ads_txt():
+    return app.response_class(
+        "google.com, pub-8021374675748501, DIRECT, f08c47fec0942fa0\n",
+        mimetype="text/plain"
+    )
 app.secret_key = os.environ.get("SECRET_KEY", "astrologerab-platform-secret")
 
 
