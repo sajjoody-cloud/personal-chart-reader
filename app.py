@@ -4285,6 +4285,13 @@ HOME_HTML = r"""
             color: #d9c7a7;
             font-size: 13px;
         }
+        .footer a {
+            color: #f1dfbd;
+            text-decoration: none;
+            font-weight: 700;
+            margin: 0 6px;
+        }
+        .footer a:hover { text-decoration: underline; }
         @media (max-width: 620px) {
             .page { padding: 12px 10px 24px; }
             .brand-card { border-radius: 22px; padding: 14px 12px; }
@@ -4392,6 +4399,137 @@ HOME_HTML = r"""
         <div class="planet-summary">{{ planet_summary|safe }}</div>
     </section>
 
+    <div class="footer">
+        <a href="/about">من نحن</a>
+        <span> | </span>
+        <span>جميع الحقوق محفوظة للمطور astrologer.ab@</span>
+    </div>
+</div>
+</body>
+</html>
+"""
+
+
+ABOUT_HTML = r"""
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>من نحن - AstroGate</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(212,175,106,.18), transparent 30%),
+                linear-gradient(180deg, #160d22 0%, #241432 48%, #170d21 100%);
+            color: #2d2926;
+            line-height: 1.9;
+        }
+        .page { max-width: 760px; margin: 0 auto; padding: 14px 14px 28px; }
+        .card {
+            background: #f7f1e4;
+            border: 1px solid rgba(197, 172, 125, .72);
+            border-radius: 24px;
+            box-shadow: 0 18px 35px rgba(0,0,0,.22);
+            padding: 20px 18px;
+        }
+        .top { text-align: center; margin-bottom: 16px; }
+        .logo {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            border: 2px solid #b99a5b;
+            object-fit: cover;
+            background: #050505;
+            box-shadow: 0 7px 18px rgba(0,0,0,.18);
+        }
+        h1 {
+            margin: 10px 0 4px;
+            font-size: 30px;
+            color: #17120e;
+        }
+        .sub { color: #6d5a42; font-weight: 700; }
+        h2 {
+            font-size: 22px;
+            color: #33281f;
+            margin: 22px 0 8px;
+            border-right: 5px solid #9f7d4f;
+            padding-right: 10px;
+        }
+        p { font-size: 17px; margin: 8px 0; color: #332c25; }
+        .note {
+            background: rgba(255,255,255,.62);
+            border: 1px solid rgba(222, 212, 196, .9);
+            border-radius: 16px;
+            padding: 13px 14px;
+            margin-top: 14px;
+            color: #46392d;
+        }
+        .nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+        .btn {
+            flex: 1;
+            min-width: 145px;
+            text-align: center;
+            text-decoration: none;
+            color: #fff;
+            background: #6f4e37;
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-weight: 800;
+        }
+        .btn.secondary { background: #d8c7ad; color: #2d2926; }
+        .footer {
+            margin: 14px auto 0;
+            text-align: center;
+            color: #d9c7a7;
+            font-size: 13px;
+        }
+        @media (max-width: 520px) {
+            .page { padding: 12px 10px 24px; }
+            .card { border-radius: 22px; padding: 18px 14px; }
+            h1 { font-size: 27px; }
+            h2 { font-size: 20px; }
+            p { font-size: 16px; }
+        }
+    </style>
+<!-- Google AdSense Auto Ads --><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8021374675748501" crossorigin="anonymous"></script></head>
+<body>
+<div class="page">
+    <section class="card">
+        <div class="top">
+            <img class="logo" src="data:image/jpeg;base64,{{ logo_b64 }}" alt="AstroGate">
+            <h1>من نحن</h1>
+            <div class="sub">AstroGate - بوابة التحليل الفلكي</div>
+        </div>
+
+        <p>AstroGate منصة عربية متخصصة في تقديم أدوات فلكية مبسطة ومنظمة تساعد المستخدم على قراءة خريطته الشخصية وفهم المؤشرات العامة المرتبطة بالطالع، الكواكب، البيوت، الزوايا، ونقاط التفعيل.</p>
+
+        <h2>رؤيتنا</h2>
+        <p>نسعى إلى تحويل التحليل الفلكي من نصوص متفرقة وصعبة إلى تجربة رقمية واضحة، تجعل المستخدم قادرًا على إدخال بياناته مرة واحدة ثم الاستفادة منها داخل أدوات متعددة في الموقع.</p>
+
+        <h2>إشراف وإعداد</h2>
+        <p>تعمل المنصة بإشراف الخبير الفلكي عباس الشباني، باحث ومحلل فلكي يهتم بربط الرموز الفلكية بالقراءة النفسية والحياتية بلغة مفهومة للقارئ العربي.</p>
+
+        <h2>ما الذي تقدمه المنصة؟</h2>
+        <p>تبدأ المنصة حاليًا بأدوات قراءة الخريطة الشخصية والمؤشرات الصحية الفلكية، ثم ستتوسع تدريجيًا لتشمل التوقعات الشخصية، نقاط المنتصف، توافق العلاقات، توقيت الزواج، تصحيح الطالع، والمقالات الفلكية.</p>
+
+        <div class="note">
+            <strong>تنبيه مهم:</strong>
+            التحليلات المنشورة في الموقع هي قراءات فلكية رمزية وبحثية، ولا تُعد بديلًا عن الاستشارة الطبية أو النفسية أو القانونية أو المالية المتخصصة.
+        </div>
+
+        <div class="nav">
+            <a class="btn" href="/">العودة إلى الرئيسية</a>
+            <a class="btn secondary" href="/profile">إدخال بياناتي الفلكية</a>
+        </div>
+    </section>
     <div class="footer">جميع الحقوق محفوظة للمطور astrologer.ab@</div>
 </div>
 </body>
@@ -4885,6 +5023,11 @@ def home():
         planet_summary=planet_summary,
     )
 
+
+
+@app.route("/about")
+def about():
+    return render_template_string(ABOUT_HTML, logo_b64=PLATFORM_LOGO_B64)
 
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
