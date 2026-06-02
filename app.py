@@ -4404,6 +4404,8 @@ HOME_HTML = r"""
         <span> | </span>
         <a href="/privacy">سياسة الخصوصية</a>
         <span> | </span>
+        <a href="/contact">اتصل بنا</a>
+        <span> | </span>
         <span>جميع الحقوق محفوظة للمطور astrologer.ab@</span>
     </div>
 </div>
@@ -4531,6 +4533,7 @@ ABOUT_HTML = r"""
             <a class="btn" href="/">العودة إلى الرئيسية</a>
             <a class="btn secondary" href="/profile">إدخال بياناتي الفلكية</a>
             <a class="btn secondary" href="/privacy">سياسة الخصوصية</a>
+            <a class="btn secondary" href="/contact">اتصل بنا</a>
         </div>
     </section>
     <div class="footer">جميع الحقوق محفوظة للمطور astrologer.ab@</div>
@@ -4585,13 +4588,85 @@ PRIVACY_HTML = r"""
         <div class="note">التحليلات المنشورة في الموقع هي قراءات فلكية رمزية وبحثية، ولا تُعد بديلًا عن الاستشارة الطبية أو النفسية أو القانونية أو المالية المتخصصة.</div>
         <h2>تحديث السياسة</h2>
         <p>قد يتم تحديث سياسة الخصوصية من وقت إلى آخر بما يتناسب مع تطوير المنصة أو متطلبات خدمات الإعلان. استمرار استخدام الموقع يعني قبول هذه السياسة بصيغتها المنشورة.</p>
-        <div class="nav"><a class="btn" href="/">العودة إلى الرئيسية</a><a class="btn secondary" href="/about">من نحن</a></div>
+        <div class="nav"><a class="btn" href="/">العودة إلى الرئيسية</a><a class="btn secondary" href="/about">من نحن</a><a class="btn secondary" href="/contact">اتصل بنا</a></div>
     </section>
     <div class="footer">جميع الحقوق محفوظة للمطور astrologer.ab@</div>
 </div>
 </body>
 </html>
 """
+
+CONTACT_HTML = r"""
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>اتصل بنا - AstroGate</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { margin:0; font-family:Tahoma,Arial,sans-serif; background:radial-gradient(circle at top left, rgba(212,175,106,.18), transparent 30%), linear-gradient(180deg,#160d22 0%,#241432 48%,#170d21 100%); color:#2d2926; line-height:1.9; }
+        .page { max-width:760px; margin:0 auto; padding:14px 14px 28px; }
+        .card { background:#f7f1e4; border:1px solid rgba(197,172,125,.72); border-radius:24px; box-shadow:0 18px 35px rgba(0,0,0,.22); padding:20px 18px; }
+        .top { text-align:center; margin-bottom:16px; }
+        .logo { width:88px; height:88px; border-radius:50%; border:2px solid #b99a5b; object-fit:cover; background:#050505; box-shadow:0 7px 18px rgba(0,0,0,.18); }
+        h1 { margin:10px 0 4px; font-size:30px; color:#17120e; }
+        .sub { color:#6d5a42; font-weight:700; }
+        h2 { font-size:22px; color:#33281f; margin:22px 0 8px; border-right:5px solid #9f7d4f; padding-right:10px; }
+        p { font-size:16.5px; color:#332c25; }
+        .contact-list { display:grid; gap:12px; margin-top:18px; }
+        .contact-item { background:rgba(255,255,255,.62); border:1px solid rgba(222,212,196,.9); border-radius:16px; padding:14px; }
+        .contact-item strong { display:block; color:#3b2f2f; font-size:18px; margin-bottom:4px; }
+        .contact-item a { color:#5b3f2c; font-weight:800; text-decoration:none; overflow-wrap:anywhere; }
+        .note { background:rgba(255,255,255,.62); border:1px solid rgba(222,212,196,.9); border-radius:16px; padding:13px 14px; margin-top:16px; color:#46392d; }
+        .nav { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+        .btn { flex:1; min-width:145px; text-align:center; text-decoration:none; color:#fff; background:#6f4e37; border-radius:14px; padding:12px 14px; font-weight:800; }
+        .btn.secondary { background:#d8c7ad; color:#2d2926; }
+        .footer { margin:14px auto 0; text-align:center; color:#d9c7a7; font-size:13px; }
+        @media(max-width:520px){ .page{padding:12px 10px 24px}.card{border-radius:22px;padding:18px 14px}h1{font-size:27px}h2{font-size:20px}p{font-size:16px} }
+    </style>
+<!-- Google AdSense Auto Ads --><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8021374675748501" crossorigin="anonymous"></script></head>
+<body>
+<div class="page">
+    <section class="card">
+        <div class="top">
+            <img class="logo" src="data:image/jpeg;base64,{{ logo_b64 }}" alt="AstroGate">
+            <h1>اتصل بنا</h1>
+            <div class="sub">AstroGate - بوابة التحليل الفلكي</div>
+        </div>
+
+        <p>للتواصل مع منصة AstroGate أو مع الخبير الفلكي عباس الشباني، يمكنكم استخدام إحدى وسائل التواصل التالية:</p>
+
+        <div class="contact-list">
+            <div class="contact-item">
+                <strong>تيليغرام</strong>
+                <a href="https://t.me/HHHU6" target="_blank" rel="noopener">@HHHU6</a>
+            </div>
+            <div class="contact-item">
+                <strong>البريد الإلكتروني</strong>
+                <a href="mailto:sajjoody@gmail.com">sajjoody@gmail.com</a>
+            </div>
+            <div class="contact-item">
+                <strong>تيك توك</strong>
+                <a href="https://www.tiktok.com/@astrologer.ab?_r=1&_t=ZS-96s85hqdVNU" target="_blank" rel="noopener">@astrologer.ab</a>
+            </div>
+        </div>
+
+        <div class="note">
+            يرجى ملاحظة أن الردود قد تتأخر حسب ضغط الرسائل. التحليلات الفلكية المنشورة في الموقع ذات طابع رمزي وبحثي، ولا تُغني عن الاستشارة الطبية أو النفسية أو القانونية أو المالية المتخصصة.
+        </div>
+
+        <div class="nav">
+            <a class="btn" href="/">العودة إلى الرئيسية</a>
+            <a class="btn secondary" href="/about">من نحن</a>
+            <a class="btn secondary" href="/privacy">سياسة الخصوصية</a>
+        </div>
+    </section>
+    <div class="footer">جميع الحقوق محفوظة للمطور astrologer.ab@</div>
+</div>
+</body>
+</html>
+"""
+
 
 PROFILE_HTML = r"""
 <!DOCTYPE html>
@@ -5089,6 +5164,10 @@ def about():
 @app.route("/privacy")
 def privacy():
     return render_template_string(PRIVACY_HTML, logo_b64=PLATFORM_LOGO_B64)
+
+@app.route("/contact")
+def contact():
+    return render_template_string(CONTACT_HTML, logo_b64=PLATFORM_LOGO_B64)
 
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
