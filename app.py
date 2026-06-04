@@ -4579,7 +4579,7 @@ HOME_HTML = r"""
             <a class="tool-item" href="/health">
                 <span class="tool-icon">✚</span>
                 <span class="tool-text">المؤشرات الصحية</span>
-                <span class="tool-badge open">متاح</span>
+                <span class="tool-badge open">مجاني</span>
             </a>
             <a class="tool-item" href="/midpoints">
                 <span class="tool-icon">✦</span>
@@ -4663,6 +4663,14 @@ MONTHLY_SUBSCRIPTION_HTML = r"""
         .primary { background:#2f6f4e; color:#fff; }
         .secondary { background:#d8c7ad; color:#2d2926; }
         .note { background:rgba(255,255,255,.65); border:1px solid rgba(222,212,196,.9); border-radius:16px; padding:13px 14px; margin-top:14px; color:#46392d; }
+        .code-form { background:#fffdf8; border:1px solid #e2d6c5; border-radius:18px; padding:14px; margin-top:16px; }
+        .code-form label { display:block; font-weight:900; margin-bottom:7px; color:#3b2f2f; }
+        .code-form input { width:100%; box-sizing:border-box; padding:12px; border-radius:12px; border:1px solid #c8bda9; font-size:17px; text-align:center; direction:ltr; font-weight:900; }
+        .code-form button { width:100%; margin-top:10px; border:0; border-radius:14px; padding:13px; background:#2f6f4e; color:#fff; font-size:17px; font-weight:900; cursor:pointer; }
+        .status-ok { background:#e9f7ef; border:1px solid #b9e1c8; color:#245b38; border-radius:15px; padding:13px; margin-top:14px; font-weight:800; }
+        .status-error { background:#fdecec; border:1px solid #e5b9b9; color:#7a2020; border-radius:15px; padding:13px; margin-top:14px; font-weight:800; }
+        .premium-panel { background:linear-gradient(135deg,#fffaf1,#ead8b9); border:1px solid #c5a66f; border-radius:18px; padding:16px; margin-top:16px; }
+        .premium-panel h2 { border-right:5px solid #2f6f4e; }
         .footer { margin:14px auto 0; text-align:center; color:#d9c7a7; font-size:13px; }
         @media(max-width:650px){ .grid{grid-template-columns:1fr} h1{font-size:26px} .card{padding:18px 14px} }
     </style>
@@ -4688,6 +4696,29 @@ MONTHLY_SUBSCRIPTION_HTML = r"""
         <h2>طريقة الاشتراك</h2>
         <p>لا ننشر أرقام بطاقات أو وسائل دفع داخل الموقع. يتم طلب الاشتراك والتفاهم على التفاصيل مباشرة عبر تيليغرام.</p>
         <div class="note">عند التواصل، أرسل رقم الطلب الظاهر في هذه الصفحة إلى @Astrol25 حتى يتم ربط الطلب بزيارتك للموقع.</div>
+
+        <form class="code-form" method="post" action="/monthly-subscription">
+            <label>تفعيل الاشتراك الشهري بالكود</label>
+            <input name="subscription_code" placeholder="SUB-XXXX-XXXX" autocomplete="off">
+            <button type="submit">تفعيل الاشتراك</button>
+        </form>
+
+        {% if activation_message %}
+            <div class="{{ 'status-ok' if activation_success else 'status-error' }}">{{ activation_message }}</div>
+        {% endif %}
+
+        {% if subscription_unlocked %}
+        <div class="premium-panel">
+            <h2>تم تفعيل الاشتراك الشهري</h2>
+            <p>أصبح بإمكانك متابعة تقاريرك الشهرية الاحترافية لهذا الشهر حسب الخدمة المتفق عليها عبر تيليغرام.</p>
+            <p>استخدم صفحة التوقعات الشخصية لاستخراج التقرير الشهري، وإذا احتجت متابعة خاصة أرسل نفس رقم الطلب في تيليغرام.</p>
+            <div class="btns">
+                <a class="btn primary" href="/forecast">فتح التوقعات الشخصية</a>
+                <a class="btn secondary" href="/profile">تحديث بياناتي الفلكية</a>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="btns">
             <a class="btn primary" href="{{ telegram_url }}" target="_blank" rel="noopener">طلب الاشتراك عبر تيليغرام</a>
             <a class="btn secondary" href="/profile">إدخال بياناتي الفلكية</a>
@@ -5464,17 +5495,38 @@ def home():
 
 
 
-@app.route("/monthly-subscription")
+@app.route("/monthly-subscription", methods=["GET", "POST"])
 def monthly_subscription():
     saved = session.get("astro_profile", {}) if isinstance(session.get("astro_profile", {}), dict) else {}
     name = str(saved.get("name", ""))
     order_id = generate_service_order_id("AGM")
     msg = monthly_subscription_message(order_id, name)
+
+    activation_message = ""
+    activation_success = False
+    subscription_unlocked = False
+
+    if request.method == "POST":
+        code = request.form.get("subscription_code", "")
+        ok, clean_code, check_msg = check_premium_code(code, "subscription")
+        if ok:
+            mark_premium_code_used(clean_code, "subscription")
+            activation_success = True
+            subscription_unlocked = True
+            session["monthly_subscription_active"] = True
+            session["monthly_subscription_code"] = clean_code
+            activation_message = "تم تفعيل الاشتراك الشهري بنجاح. يمكنك الآن متابعة تقاريرك الشهرية الاحترافية حسب الخدمة المتفق عليها."
+        else:
+            activation_message = check_msg
+
     return render_template_string(
         MONTHLY_SUBSCRIPTION_HTML,
         logo_b64=PLATFORM_LOGO_B64,
         order_id=order_id,
         telegram_url=telegram_contact_url(msg),
+        activation_message=activation_message,
+        activation_success=activation_success,
+        subscription_unlocked=subscription_unlocked or bool(session.get("monthly_subscription_active")),
     )
 
 
@@ -5613,13 +5665,13 @@ def natal():
 # تطبيق المؤشرات الصحية الفلكية داخل AstroGate
 # ============================================================
 
+FERTILITY_SYSTEM = "الخصوبة والإنجاب"
 HEALTH_SYSTEMS_ORDER = [
-    "الجهاز القلبي الوعائي", "الجهاز العصبي", "الجهاز الهضمي", "الجهاز البولي والكلى",
+    "الجهاز القلبي الوعائي", "الجهاز العصبي والدماغ", "الجهاز الهضمي", "الجهاز البولي والكلى",
     "الجهاز التنفسي", "العظام والأسنان والمفاصل", "العيون والبصر", "السمع والأذن",
-    "الجلد والبشرة", "الغدد والهرمونات", "المناعة والحساسية", "الالتهابات والجراحة",
+    "الجلد والبشرة", "الغدد والهرمونات", "الخصوبة والإنجاب", "المناعة والحساسية", "الالتهابات والجراحة",
     "الفحص الوقائي العميق",
 ]
-FERTILITY_SYSTEM = "الخصوبة والإنجاب"
 HEALTH_ASPECTS = {"اقتران": 0, "نصف تربيع": 45, "تسديس": 60, "تربيع": 90, "تثليث": 120, "تربيع ونصف": 135, "مقابلة": 180}
 HEALTH_HARD_ASPECTS = ["اقتران", "تربيع", "مقابلة", "نصف تربيع", "تربيع ونصف"]
 HEALTH_PLANET_AR = {"Sun":"الشمس","Moon":"القمر","Mercury":"عطارد","Venus":"الزهرة","Mars":"المريخ","Jupiter":"المشتري","Saturn":"زحل","Uranus":"أورانوس","Neptune":"نبتون","Pluto":"بلوتو"}
@@ -5737,7 +5789,7 @@ def health_apply_fertility_rules(positions: Dict[str, BodyPosition], cusps: List
 
 HEALTH_PUBLIC_GUIDE = {
     "الجهاز القلبي الوعائي": {"meaning":"يرتبط هذا المحور بالحيوية العامة، القلب، الدورة الدموية، حرارة الجسد، وطريقة استجابة الجسم للضغط.","manifestation":"قد يظهر عند التفعيل على شكل إجهاد سريع، توتر جسدي، اضطراب في الإيقاع اليومي، أو حساسية تجاه الانفعال والضغط.","advice":"راقب ضغط الحياة اليومي، خفف التوتر، ولا تؤجل الفحص الطبي عند وجود خفقان أو ألم أو تعب متكرر."},
-    "الجهاز العصبي": {"meaning":"يرتبط هذا المحور بالأعصاب، التفكير الزائد، التوتر الذهني، النوم، سرعة الاستجابة، وحساسية الجسم للمنبهات.","manifestation":"قد يظهر عند الضغط كقلق، أرق، توتر، تنميل، إرهاق ذهني، أو صعوبة في تهدئة التفكير.","advice":"نظّم النوم، خفف المنبهات، امنح الجسم فترات هدوء، وراجع الطبيب عند استمرار الأعراض العصبية."},
+    "الجهاز العصبي والدماغ": {"meaning":"يرتبط هذا المحور بالأعصاب، التفكير الزائد، التوتر الذهني، النوم، سرعة الاستجابة، وحساسية الجسم للمنبهات.","manifestation":"قد يظهر عند الضغط كقلق، أرق، توتر، تنميل، إرهاق ذهني، أو صعوبة في تهدئة التفكير.","advice":"نظّم النوم، خفف المنبهات، امنح الجسم فترات هدوء، وراجع الطبيب عند استمرار الأعراض العصبية."},
     "الجهاز الهضمي": {"meaning":"يرتبط هذا المحور بالمعدة، الهضم، الغذاء، السوائل، واستجابة البطن للحالة النفسية والروتين اليومي.","manifestation":"قد يظهر مع التوتر أو اضطراب الطعام على شكل تهيج، ثقل، حموضة، انتفاخ، أو حساسية غذائية.","advice":"نظّم مواعيد الطعام، راقب ما يهيج المعدة، وراجع الطبيب عند تكرر الألم أو اضطراب الهضم."},
     "الجهاز البولي والكلى": {"meaning":"يرتبط هذا المحور بالسوائل، الكلى، التوازن الداخلي، التنقية، وأحيانًا أثر الجفاف أو الأملاح.","manifestation":"قد يظهر عند الإهمال كاحتباس سوائل، جفاف، اضطراب أملاح، أو حساسية في محور الكلى والبول.","advice":"اهتم بالماء والتوازن الغذائي، ولا تؤجل التحاليل عند وجود ألم أو حرقة أو تغير واضح في البول."},
     "الجهاز التنفسي": {"meaning":"يرتبط هذا المحور بالتنفس، الصدر، الشعب، الحساسية التنفسية، وطريقة تفاعل الجسم مع الهواء والقلق.","manifestation":"قد يظهر كحساسية، ضيق، سعال متكرر، أو تأثر التنفس مع التوتر والبيئة.","advice":"انتبه للغبار والتدخين والبرد، وراجع الطبيب عند استمرار ضيق التنفس أو السعال."},
@@ -5806,17 +5858,17 @@ def build_health_report_from_form(form: Dict[str, str]) -> Dict[str, object]:
     if h("Sun") in [6,8,12]: health_add_score(scores, reasons, "الجهاز القلبي الوعائي", 2, "وجود الشمس في بيت صحي أو عميق يجعل محور الحيوية والقلب والدورة الدموية أكثر حساسية فلكيًا.")
     if h("Mercury") in [3,6,12]:
         health_add_score(scores, reasons, "الجهاز التنفسي", 2, "وجود عطارد في بيت مرتبط بالحركة أو الصحة أو الأمور الخفية قد يرفع حساسية التنفس والأعصاب.")
-        health_add_score(scores, reasons, "الجهاز العصبي", 1, "عطارد في بيت حساس يزيد حضور المحور العصبي والذهني في الخريطة.")
+        health_add_score(scores, reasons, "الجهاز العصبي والدماغ", 1, "عطارد في بيت حساس يزيد حضور المحور العصبي والذهني في الخريطة.")
 
     aspect_rules = [
         (("Mars","Saturn"),"العظام والأسنان والمفاصل",5,"اتصال صعب بين المريخ وزحل: دلالة ألم، عظام، أسنان، مفاصل، كسور، أو تأخر شفاء."),(("Mars","Saturn"),"الالتهابات والجراحة",4,"اتصال المريخ بزحل قد يدل على جراحة، إصابة، أو التهاب مع انسداد."),
         (("Sun","Neptune"),"المناعة والحساسية",4,"اتصال صعب بين الشمس ونبتون: وهن، حساسية، تعب غير واضح، أو ضعف مناعة."),(("Sun","Neptune"),"العيون والبصر",3,"اتصال الشمس بنبتون قد يرتبط بضبابية الرؤية أو حساسية الضوء."),
         (("Sun","Saturn"),"العظام والأسنان والمفاصل",3,"اتصال الشمس بزحل قد يدل على تعب مزمن أو ضعف في العظام والظهر."),(("Sun","Saturn"),"العيون والبصر",3,"اتصال الشمس بزحل قد يرفع دلالة إجهاد العين أو الجفاف أو الضعف التدريجي."),(("Sun","Saturn"),"الجهاز القلبي الوعائي",3,"اتصال الشمس بزحل قد يدل فلكيًا على انخفاض الحيوية أو ضغط على محور القلب والدورة الدموية."),
         (("Sun","Mars"),"الجهاز القلبي الوعائي",3,"اتصال صعب بين الشمس والمريخ قد يرفع حرارة الجسد أو التوتر أو سرعة الاستجابة القلبية."),(("Sun","Mars"),"الالتهابات والجراحة",3,"الشمس مع المريخ قد تعطي قابلية للالتهاب أو الإصابات عند التفعيل."),
-        (("Sun","Uranus"),"الجهاز القلبي الوعائي",3,"اتصال صعب بين الشمس وأورانوس قد يرمز إلى اضطراب مفاجئ في الحيوية أو النبض أو التوتر الجسدي."),(("Sun","Uranus"),"الجهاز العصبي",2,"الشمس مع أورانوس قد ترفع حساسية الجهاز العصبي والتوتر المفاجئ."),
-        (("Mercury","Uranus"),"الجهاز العصبي",4,"اتصال عطارد بأورانوس يدل على توتر عصبي أو كهرباء عصبية أو تنميل."),(("Mercury","Uranus"),"السمع والأذن",3,"اتصال عطارد بأورانوس قد يدل على طنين أو حساسية صوتية مفاجئة."),
-        (("Mercury","Saturn"),"الجهاز العصبي",4,"اتصال عطارد بزحل يدل على توتر عصبي مزمن أو بطء في الاستجابة العصبية."),(("Mercury","Saturn"),"السمع والأذن",3,"اتصال عطارد بزحل قد يرفع دلالة ضعف السمع أو الطنين المزمن."),(("Mercury","Saturn"),"الجهاز التنفسي",2,"عطارد مع زحل قد يدل على بطء أو جفاف أو ضيق في المحور التنفسي عند وجود عوامل مساعدة."),
-        (("Mercury","Neptune"),"الجهاز العصبي",3,"اتصال عطارد بنبتون يدل على تشوش عصبي أو أعراض غير واضحة."),(("Mercury","Neptune"),"السمع والأذن",3,"اتصال عطارد بنبتون قد يرتبط بطنين أو حساسية صوتية."),(("Mercury","Neptune"),"المناعة والحساسية",2,"عطارد مع نبتون يرفع دلالة الحساسية والتنفس الحساس."),(("Mercury","Neptune"),"الجهاز التنفسي",3,"عطارد مع نبتون قد يدل على حساسية تنفسية أو أعراض متغيرة وغير واضحة."),
+        (("Sun","Uranus"),"الجهاز القلبي الوعائي",3,"اتصال صعب بين الشمس وأورانوس قد يرمز إلى اضطراب مفاجئ في الحيوية أو النبض أو التوتر الجسدي."),(("Sun","Uranus"),"الجهاز العصبي والدماغ",2,"الشمس مع أورانوس قد ترفع حساسية الجهاز العصبي والدماغ والتوتر المفاجئ."),
+        (("Mercury","Uranus"),"الجهاز العصبي والدماغ",4,"اتصال عطارد بأورانوس يدل على توتر عصبي أو كهرباء عصبية أو تنميل."),(("Mercury","Uranus"),"السمع والأذن",3,"اتصال عطارد بأورانوس قد يدل على طنين أو حساسية صوتية مفاجئة."),
+        (("Mercury","Saturn"),"الجهاز العصبي والدماغ",4,"اتصال عطارد بزحل يدل على توتر عصبي مزمن أو بطء في الاستجابة العصبية."),(("Mercury","Saturn"),"السمع والأذن",3,"اتصال عطارد بزحل قد يرفع دلالة ضعف السمع أو الطنين المزمن."),(("Mercury","Saturn"),"الجهاز التنفسي",2,"عطارد مع زحل قد يدل على بطء أو جفاف أو ضيق في المحور التنفسي عند وجود عوامل مساعدة."),
+        (("Mercury","Neptune"),"الجهاز العصبي والدماغ",3,"اتصال عطارد بنبتون يدل على تشوش عصبي أو أعراض غير واضحة."),(("Mercury","Neptune"),"السمع والأذن",3,"اتصال عطارد بنبتون قد يرتبط بطنين أو حساسية صوتية."),(("Mercury","Neptune"),"المناعة والحساسية",2,"عطارد مع نبتون يرفع دلالة الحساسية والتنفس الحساس."),(("Mercury","Neptune"),"الجهاز التنفسي",3,"عطارد مع نبتون قد يدل على حساسية تنفسية أو أعراض متغيرة وغير واضحة."),
         (("Venus","Saturn"),"الجهاز البولي والكلى",4,"اتصال الزهرة بزحل يدل على كلى، جلد، هرمونات، جفاف، أو نقص."),(("Venus","Saturn"),"الجلد والبشرة",3,"اتصال الزهرة بزحل قد يدل على جفاف الجلد أو حساسية مزمنة أو نقص في الترطيب."),(("Venus","Saturn"),"الغدد والهرمونات",2,"الزهرة مع زحل قد ترفع حساسية محور الهرمونات أو التوازن الداخلي."),
         (("Venus","Neptune"),"الجهاز البولي والكلى",3,"اتصال الزهرة بنبتون يدل على سوائل، كلى، هرمونات، أو حساسية."),(("Venus","Neptune"),"المناعة والحساسية",3,"الزهرة مع نبتون ترفع دلالة الحساسية الجلدية أو الدوائية."),(("Venus","Neptune"),"الغدد والهرمونات",3,"الزهرة مع نبتون قد تشير إلى حساسية في المحور الهرموني أو السوائل."),
         (("Venus","Pluto"),"الغدد والهرمونات",3,"اتصال الزهرة ببلوتو يرفع حساسية محور الهرمونات والأنسجة العميقة."),(("Venus","Pluto"),"الفحص الوقائي العميق",2,"الزهرة مع بلوتو قد تشير إلى حاجة لمتابعة وقائية للأنسجة أو الغدد عند وجود أعراض."),
@@ -5834,22 +5886,22 @@ def build_health_report_from_form(form: Dict[str, str]) -> Dict[str, object]:
         scores[key] = max(0, int(scores[key]))
 
     score_rows = []
-    for system in HEALTH_SYSTEMS_ORDER + [FERTILITY_SYSTEM]:
+    for system in HEALTH_SYSTEMS_ORDER:
         score = scores.get(system, 0)
         score_rows.append(health_public_row(system, score, reasons.get(system, [])))
 
     active_rows = [r for r in score_rows if int(r["score"]) >= 4]
     active_rows.sort(key=lambda r: int(r["score"]), reverse=True)
     calm_rows = [r for r in score_rows if int(r["score"]) < 4]
-    fertility_row = next((r for r in score_rows if r["system"] == FERTILITY_SYSTEM), None)
-    health_active_rows = [r for r in active_rows if r["system"] != FERTILITY_SYSTEM]
+    fertility_row = None
+    health_active_rows = active_rows
 
     planet_rows = [{"name": positions[k].name_ar, "pos": f"{positions[k].sign} {format_degree(positions[k].degree)}", "house": positions[k].house, "motion": "متراجع" if positions[k].retrograde else "مباشر"} for k in ["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto"]]
     aspect_rows = [{"p1": HEALTH_PLANET_AR.get(str(a["planet1"]), str(a["planet1"])), "p2": HEALTH_PLANET_AR.get(str(a["planet2"]), str(a["planet2"])), "aspect": a["aspect"], "orb": a["orb"]} for a in aspects]
     return {"name": name, "gender": gender, "date": f"{day}/{month}/{year}", "time": f"{hour:02d}:{minute:02d}", "timezone": timezone, "city": city_input, "asc": f"{angles['ASC_sign']} {format_degree(float(angles['ASC_degree']))}", "mc": f"{angles['MC_sign']} {format_degree(float(angles['MC_degree']))}", "summary": health_summary_text(health_active_rows, calm_rows), "score_rows": score_rows, "active_rows": health_active_rows, "calm_rows": calm_rows, "fertility_row": fertility_row, "planet_rows": planet_rows, "aspect_rows": aspect_rows}
 
 
-HEALTH_HTML = '<!DOCTYPE html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charset="UTF-8">\n<title>المؤشرات الصحية | AstroGate</title>\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<style>\n*{box-sizing:border-box}\nbody{font-family:Tahoma,Arial,sans-serif;background:linear-gradient(180deg,#160d22 0%,#241432 45%,#170d21 100%);margin:0;color:#2d2926;line-height:1.9}\n.container{max-width:900px;margin:0 auto;padding:18px}.card{background:#f7f1e4;border:1px solid rgba(197,172,125,.72);border-radius:22px;padding:18px;margin-bottom:16px;box-shadow:0 14px 28px rgba(0,0,0,.20)}\nh1,h2,h3{margin-top:0;color:#1d1712}.center{text-align:center}.nav{text-align:center;margin:12px 0}.nav a{display:inline-block;background:#fffdf8;border:1px solid #ded4c4;color:#5a3f2a;text-decoration:none;padding:8px 14px;border-radius:999px;font-weight:bold;margin:4px}\n.notice{background:#fff8e8;border:1px solid #dec99d;border-radius:16px;padding:12px}.summary{font-size:17px;font-weight:700;color:#2b2119}.health-card{background:#fffdf8;border:1px solid #e4d8c4;border-radius:18px;padding:15px;margin:12px 0}.health-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.level{font-weight:bold;background:#efe5d4;border-radius:999px;padding:5px 12px;color:#4c3a2c}.level.hot{background:#ead9c4;color:#5f301a}.bar{height:34px;background:#e9dfcf;border-radius:999px;overflow:hidden;margin:10px 0 12px;position:relative}.fill{height:100%;background:#8b6f47;border-radius:999px}.percent-label{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-weight:900;font-size:18px;color:#4b3828;direction:ltr}.percent-title{font-weight:bold;background:#f8efe0;border:1px solid #e4d8c4;border-radius:999px;padding:5px 12px;color:#4c3a2c;direction:ltr}.sub{font-weight:bold;color:#5f4936;margin-top:9px}.quiet-list{display:flex;flex-wrap:wrap;gap:8px}.quiet-item{background:#fffdf8;border:1px solid #e4d8c4;border-radius:999px;padding:6px 10px;font-size:14px}.details{margin-top:10px;background:#faf6ee;border:1px solid #eadfce;border-radius:14px;padding:10px}.small-table{width:100%;border-collapse:collapse;background:#fffdf8;border-radius:14px;overflow:hidden}.small-table th,.small-table td{border-bottom:1px solid #e4d8c4;padding:9px;text-align:right}.footer{text-align:center;color:#d9c7a7;font-size:13px;margin-top:14px}@media(max-width:650px){.container{padding:12px}.health-head{display:block}.small-table{font-size:13px}}\n</style></head><body><div class="container">\n<div class="card center"><h1>المؤشرات الصحية الوقائية</h1><p>قراءة فلكية رمزية للمحاور الجسدية الأكثر قابلية للتأثر، بلغة وقائية لا تشخيصية.</p><div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a></div></div>\n{% if error %}<div class="card notice"><strong>{{ error }}</strong><br><a href="/profile">إدخال بياناتي الفلكية</a></div>{% elif report %}\n<div class="card"><h2>بيانات الحساب</h2><p><strong>{{ report.name }}</strong> — {{ report.gender }}<br>تاريخ الميلاد: {{ report.date }} — الوقت: {{ report.time }} — GMT {{ \'%+.2f\'|format(report.timezone) }}<br>المدينة: {{ report.city }}<br>الطالع: {{ report.asc }} — MC: {{ report.mc }}</p><div class="notice">هذا التقرير لا يقدم تشخيصًا طبيًا ولا يغني عن الطبيب. ارتفاع المؤشر يعني حضورًا فلكيًا أو قابلية رمزية تحتاج انتباهًا وقائيًا فقط، خاصة عند وجود أعراض واقعية.</div></div>\n<div class="card"><h2>الخلاصة الصحية العامة</h2><p class="summary">{{ report.summary }}</p></div>\n<div class="card"><h2>أبرز المحاور الصحية التي تستحق الانتباه</h2>{% if report.active_rows %}{% for row in report.active_rows %}<div class="health-card"><div class="health-head"><h3>{{ row.system }}</h3><span class="percent-title">{{ row.percent }}%</span><span class="level {% if row.score > 12 %}hot{% endif %}">{{ row.level }}</span></div><div class="bar"><div class="fill" style="width:{{ row.percent }}%"></div><span class="percent-label">{{ row.percent }}%</span></div><p><strong>{{ row.level_intro }}</strong></p><div class="sub">المعنى</div><p>{{ row.meaning }}</p><div class="sub">كيف قد يظهر؟</div><p>{{ row.manifestation }}</p><div class="sub">النصيحة الوقائية</div><p>{{ row.advice }}</p>{% if row.reasons %}<details class="details"><summary>الأسباب الفلكية المختصرة</summary><ul>{% for reason in row.reasons %}<li>{{ reason }}</li>{% endfor %}</ul></details>{% endif %}</div>{% endfor %}{% else %}<p>لا توجد محاور صحية بارزة في هذه القراءة. هذا لا يلغي أهمية الطب والفحوصات، لكنه يعني أن المؤشرات الفلكية هادئة نسبيًا.</p>{% endif %}</div>\n{% if report.fertility_row %}<div class="card"><h2>محور الخصوبة والإنجاب</h2><div class="health-card"><div class="health-head"><h3>{{ report.fertility_row.system }}</h3><span class="percent-title">{{ report.fertility_row.percent }}%</span><span class="level">{{ report.fertility_row.level }}</span></div><div class="bar"><div class="fill" style="width:{{ report.fertility_row.percent }}%"></div><span class="percent-label">{{ report.fertility_row.percent }}%</span></div><p><strong>{{ report.fertility_row.level_intro }}</strong></p><p>{{ report.fertility_row.meaning }}</p><p>{{ report.fertility_row.manifestation }}</p><p>{{ report.fertility_row.advice }}</p>{% if report.fertility_row.reasons %}<details class="details"><summary>الأسباب الفلكية المختصرة</summary><ul>{% for reason in report.fertility_row.reasons %}<li>{{ reason }}</li>{% endfor %}</ul></details>{% endif %}</div></div>{% endif %}\n<div class="card"><h2>المحاور الهادئة فلكيًا</h2><p>هذه المحاور لا تظهر كأولوية فلكية في القراءة الحالية. هذا لا يعني غياب أي احتمال طبي، بل يعني أنها ليست الأكثر بروزًا في الخريطة.</p><div class="quiet-list">{% for row in report.calm_rows %}<span class="quiet-item">{{ row.system }}</span>{% endfor %}</div></div>\n<div class="card"><h2>مواقع الكواكب المستخدمة صحيًا</h2><table class="small-table"><thead><tr><th>الكوكب</th><th>الموقع</th><th>البيت</th><th>الحركة</th></tr></thead><tbody>{% for p in report.planet_rows %}<tr><td>{{ p.name }}</td><td>{{ p.pos }}</td><td>{{ p.house }}</td><td>{{ p.motion }}</td></tr>{% endfor %}</tbody></table></div>\n<div class="card"><h2>الاتصالات الصحية المفحوصة</h2>{% if report.aspect_rows %}<table class="small-table"><thead><tr><th>الكوكب الأول</th><th>الزاوية</th><th>الكوكب الثاني</th><th>الأورب</th></tr></thead><tbody>{% for a in report.aspect_rows %}<tr><td>{{ a.p1 }}</td><td>{{ a.aspect }}</td><td>{{ a.p2 }}</td><td>{{ a.orb }}°</td></tr>{% endfor %}</tbody></table>{% else %}<p>لا توجد اتصالات ضمن الأورب المحدد.</p>{% endif %}</div>\n{% endif %}<div class="footer">جميع الحقوق محفوظة للمطور astrologer.ab@</div></div></body></html>\n'
+HEALTH_HTML = '<!DOCTYPE html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charset="UTF-8">\n<title>المؤشرات الصحية | AstroGate</title>\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<style>\n*{box-sizing:border-box}\nbody{font-family:Tahoma,Arial,sans-serif;background:linear-gradient(180deg,#160d22 0%,#241432 45%,#170d21 100%);margin:0;color:#2d2926;line-height:1.9}\n.container{max-width:900px;margin:0 auto;padding:18px}.card{background:#f7f1e4;border:1px solid rgba(197,172,125,.72);border-radius:22px;padding:18px;margin-bottom:16px;box-shadow:0 14px 28px rgba(0,0,0,.20)}\nh1,h2,h3{margin-top:0;color:#1d1712}.center{text-align:center}.nav{text-align:center;margin:12px 0}.nav a{display:inline-block;background:#fffdf8;border:1px solid #ded4c4;color:#5a3f2a;text-decoration:none;padding:8px 14px;border-radius:999px;font-weight:bold;margin:4px}\n.notice{background:#fff8e8;border:1px solid #dec99d;border-radius:16px;padding:12px}.summary{font-size:17px;font-weight:700;color:#2b2119}.health-card{background:#fffdf8;border:1px solid #e4d8c4;border-radius:18px;padding:15px;margin:12px 0}.health-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.level{font-weight:bold;background:#efe5d4;border-radius:999px;padding:5px 12px;color:#4c3a2c}.level.hot{background:#ead9c4;color:#5f301a}.bar{height:34px;background:#e9dfcf;border-radius:999px;overflow:hidden;margin:10px 0 12px;position:relative}.fill{height:100%;background:#8b6f47;border-radius:999px}.percent-label{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-weight:900;font-size:18px;color:#4b3828;direction:ltr}.percent-title{font-weight:bold;background:#f8efe0;border:1px solid #e4d8c4;border-radius:999px;padding:5px 12px;color:#4c3a2c;direction:ltr}.sub{font-weight:bold;color:#5f4936;margin-top:9px}.quiet-list{display:flex;flex-wrap:wrap;gap:8px}.quiet-item{background:#fffdf8;border:1px solid #e4d8c4;border-radius:999px;padding:6px 10px;font-size:14px}.details{margin-top:10px;background:#faf6ee;border:1px solid #eadfce;border-radius:14px;padding:10px}.small-table{width:100%;border-collapse:collapse;background:#fffdf8;border-radius:14px;overflow:hidden}.small-table th,.small-table td{border-bottom:1px solid #e4d8c4;padding:9px;text-align:right}.footer{text-align:center;color:#d9c7a7;font-size:13px;margin-top:14px}@media(max-width:650px){.container{padding:12px}.health-head{display:block}.small-table{font-size:13px}}\n</style></head><body><div class="container">\n<div class="card center"><h1>المؤشرات الصحية الوقائية</h1><p>قراءة فلكية رمزية للمحاور الجسدية الأكثر قابلية للتأثر، بلغة وقائية لا تشخيصية.</p><div class="notice"><strong>هذه الأداة مجانية بالكامل وبدون اشتراك أو دفع.</strong></div><div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a></div></div>\n{% if error %}<div class="card notice"><strong>{{ error }}</strong><br><a href="/profile">إدخال بياناتي الفلكية</a></div>{% elif report %}\n<div class="card"><h2>بيانات الحساب</h2><p><strong>{{ report.name }}</strong> — {{ report.gender }}<br>تاريخ الميلاد: {{ report.date }} — الوقت: {{ report.time }} — GMT {{ \'%+.2f\'|format(report.timezone) }}<br>المدينة: {{ report.city }}<br>الطالع: {{ report.asc }} — MC: {{ report.mc }}</p><div class="notice">هذا التقرير لا يقدم تشخيصًا طبيًا ولا يغني عن الطبيب. ارتفاع المؤشر يعني حضورًا فلكيًا أو قابلية رمزية تحتاج انتباهًا وقائيًا فقط، خاصة عند وجود أعراض واقعية.</div></div>\n<div class="card"><h2>الخلاصة الصحية العامة</h2><p class="summary">{{ report.summary }}</p></div>\n<div class="card"><h2>أبرز المحاور الصحية التي تستحق الانتباه</h2>{% if report.active_rows %}{% for row in report.active_rows %}<div class="health-card"><div class="health-head"><h3>{{ row.system }}</h3><span class="percent-title">{{ row.percent }}%</span><span class="level {% if row.score > 12 %}hot{% endif %}">{{ row.level }}</span></div><div class="bar"><div class="fill" style="width:{{ row.percent }}%"></div><span class="percent-label">{{ row.percent }}%</span></div><p><strong>{{ row.level_intro }}</strong></p><div class="sub">المعنى</div><p>{{ row.meaning }}</p><div class="sub">كيف قد يظهر؟</div><p>{{ row.manifestation }}</p><div class="sub">النصيحة الوقائية</div><p>{{ row.advice }}</p>{% if row.reasons %}<details class="details"><summary>الأسباب الفلكية المختصرة</summary><ul>{% for reason in row.reasons %}<li>{{ reason }}</li>{% endfor %}</ul></details>{% endif %}</div>{% endfor %}{% else %}<p>لا توجد محاور صحية بارزة في هذه القراءة. هذا لا يلغي أهمية الطب والفحوصات، لكنه يعني أن المؤشرات الفلكية هادئة نسبيًا.</p>{% endif %}</div>\n{% if report.fertility_row %}<div class="card"><h2>محور الخصوبة والإنجاب</h2><div class="health-card"><div class="health-head"><h3>{{ report.fertility_row.system }}</h3><span class="percent-title">{{ report.fertility_row.percent }}%</span><span class="level">{{ report.fertility_row.level }}</span></div><div class="bar"><div class="fill" style="width:{{ report.fertility_row.percent }}%"></div><span class="percent-label">{{ report.fertility_row.percent }}%</span></div><p><strong>{{ report.fertility_row.level_intro }}</strong></p><p>{{ report.fertility_row.meaning }}</p><p>{{ report.fertility_row.manifestation }}</p><p>{{ report.fertility_row.advice }}</p>{% if report.fertility_row.reasons %}<details class="details"><summary>الأسباب الفلكية المختصرة</summary><ul>{% for reason in report.fertility_row.reasons %}<li>{{ reason }}</li>{% endfor %}</ul></details>{% endif %}</div></div>{% endif %}\n<div class="card"><h2>المحاور الهادئة فلكيًا</h2><p>هذه المحاور لا تظهر كأولوية فلكية في القراءة الحالية. هذا لا يعني غياب أي احتمال طبي، بل يعني أنها ليست الأكثر بروزًا في الخريطة.</p><div class="quiet-list">{% for row in report.calm_rows %}<span class="quiet-item">{{ row.system }}</span>{% endfor %}</div></div>\n<div class="card"><h2>مواقع الكواكب المستخدمة صحيًا</h2><table class="small-table"><thead><tr><th>الكوكب</th><th>الموقع</th><th>البيت</th><th>الحركة</th></tr></thead><tbody>{% for p in report.planet_rows %}<tr><td>{{ p.name }}</td><td>{{ p.pos }}</td><td>{{ p.house }}</td><td>{{ p.motion }}</td></tr>{% endfor %}</tbody></table></div>\n<div class="card"><h2>الاتصالات الصحية المفحوصة</h2>{% if report.aspect_rows %}<table class="small-table"><thead><tr><th>الكوكب الأول</th><th>الزاوية</th><th>الكوكب الثاني</th><th>الأورب</th></tr></thead><tbody>{% for a in report.aspect_rows %}<tr><td>{{ a.p1 }}</td><td>{{ a.aspect }}</td><td>{{ a.p2 }}</td><td>{{ a.orb }}°</td></tr>{% endfor %}</tbody></table>{% else %}<p>لا توجد اتصالات ضمن الأورب المحدد.</p>{% endif %}</div>\n{% endif %}<div class="footer">جميع الحقوق محفوظة للمطور astrologer.ab@</div></div></body></html>\n'
 
 
 # ============================================================
