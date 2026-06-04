@@ -29,7 +29,7 @@ import urllib.request
 import urllib.parse
 import ssl
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 
 from flask import Flask, request, render_template_string, jsonify, session, redirect, url_for
@@ -309,19 +309,311 @@ def premium_section_message(order_id: str, name: str = "") -> str:
 # ============================================================
 PREMIUM_SERVICE_PREFIXES = {'forecast': 'FOR', 'marriage': 'MRG', 'relationship': 'REL', 'natal': 'NAT', 'midpoints': 'MID', 'subscription': 'SUB'}
 PREMIUM_SERVICE_LABELS = {'forecast': 'التوقعات الشخصية', 'marriage': 'الزواج والخطوبة', 'relationship': 'توافق العلاقات', 'natal': 'قراءة الخريطة الاحترافية', 'midpoints': 'نقاط المنتصف', 'subscription': 'الاشتراك الشهري'}
-PREMIUM_CODES_BY_SERVICE = {
-    'forecast': ['FOR-CUBX-NEFR', 'FOR-RXWB-LT4B', 'FOR-CN8C-CTLK', 'FOR-LFAG-9MTQ', 'FOR-WGSR-X9VK', 'FOR-3LJ7-KM4P', 'FOR-JMUT-BVMV', 'FOR-BP4M-KGXM', 'FOR-QHRL-N5NJ', 'FOR-XVQE-UPY7', 'FOR-4XAU-JPR2', 'FOR-A4MR-FGTG', 'FOR-DK8Y-HMQW', 'FOR-7HWK-GYEU', 'FOR-KQSR-8STM', 'FOR-NBS3-MMGG', 'FOR-UBF6-NTWA', 'FOR-LNVE-D9KY', 'FOR-GL2S-93EV', 'FOR-RRKG-XEX9', 'FOR-WEPA-5MRB', 'FOR-CTFE-BR98', 'FOR-7XXD-Y3W5', 'FOR-XXZW-TG6Z', 'FOR-6GA7-CA7Q', 'FOR-LPLS-ABS5', 'FOR-68SC-3TQJ', 'FOR-XEL4-H3JB', 'FOR-BEW3-LAY6', 'FOR-BQ8W-E8N5', 'FOR-EZN8-XVFA', 'FOR-STFF-S8A4', 'FOR-SALE-DQTB', 'FOR-3XMR-D6YV', 'FOR-2ENC-S7FD', 'FOR-SHUY-JRGT', 'FOR-E8QX-5R65', 'FOR-THSD-AN2L', 'FOR-GAWH-CC8R', 'FOR-YZA8-KTPE', 'FOR-N4CJ-P3H5', 'FOR-7YTF-Z4WM', 'FOR-AJ9W-E7ET', 'FOR-H29S-QW48', 'FOR-YNBQ-EA8V', 'FOR-SGXC-P5CF', 'FOR-C9FP-CX4X', 'FOR-MY5H-LMKS', 'FOR-N6VD-XR4Y', 'FOR-3M44-LBHU'],
-    'marriage': ['MRG-JE88-78QG', 'MRG-KGAL-2VJS', 'MRG-J9QQ-V2Z4', 'MRG-MJAX-WXFG', 'MRG-3QXA-C4XR', 'MRG-RW7Q-4A3M', 'MRG-AFVH-G5CY', 'MRG-N7B8-DUP4', 'MRG-5JAT-8VWA', 'MRG-L5FX-AZZB', 'MRG-JUEG-XKET', 'MRG-VN3J-U7NH', 'MRG-YKVA-8NKJ', 'MRG-T4C7-SBHM', 'MRG-KGLM-SNB9', 'MRG-D44B-M6KA', 'MRG-RETK-DZN8', 'MRG-DQ6J-DB3H', 'MRG-HE9D-VR33', 'MRG-RKJF-AHPE', 'MRG-NEQ5-VUU3', 'MRG-S23K-YKY6', 'MRG-7RFH-KEJB', 'MRG-UB2A-3XYM', 'MRG-KNYN-M22L', 'MRG-YYJJ-EGN6', 'MRG-ZJVB-W9TW', 'MRG-3L3P-EF8Z', 'MRG-XTQ9-5JK4', 'MRG-E9B7-ZWP4', 'MRG-LV43-S8FC', 'MRG-PWRB-G45A', 'MRG-C3XS-D55X', 'MRG-CTQJ-EF9H', 'MRG-LBJ4-MK4Y', 'MRG-QP78-DB8F', 'MRG-VT24-NF4C', 'MRG-KHGG-VYPT', 'MRG-KBLD-3BVU', 'MRG-K6MG-WRL5', 'MRG-PSKT-ALGT', 'MRG-KLX2-V6BR', 'MRG-DCKZ-UYCE', 'MRG-EDJA-KT5Z', 'MRG-K76C-N68D', 'MRG-WWC8-6CB2', 'MRG-N3LQ-LENG', 'MRG-TFFN-APQF', 'MRG-FPTC-F75P', 'MRG-898Y-DPZK'],
-    'relationship': ['REL-SUGG-DGGE', 'REL-8XN9-PBU8', 'REL-6A5S-9CWR', 'REL-FAGG-MZDW', 'REL-TTJS-KVU9', 'REL-6R7B-6NG5', 'REL-WGEV-5GCK', 'REL-9V66-6QLT', 'REL-R4ZB-8VLU', 'REL-MEEV-5AVF', 'REL-MZN2-769Q', 'REL-AEB5-X3B7', 'REL-6U8E-8KRQ', 'REL-BD2P-J2TB', 'REL-MDDQ-ENV5', 'REL-6L3Q-PAMR', 'REL-KXNQ-HRYL', 'REL-SUT3-EAL2', 'REL-HE27-H4X8', 'REL-RSWA-9LXS', 'REL-U5KQ-G7Q2', 'REL-EUTB-CXPM', 'REL-NSGS-XA3A', 'REL-PSWH-LR6F', 'REL-UPCT-KYHC', 'REL-D6L7-BT79', 'REL-FAB4-8NXX', 'REL-WAKA-Z4PY', 'REL-ZSBZ-6ZEF', 'REL-52MX-FSUG', 'REL-BNTB-V6YT', 'REL-QSZ6-64LG', 'REL-EL2C-XMNB', 'REL-7Q99-R8BW', 'REL-ACJM-6TS6', 'REL-XS4A-EA8Y', 'REL-2A7W-AHA3', 'REL-WPRG-66H9', 'REL-PEV3-3V8X', 'REL-WBKH-W2X2', 'REL-M6EF-778P', 'REL-NV8A-J4Q5', 'REL-4ZMP-7YPH', 'REL-CNSU-S32B', 'REL-BXBP-U4PZ', 'REL-ZD6C-X3YG', 'REL-9L6B-LJPG', 'REL-8ZSW-LXSQ', 'REL-JYX9-MSR4', 'REL-XBSV-8MVX'],
-    'natal': ['NAT-ZBW8-FP79', 'NAT-D3MZ-SNKM', 'NAT-RPM9-Y6DN', 'NAT-LYWN-S9YH', 'NAT-S5AN-QW7R', 'NAT-PE6G-PVEU', 'NAT-BHAB-QVKP', 'NAT-5UPQ-6JW3', 'NAT-GDGX-LEQS', 'NAT-5GJB-7JHB', 'NAT-S3ZZ-JJDX', 'NAT-PANL-V8QP', 'NAT-UC6X-F6ZD', 'NAT-KT9E-DUSK', 'NAT-C3E5-W8WW', 'NAT-NKYS-Z68J', 'NAT-RMUT-U8B8', 'NAT-S8XK-L3FZ', 'NAT-UGLZ-XJ5U', 'NAT-AWSU-8ESC', 'NAT-6VLR-WR8T', 'NAT-WJPD-XU59', 'NAT-QKZR-HLTM', 'NAT-8XL3-RYWU', 'NAT-PXFY-DQS6', 'NAT-2ZGF-QMA3', 'NAT-T3GV-GWSL', 'NAT-T8XD-XTN8', 'NAT-T364-ZF32', 'NAT-V66S-P5TE', 'NAT-ED5F-2PP9', 'NAT-DSC6-RKFP', 'NAT-ZCGQ-49XL', 'NAT-54LK-P5T6', 'NAT-CWFE-CNK7', 'NAT-BB8Q-65SG', 'NAT-6JJ5-ZZSD', 'NAT-BVVD-9QTJ', 'NAT-QCQJ-YY2A', 'NAT-DBME-36YS', 'NAT-VSLY-S375', 'NAT-FGYC-ZYJE', 'NAT-PBK2-BVY8', 'NAT-YUUW-ATAL', 'NAT-VAT3-SXRV', 'NAT-BRU8-PRRC', 'NAT-LBTN-8NGC', 'NAT-QLFW-YN7Y', 'NAT-J54B-YJD7', 'NAT-8G6D-Q58G'],
-    'midpoints': ['MID-9463-7HLL', 'MID-GUQF-S6AB', 'MID-SRYC-2JBJ', 'MID-TCEE-T7G8', 'MID-WRKR-WBTE', 'MID-R43J-X4R9', 'MID-FU9H-ULKF', 'MID-E9YF-WSZB', 'MID-H6YL-7QKY', 'MID-SDNF-NQH8', 'MID-CD2W-6DLT', 'MID-GYVR-44P7', 'MID-67RC-2KGS', 'MID-RV5B-2FL8', 'MID-FE3A-56Y3', 'MID-Q76J-KK45', 'MID-QPKT-7HBZ', 'MID-GBA4-4GD6', 'MID-XCJS-9999', 'MID-KFC6-25FJ', 'MID-KS2Z-E99P', 'MID-YYJY-457Y', 'MID-2RY9-Q4K7', 'MID-E9M6-5HRA', 'MID-FPQP-UTLW', 'MID-8FUJ-777T', 'MID-HGRZ-VZT8', 'MID-6JGN-JBJY', 'MID-KBUE-NPME', 'MID-MJN9-C57N', 'MID-MALN-V4F6', 'MID-U4WM-66R2', 'MID-TD9L-JMLX', 'MID-PZ92-6VRR', 'MID-WYNC-KHYF', 'MID-B8CR-AUAP', 'MID-SQGJ-AU3H', 'MID-7BTP-9F7S', 'MID-RB86-EF6W', 'MID-QD6W-PY66', 'MID-9MCX-EE8C', 'MID-ENRM-FV92', 'MID-VCQ2-2ARR', 'MID-3P7A-R649', 'MID-H8HP-QVJW', 'MID-8P3R-ZA5J', 'MID-MYCK-GG4M', 'MID-THCL-4W6U', 'MID-7TPU-ZJUE', 'MID-QD4T-8PEQ'],
-    'subscription': ['SUB-D5KK-C53L', 'SUB-64EX-GA4H', 'SUB-LFBP-HK2T', 'SUB-JXLZ-XX9B', 'SUB-8LQX-2SLP', 'SUB-NEX8-35E8', 'SUB-FTJ9-QYDA', 'SUB-XH6T-Z6AT', 'SUB-VLT6-7UKX', 'SUB-WKNL-YTWP', 'SUB-JJ5T-37B9', 'SUB-CN8Z-ZQFK', 'SUB-MR7H-Y84V', 'SUB-KS5X-S37F', 'SUB-RZ8J-TJM4', 'SUB-E2LX-L6XN', 'SUB-HEGB-2M9B', 'SUB-BQYE-7U9Z', 'SUB-SKXU-P97S', 'SUB-D3W4-D4N6', 'SUB-G6B2-59W4', 'SUB-DN2M-M6NB', 'SUB-XH9P-WRPB', 'SUB-J4XZ-3JA6', 'SUB-D5SF-EK6P', 'SUB-J846-H3Q5', 'SUB-TCVX-2L6M', 'SUB-EN2D-K8FX', 'SUB-F7J6-TTA5', 'SUB-LWVA-DR65', 'SUB-7Q5Q-FFQ5', 'SUB-SSXA-8M4U', 'SUB-7MXE-8EJU', 'SUB-4VAY-7J5P', 'SUB-F7BX-UPGM', 'SUB-BNS6-ZQ5G', 'SUB-UD86-E2BA', 'SUB-YPKK-CVB8', 'SUB-BV6N-3Z7F', 'SUB-VVVB-V7BQ', 'SUB-G6TM-7EL5', 'SUB-BPSR-BUW4', 'SUB-MP3G-NJY5', 'SUB-2G8L-TH6K', 'SUB-DAXY-JSFD', 'SUB-WRLC-7XJR', 'SUB-PZUP-2DRD', 'SUB-KKX8-JYG3', 'SUB-GG6A-FLZT', 'SUB-NQDM-E6B3']
-}
+PREMIUM_CODES_BY_SERVICE = {'forecast': ['FOR-6FN0-CS46',
+              'FOR-1OZV-GLI6',
+              'FOR-8CA9-DQES',
+              'FOR-Q8EF-1QZ3',
+              'FOR-AIRY-370H',
+              'FOR-1300-YUXB',
+              'FOR-P9P5-8M9T',
+              'FOR-57ZK-HL1D',
+              'FOR-V39C-61M8',
+              'FOR-ZEA6-O2CB',
+              'FOR-3N09-7OYA',
+              'FOR-TK8J-BYK6',
+              'FOR-M521-FUO6',
+              'FOR-Y6BW-NJ2T',
+              'FOR-7C78-O6HI',
+              'FOR-9DF8-NK7V',
+              'FOR-DB27-GWPW',
+              'FOR-DFER-XYHZ',
+              'FOR-Z2E6-LNMZ',
+              'FOR-9P1N-AASR',
+              'FOR-PKW7-CWOZ',
+              'FOR-JU8R-W6UD',
+              'FOR-BJ1I-EVAA',
+              'FOR-W9GT-KJI5',
+              'FOR-QBVT-Z791',
+              'FOR-XOYH-TIMY',
+              'FOR-XZTY-IY26',
+              'FOR-46RC-QQP7',
+              'FOR-17WA-O4HS',
+              'FOR-1DPR-ZWBJ',
+              'FOR-MYAP-00VA',
+              'FOR-MKV9-JEJQ',
+              'FOR-IH2D-Q5D9',
+              'FOR-95HH-AZUQ',
+              'FOR-VACX-6K8B',
+              'FOR-S6OI-E78W',
+              'FOR-XWGS-NG6U',
+              'FOR-I3W2-MS5T',
+              'FOR-J3FX-KX6J',
+              'FOR-84KG-BPPQ',
+              'FOR-5A0O-SHDA',
+              'FOR-PU2P-TQJ1',
+              'FOR-0AO2-ZUKA',
+              'FOR-C0D2-N9T3',
+              'FOR-OS7T-NHXB',
+              'FOR-YMV6-JIOA',
+              'FOR-0T5E-OC7J',
+              'FOR-WCLG-VGEF',
+              'FOR-KQB2-173X',
+              'FOR-K2UZ-1VL6'],
+ 'marriage': ['MRG-Y9YG-OHJX',
+              'MRG-XBF8-UOVC',
+              'MRG-TV3V-LR4I',
+              'MRG-0DOW-PGFO',
+              'MRG-WASV-7IDV',
+              'MRG-RXD3-XDLC',
+              'MRG-J113-BNYR',
+              'MRG-5MMS-SVAH',
+              'MRG-MSPW-68OB',
+              'MRG-95UD-V6E2',
+              'MRG-OE5B-0B0S',
+              'MRG-Y071-C2FD',
+              'MRG-CMPQ-PHW1',
+              'MRG-Y09S-ERKN',
+              'MRG-FJIK-827T',
+              'MRG-ASHM-15KB',
+              'MRG-3GMW-GURD',
+              'MRG-CFO5-HVXS',
+              'MRG-J6V1-00W6',
+              'MRG-11EX-SJP7',
+              'MRG-3BPW-THIH',
+              'MRG-PSXD-SU89',
+              'MRG-C0OA-C6ZU',
+              'MRG-4T76-7PHL',
+              'MRG-IRPP-65I3',
+              'MRG-NHCF-MWVB',
+              'MRG-K5LB-9JFA',
+              'MRG-5PYW-6G17',
+              'MRG-IBTF-LREM',
+              'MRG-0OD1-CJLF',
+              'MRG-HRFK-LMXT',
+              'MRG-NJ7C-K76F',
+              'MRG-K56Z-22LE',
+              'MRG-3JV7-LCNI',
+              'MRG-74CQ-G5UY',
+              'MRG-I1OZ-N3N3',
+              'MRG-HP1C-0OAA',
+              'MRG-J86H-X75V',
+              'MRG-VCZF-4409',
+              'MRG-3KXI-11A2',
+              'MRG-Y3Q4-LTFS',
+              'MRG-J1BY-FILS',
+              'MRG-IF29-80TY',
+              'MRG-EGX3-P5AX',
+              'MRG-K746-O4LG',
+              'MRG-BE19-T59G',
+              'MRG-FO5N-SQVY',
+              'MRG-OBEW-TBUF',
+              'MRG-J45R-B5GO',
+              'MRG-Z4YE-7H1J'],
+ 'relationship': ['REL-DJQH-66JZ',
+                  'REL-TMWT-8P0Q',
+                  'REL-L0WE-0F0K',
+                  'REL-70T9-9SC2',
+                  'REL-54S9-OPL7',
+                  'REL-TRH3-ZNQT',
+                  'REL-XKCB-JIGA',
+                  'REL-R715-QKKC',
+                  'REL-XZQR-2TXF',
+                  'REL-IKNN-ZRU7',
+                  'REL-R443-BNYJ',
+                  'REL-171S-8EUR',
+                  'REL-ZJ0V-OZH1',
+                  'REL-EVZR-JSY5',
+                  'REL-OA07-QTX8',
+                  'REL-P7C6-9FSL',
+                  'REL-ZAYW-VCMU',
+                  'REL-A629-ZTOF',
+                  'REL-CKBG-HHMB',
+                  'REL-HRYU-2X67',
+                  'REL-EBIG-C3QI',
+                  'REL-93DH-NZQU',
+                  'REL-CDT1-7UHK',
+                  'REL-S8WM-R44E',
+                  'REL-43DP-YYIA',
+                  'REL-6JZJ-ASXZ',
+                  'REL-SHAD-C6QZ',
+                  'REL-K2VY-XB1A',
+                  'REL-TK4B-6LGF',
+                  'REL-OWOQ-ARO3',
+                  'REL-X5DV-Y12J',
+                  'REL-FD1O-A2TT',
+                  'REL-W1QP-LU11',
+                  'REL-EVSB-I5CB',
+                  'REL-VL21-I27A',
+                  'REL-W1R8-ZU20',
+                  'REL-ER8D-J67D',
+                  'REL-W774-SS45',
+                  'REL-APLE-5TFR',
+                  'REL-4WNC-3H9O',
+                  'REL-IGJ4-VJK9',
+                  'REL-XC1B-CTUB',
+                  'REL-OIDY-LQQT',
+                  'REL-43ZK-00LR',
+                  'REL-0DUT-RIAI',
+                  'REL-26XV-ZWU2',
+                  'REL-J85J-HOQM',
+                  'REL-CYBD-67KO',
+                  'REL-V7ZJ-RUQN',
+                  'REL-AABQ-E1IP'],
+ 'natal': ['NAT-DYN8-T2HB',
+           'NAT-5M00-QTND',
+           'NAT-550J-OR1M',
+           'NAT-C4VY-KK1C',
+           'NAT-A4B8-H93V',
+           'NAT-0JV0-GDJ9',
+           'NAT-3T2P-LWE5',
+           'NAT-612T-BC8G',
+           'NAT-8UUD-F7EH',
+           'NAT-SQLC-A0AF',
+           'NAT-G6D4-SUYI',
+           'NAT-5DL1-M1XG',
+           'NAT-0I86-MFKE',
+           'NAT-FTVC-TN71',
+           'NAT-D15W-UE19',
+           'NAT-SYS0-YD03',
+           'NAT-Z2YB-HCKB',
+           'NAT-49FQ-967Q',
+           'NAT-TRG9-5U7I',
+           'NAT-RA1J-40V4',
+           'NAT-1O0W-7709',
+           'NAT-OMF4-PL5Y',
+           'NAT-0X68-GYY5',
+           'NAT-JA3B-OQU1',
+           'NAT-T8IP-JX8Q',
+           'NAT-9YD0-S3S0',
+           'NAT-03X4-WIO7',
+           'NAT-2N7B-OYN8',
+           'NAT-GKY1-ZEUY',
+           'NAT-MTQL-9BKF',
+           'NAT-K2M5-JBOR',
+           'NAT-L4TB-O5AM',
+           'NAT-C2PW-1LBL',
+           'NAT-LB77-7DM1',
+           'NAT-U3OK-1ETU',
+           'NAT-N57T-WFU5',
+           'NAT-WN8O-E76S',
+           'NAT-W7IS-DIDX',
+           'NAT-AEJD-O0VH',
+           'NAT-REYU-AFEX',
+           'NAT-903F-CN5A',
+           'NAT-SQC0-5RQ0',
+           'NAT-9PNY-LDPJ',
+           'NAT-D609-PGZ3',
+           'NAT-UWI1-LK47',
+           'NAT-6RNK-UBL5',
+           'NAT-EQNX-RN2O',
+           'NAT-TU5M-OW6G',
+           'NAT-WGG6-JCVB',
+           'NAT-OXQ5-GHNB'],
+ 'midpoints': ['MID-0Z1G-VDYN',
+               'MID-9FMP-I6CA',
+               'MID-HOU4-KFE6',
+               'MID-VHPO-BM4B',
+               'MID-Y4F8-EPSR',
+               'MID-B7OZ-1875',
+               'MID-SKEG-57ZE',
+               'MID-XSVW-3EOJ',
+               'MID-LR87-67PY',
+               'MID-BRT6-G9F3',
+               'MID-6AEZ-PYJT',
+               'MID-AZGM-6KHN',
+               'MID-MXX5-JGR0',
+               'MID-K5CZ-FSDB',
+               'MID-8L6V-7TVP',
+               'MID-QVML-HGXA',
+               'MID-E466-SWO4',
+               'MID-0HIB-YLMV',
+               'MID-GEA4-8SP6',
+               'MID-2HDP-71G1',
+               'MID-GUF2-X5OH',
+               'MID-1WSZ-QX9Z',
+               'MID-X093-YH4M',
+               'MID-DWZY-ZT4Q',
+               'MID-5L54-8NTR',
+               'MID-EGLL-KEPV',
+               'MID-DRL0-BQPB',
+               'MID-JERF-SQ0J',
+               'MID-D7II-2849',
+               'MID-FU8U-M10N',
+               'MID-DWG9-STWY',
+               'MID-O26W-A08Y',
+               'MID-KR68-JKN3',
+               'MID-WNHA-8Q8M',
+               'MID-ZE9N-95FL',
+               'MID-4GHN-EHP8',
+               'MID-E13Z-Z10B',
+               'MID-FLYO-I9NC',
+               'MID-1SBX-XYZ5',
+               'MID-4QV7-7E98',
+               'MID-DLRG-RV5H',
+               'MID-JCBU-VKZ7',
+               'MID-TXEU-7BEP',
+               'MID-387G-GYM2',
+               'MID-AJF9-8EIC',
+               'MID-K9G7-MCN4',
+               'MID-YJM7-BJCB',
+               'MID-4OO9-9ONV',
+               'MID-9HV6-SGE6',
+               'MID-78HT-K6WO'],
+ 'subscription': ['SUB-7PET-TW9A',
+                  'SUB-TW6C-KTOT',
+                  'SUB-RNPJ-ASWC',
+                  'SUB-IRWF-0VKE',
+                  'SUB-5L7H-M8B5',
+                  'SUB-PTS6-SVPJ',
+                  'SUB-M3LJ-IXQJ',
+                  'SUB-UJCV-WVST',
+                  'SUB-X7US-3XYQ',
+                  'SUB-4OMR-F2TM',
+                  'SUB-TBWR-JLEA',
+                  'SUB-JX8I-DR95',
+                  'SUB-9AHK-ZP0X',
+                  'SUB-UQP2-2D2I',
+                  'SUB-ISMN-TWTE',
+                  'SUB-VJYU-PHE9',
+                  'SUB-59VD-T3M7',
+                  'SUB-2IWH-NI4R',
+                  'SUB-UAW5-BM5C',
+                  'SUB-ZLGQ-3VVZ',
+                  'SUB-FJ6K-V9Q1',
+                  'SUB-PZUQ-PVAC',
+                  'SUB-78NI-DE84',
+                  'SUB-N53I-HFGL',
+                  'SUB-QNMQ-07JI',
+                  'SUB-2O5V-5DAR',
+                  'SUB-HCTY-7HOE',
+                  'SUB-33TE-EGKS',
+                  'SUB-FWES-OR00',
+                  'SUB-KEVP-6TPA',
+                  'SUB-Z88B-W1WE',
+                  'SUB-CVAJ-QHKP',
+                  'SUB-AAFD-MPAK',
+                  'SUB-OZV5-XVMH',
+                  'SUB-9KRS-9SMB',
+                  'SUB-73MR-V7RE',
+                  'SUB-JF63-ZP4K',
+                  'SUB-79J2-8NTB',
+                  'SUB-4NIW-GAGY',
+                  'SUB-CPD7-E6D2',
+                  'SUB-KP37-378K',
+                  'SUB-W92N-2QPW',
+                  'SUB-B9VS-7OV8',
+                  'SUB-OWDM-5NJT',
+                  'SUB-OI4J-QXO3',
+                  'SUB-NJ8X-FTMX',
+                  'SUB-IE8C-A15V',
+                  'SUB-XKXO-JPNK',
+                  'SUB-8UWH-L4R3',
+                  'SUB-CLLO-LSHE']}
 PREMIUM_ACCESS_CODES = set(code for codes in PREMIUM_CODES_BY_SERVICE.values() for code in codes)
 
 # سجل مستقل للأكواد المستخدمة.
 # لا يتم لمس هذا الملف عند استخراج التقرير الأولي، بل فقط عند فتح التقرير الاحترافي بنجاح.
-USED_PREMIUM_CODES_FILE = os.environ.get("USED_PREMIUM_CODES_FILE", "used_premium_codes_master.json")
+USED_PREMIUM_CODES_FILE = os.environ.get("USED_PREMIUM_CODES_FILE", "used_premium_codes_2026_embedded.json")
 
 def normalize_premium_code(code: str) -> str:
     """تطبيع كود الفتح حتى يقبل النسخ من الهاتف أو تيليغرام مع اختلاف أشكال الشرطة."""
@@ -331,6 +623,13 @@ def normalize_premium_code(code: str) -> str:
     while "--" in clean:
         clean = clean.replace("--", "-")
     return clean
+
+# كود الماستر الوحيد للمطور. لا يُستهلك ويفتح كل التقارير الاحترافية.
+DEVELOPER_MASTER_CODE = 'Abo_saj_2026+08@'
+DEVELOPER_MASTER_CODES = {normalize_premium_code(DEVELOPER_MASTER_CODE)}
+
+def is_developer_master_code(clean_code: str) -> bool:
+    return normalize_premium_code(clean_code) in DEVELOPER_MASTER_CODES
 
 def load_used_premium_codes() -> dict:
     try:
@@ -363,6 +662,9 @@ def check_premium_code(code: str, service: str = "general") -> tuple[bool, str, 
     if not clean:
         return False, clean, "يرجى إدخال كود فتح التقرير الاحترافي."
 
+    if is_developer_master_code(clean):
+        return True, clean, "تم فتح التقرير الاحترافي بكود المطور."
+
     actual_service = premium_code_service(clean)
     if not actual_service:
         expected_prefix = PREMIUM_SERVICE_PREFIXES.get(service, "")
@@ -382,6 +684,8 @@ def check_premium_code(code: str, service: str = "general") -> tuple[bool, str, 
     return True, clean, "الكود صحيح."
 
 def mark_premium_code_used(clean_code: str, service: str = "general") -> None:
+    if is_developer_master_code(clean_code):
+        return
     used = load_used_premium_codes()
     actual_service = premium_code_service(clean_code) or service
     used[clean_code] = {
@@ -397,6 +701,8 @@ def consume_premium_code(code: str, service: str = "general") -> tuple[bool, str
     if not ok:
         return False, msg
     mark_premium_code_used(clean, service)
+    if is_developer_master_code(clean):
+        return True, "تم فتح التقرير الاحترافي بكود المطور."
     return True, "تم فتح التقرير الاحترافي بنجاح."
 
 SIGNS_AR = [
@@ -3353,6 +3659,28 @@ HTML = r"""
         .hidden {
             display: none;
         }
+        .premium-code-panel {
+            background: linear-gradient(135deg, #fffaf1, #ead8b9);
+            border: 1px solid #c5a66f;
+            border-radius: 18px;
+            padding: 16px;
+            margin: 18px 0;
+        }
+        .premium-code-panel h3 { margin-top: 0; color:#2b2119; }
+        .success-message {
+            background:#e9f8e9;
+            border:1px solid #9bd19b;
+            color:#184b22;
+            border-radius:14px;
+            padding:12px;
+            margin:12px 0 0;
+            text-align:center;
+            font-weight:900;
+        }
+        .premium-open-section {
+            border: 1px solid #c5a66f;
+            background:#fffdf8;
+        }
         @media (max-width: 800px) {
             .grid, .grid2 {
                 grid-template-columns: 1fr;
@@ -4159,6 +4487,18 @@ HTML = r"""
             <div class="section">
                 <h3>الأقسام الاحترافية المقفلة</h3>
                 <p class="muted">اضغط على أي قسم مقفل لطلب فتحه كتحليل احترافي مثمّن عبر تيليغرام. أرسل رقم الطلب الظاهر أعلاه حتى يتم التعرف على تقريرك.</p>
+
+                <div class="premium-code-panel">
+                    <h3>فتح الأقسام الاحترافية بالكود</h3>
+                    <p class="muted">بعد استلام كود فتح الخريطة الشخصية من تيليغرام، أدخله هنا لعرض الأقسام الاحترافية داخل نفس الصفحة. الكود الخاص بهذه الصفحة يبدأ بـ NAT-، كما يعمل كود المطور الماستر.</p>
+                    <form method="post" style="margin-top:12px;">
+                        <input type="hidden" name="premium_action" value="unlock_natal_sections">
+                        <input name="premium_code" placeholder="أدخل كود فتح الخريطة الشخصية" autocomplete="off" style="width:100%;padding:13px;border-radius:12px;border:1px solid #c9b58d;text-align:center;font-weight:bold;margin:8px 0;direction:ltr;">
+                        <button type="submit" style="width:100%;background:#2f6f4e;color:#fff;border:0;border-radius:14px;padding:13px;font-weight:900;">فتح الأقسام الاحترافية</button>
+                    </form>
+                    {% if natal_premium_message %}<p class="success-message">{{ natal_premium_message }}</p>{% endif %}
+                </div>
+
                 <div class="locked-grid">
                     <a class="locked-card" href="{{ premium_telegram_url }}" target="_blank" rel="noopener">
                         <span class="locked-badge">🔒 قسم احترافي</span>
@@ -4209,6 +4549,85 @@ HTML = r"""
                         <div class="locked-cta">طلب تقرير التوقعات الشهرية</div>
                     </a>
                 </div>
+
+                {% if natal_premium_unlocked %}
+                <div class="section premium-open-section" id="natalPremiumOpen">
+                    <h3>الأقسام الاحترافية المفتوحة</h3>
+                    <details class="accordion" open>
+                        <summary>تحليل الكواكب واحدًا تلو الآخر</summary>
+                        <div class="accordion-content">
+                            {% for item in report.planetary_analysis %}<div class="item">{{ item }}</div>{% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>تحليل الكويكبات والنقاط المهمة</summary>
+                        <div class="accordion-content">
+                            {% for item in report.asteroids_points_analysis %}<div class="item">{{ item }}</div>{% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>الجانب العاطفي ونقاط المنتصف</summary>
+                        <div class="accordion-content">
+                            {% for group in report.midpoints_analysis %}
+                                {% if 'عاطفي' in group['title'] %}
+                                    <h4>{{ group['title'] }}</h4>
+                                    {% for item in group['items'] %}<div class="item">{{ item }}</div>{% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>الجانب المهني والمالي</summary>
+                        <div class="accordion-content">
+                            {% for group in report.midpoints_analysis %}
+                                {% if 'مهني' in group['title'] or 'مالي' in group['title'] %}
+                                    <h4>{{ group['title'] }}</h4>
+                                    {% for item in group['items'] %}<div class="item">{{ item }}</div>{% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>الجانب النفسي والزوايا العميقة</summary>
+                        <div class="accordion-content">
+                            {% for item in report.aspects_analysis %}<div class="item">{{ item }}</div>{% endfor %}
+                            {% for item in report.dignity_summary %}<div class="item">{{ item }}</div>{% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>المواهب والقدرات</summary>
+                        <div class="accordion-content">
+                            {% for item in report.creativity %}<div class="item">{{ item }}</div>{% endfor %}
+                            {% for item in report.strengths %}<div class="item">{{ item }}</div>{% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>التحديات والدروس</summary>
+                        <div class="accordion-content">
+                            {% for item in report.challenges %}<div class="item">{{ item }}</div>{% endfor %}
+                            {% for item in report.notes %}<div class="item">{{ item }}</div>{% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>الدراسة والسفر والتوسع</summary>
+                        <div class="accordion-content">
+                            {% for group in report.midpoints_analysis %}
+                                {% if 'الدراسة' in group['title'] or 'السفر' in group['title'] %}
+                                    <h4>{{ group['title'] }}</h4>
+                                    {% for item in group['items'] %}<div class="item">{{ item }}</div>{% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </details>
+                    <details class="accordion">
+                        <summary>جميع البيوت والتقنيات المساندة</summary>
+                        <div class="accordion-content">
+                            {% for item in report.houses_analysis %}<div class="item">{{ item }}</div>{% endfor %}
+                            {% for item in report.supporting_techniques %}<div class="item">{{ item }}</div>{% endfor %}
+                        </div>
+                    </details>
+                </div>
+                {% endif %}
             </div>
 
         </div>
@@ -4584,7 +5003,7 @@ HOME_HTML = r"""
             <a class="tool-item" href="/midpoints">
                 <span class="tool-icon">✦</span>
                 <span class="tool-text">نقاط المنتصف</span>
-                <span class="tool-badge">قريبًا</span>
+                <span class="tool-badge open">متاح</span>
             </a>
             <a class="tool-item" href="/rectification">
                 <span class="tool-icon">◷</span>
@@ -5621,6 +6040,8 @@ def natal():
     form = form_from_session()
     report = None
     error = ""
+    natal_premium_unlocked = False
+    natal_premium_message = ""
 
     # إذا دخل المستخدم بياناته في /profile، تُحسب قراءة الخريطة مباشرة عند فتح /natal.
     should_calculate = request.method == "POST" or profile_is_complete()
@@ -5635,6 +6056,19 @@ def natal():
         except Exception as exc:
             error = f"حدث خطأ أثناء الحساب: {exc}"
             report = None
+
+    if request.method == "POST" and str(request.form.get("premium_action", "")).strip() == "unlock_natal_sections":
+        premium_code = request.form.get("premium_code", "")
+        ok, clean_code, natal_premium_message = check_premium_code(premium_code, "natal")
+        if ok and report is not None:
+            natal_premium_unlocked = True
+            mark_premium_code_used(clean_code, "natal")
+            if is_developer_master_code(clean_code):
+                natal_premium_message = "تم فتح الأقسام الاحترافية بكود المطور."
+            else:
+                natal_premium_message = "تم فتح الأقسام الاحترافية بنجاح. أصبح هذا الكود مستخدمًا ولا يعمل مرة ثانية."
+        elif ok and report is None:
+            natal_premium_message = "الكود صحيح، لكن يجب إدخال بيانات الميلاد أولًا حتى تظهر الأقسام الاحترافية."
 
     countries = build_country_list()
     city_suggestions = city_suggestions_for_country(form.get("country_code", ""))
@@ -5656,6 +6090,8 @@ def natal():
         monthly_order_id=monthly_order_id,
         monthly_telegram_url=monthly_telegram_url,
         premium_telegram_url=premium_telegram_url,
+        natal_premium_unlocked=natal_premium_unlocked,
+        natal_premium_message=natal_premium_message,
     )
 
 
@@ -5908,7 +6344,7 @@ HEALTH_HTML = '<!DOCTYPE html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charse
 # Personal Forecast Engine V4 داخل ASTROGATE
 # ============================================================
 
-_FORECAST_ENGINE_CODE = '# -*- coding: utf-8 -*-\n"""\nPersonal Forecast Engine - Complete Prototype v3\nنواة التوقعات الشخصية الفلكية - نسخة شاملة أولية\n\nهذه النسخة تجمع:\n1) حساب خريطة الميلاد والعبور بواسطة Swiss Ephemeris.\n2) Placidus houses.\n3) حدود بطليموس.\n4) نقاط المنتصف وتفعيلها بالاقتران/المقابلة/التربيع.\n5) نظام الأورب: مقترب/منفصل، دقيق/قوي/فعال/تمهيدي.\n6) البروفكشن السنوي/الشهري/اليومي.\n7) الفريدار الرئيسي والفرعي بنسخة عملية أولى.\n8) العودة الشمسية والعودة القمرية بنسخة تقريبية قابلة للتطوير.\n9) التقدم الثانوي.\n10) القوس الشمسي.\n11) ملفات الحالات:\n    - السياق العام\n    - العاطفة\n    - عودة العلاقة\n    - الزواج والخطوبة\n    - العمل والمهنة\n    - المال والاستثمار\n    - السفر والهجرة\n    - الدراسة والاختبارات\n    - الصحة والعملية الجراحية\n    - حساسية الأعضاء\n    - شراء العقار\n    - شراء السيارة\n    - القضايا والعقود\n    - الحمل والإنجاب\n    - المشروع الجديد والقرار المهم\n12) نظام ترجيح رقمي عام.\n13) تقرير مستخدم مبسط.\n14) تقرير فني مفصل.\n\nملاحظات مهمة:\n- هذه نسخة نواة وليست واجهة تطبيق.\n- بعض التقنيات مثل العودة الشمسية/القمرية والفريدار مضافة بنسخة عملية أولى،\n  وتحتاج اختبارًا وتدقيقًا لاحقًا على حالات حقيقية.\n- التقرير الصحي ليس تشخيصًا طبيًا، والقرار الطبي للطبيب والفحوصات.\n- التقرير القانوني ليس استشارة قانونية، والقرار القانوني للمختص.\n"""\n\nfrom __future__ import annotations\n\nfrom dataclasses import dataclass, field\nfrom typing import Dict, List, Optional, Tuple, Any\nfrom datetime import datetime, timedelta\nimport math\n\ntry:\n    import swisseph as swe\n    SWISSEPH_AVAILABLE = True\nexcept Exception:\n    swe = None\n    SWISSEPH_AVAILABLE = False\n\n\n# =========================================================\n# 1. الثوابت العامة\n# =========================================================\n\nSIGNS = [\n    "الحمل", "الثور", "الجوزاء", "السرطان",\n    "الأسد", "العذراء", "الميزان", "العقرب",\n    "القوس", "الجدي", "الدلو", "الحوت"\n]\n\nSIGN_START = {sign: i * 30 for i, sign in enumerate(SIGNS)}\n\nSIGN_RULERS = {\n    "الحمل": "المريخ",\n    "الثور": "الزهرة",\n    "الجوزاء": "عطارد",\n    "السرطان": "القمر",\n    "الأسد": "الشمس",\n    "العذراء": "عطارد",\n    "الميزان": "الزهرة",\n    "العقرب": "المريخ",   # تقليديًا، ويمكن لاحقًا إضافة بلوتو كمساعد\n    "القوس": "المشتري",\n    "الجدي": "زحل",\n    "الدلو": "زحل",       # تقليديًا، ويمكن لاحقًا إضافة أورانوس كمساعد\n    "الحوت": "المشتري",  # تقليديًا، ويمكن لاحقًا إضافة نبتون كمساعد\n}\n\nPLANETS: Dict[str, int] = {}\nif SWISSEPH_AVAILABLE:\n    PLANETS = {\n        "الشمس": swe.SUN,\n        "القمر": swe.MOON,\n        "عطارد": swe.MERCURY,\n        "الزهرة": swe.VENUS,\n        "المريخ": swe.MARS,\n        "المشتري": swe.JUPITER,\n        "زحل": swe.SATURN,\n        "أورانوس": swe.URANUS,\n        "نبتون": swe.NEPTUNE,\n        "بلوتو": swe.PLUTO,\n        "الرأس الشمالي": swe.MEAN_NODE,\n        "كايرون": swe.CHIRON,\n    }\n\nASPECTS = {\n    "اقتران": 0.0,\n    "تربيع": 90.0,\n    "مقابلة": 180.0,\n    "تربيع معاكس": 270.0,\n}\n\nMAJOR_ASPECTS_ALL = {\n    "اقتران": 0.0,\n    "تسديس": 60.0,\n    "تربيع": 90.0,\n    "تثليث": 120.0,\n    "مقابلة": 180.0,\n}\n\n\n# =========================================================\n# 2. أدوات الدرجات والزمن\n# =========================================================\n\ndef normalize_degree(deg: float) -> float:\n    return deg % 360.0\n\n\ndef zodiac_diff(a: float, b: float) -> float:\n    """فرق موجه من a إلى b على دائرة 360."""\n    return (b - a) % 360.0\n\n\ndef shortest_distance(a: float, b: float) -> float:\n    diff = abs(normalize_degree(a) - normalize_degree(b))\n    return min(diff, 360.0 - diff)\n\n\ndef degree_to_sign(deg: float) -> Tuple[str, float]:\n    deg = normalize_degree(deg)\n    idx = int(deg // 30)\n    return SIGNS[idx], deg - idx * 30\n\n\ndef sign_index(sign: str) -> int:\n    return SIGNS.index(sign)\n\n\ndef format_degree(deg: float) -> str:\n    sign, d = degree_to_sign(deg)\n    whole = int(d)\n    minutes = int(round((d - whole) * 60))\n    if minutes == 60:\n        whole += 1\n        minutes = 0\n    if whole == 30:\n        idx = (SIGNS.index(sign) + 1) % 12\n        sign = SIGNS[idx]\n        whole = 0\n    return f"{whole}°{minutes:02d}′ {sign}"\n\n\ndef midpoint(deg1: float, deg2: float) -> float:\n    deg1 = normalize_degree(deg1)\n    deg2 = normalize_degree(deg2)\n    diff = (deg2 - deg1) % 360\n    if diff <= 180:\n        mid = deg1 + diff / 2\n    else:\n        mid = deg2 + (360 - diff) / 2\n    return normalize_degree(mid)\n\n\ndef decimal_hour(hour: int, minute: int) -> float:\n    return hour + minute / 60.0\n\n\ndef to_utc_decimal_hour(hour: int, minute: int, timezone: float) -> float:\n    return decimal_hour(hour, minute) - timezone\n\n\ndef date_to_datetime(year: int, month: int, day: int, hour: int, minute: int) -> datetime:\n    return datetime(year, month, day, hour, minute)\n\n\ndef safe_days_between(a: datetime, b: datetime) -> float:\n    return (b - a).total_seconds() / 86400.0\n\n\n# =========================================================\n# 3. حدود بطليموس\n# =========================================================\n\nPTOLEMY_TERMS = {\n    "الحمل": [(0, 6, "المشتري"), (6, 14, "الزهرة"), (14, 21, "عطارد"), (21, 26, "المريخ"), (26, 30, "زحل")],\n    "الثور": [(0, 8, "الزهرة"), (8, 14, "عطارد"), (14, 22, "المشتري"), (22, 27, "زحل"), (27, 30, "المريخ")],\n    "الجوزاء": [(0, 6, "عطارد"), (6, 12, "المشتري"), (12, 17, "الزهرة"), (17, 24, "المريخ"), (24, 30, "زحل")],\n    "السرطان": [(0, 7, "المريخ"), (7, 13, "الزهرة"), (13, 19, "عطارد"), (19, 26, "المشتري"), (26, 30, "زحل")],\n    "الأسد": [(0, 6, "زحل"), (6, 13, "عطارد"), (13, 19, "الزهرة"), (19, 25, "المشتري"), (25, 30, "المريخ")],\n    "العذراء": [(0, 7, "عطارد"), (7, 13, "الزهرة"), (13, 17, "المشتري"), (17, 21, "المريخ"), (21, 30, "زحل")],\n    "الميزان": [(0, 6, "زحل"), (6, 14, "عطارد"), (14, 21, "المشتري"), (21, 28, "الزهرة"), (28, 30, "المريخ")],\n    "العقرب": [(0, 7, "المريخ"), (7, 11, "الزهرة"), (11, 19, "عطارد"), (19, 24, "المشتري"), (24, 30, "زحل")],\n    "القوس": [(0, 12, "المشتري"), (12, 17, "الزهرة"), (17, 21, "عطارد"), (21, 26, "زحل"), (26, 30, "المريخ")],\n    "الجدي": [(0, 7, "عطارد"), (7, 14, "المشتري"), (14, 22, "الزهرة"), (22, 26, "زحل"), (26, 30, "المريخ")],\n    "الدلو": [(0, 7, "عطارد"), (7, 13, "الزهرة"), (13, 20, "المشتري"), (20, 25, "المريخ"), (25, 30, "زحل")],\n    "الحوت": [(0, 12, "الزهرة"), (12, 16, "المشتري"), (16, 19, "عطارد"), (19, 28, "المريخ"), (28, 30, "زحل")],\n}\n\n\ndef get_ptolemy_term(deg: float) -> str:\n    sign, d = degree_to_sign(deg)\n    for start, end, ruler in PTOLEMY_TERMS[sign]:\n        if start <= d < end:\n            return ruler\n    return "غير محدد"\n\n\n# =========================================================\n# 4. نماذج البيانات\n# =========================================================\n\n@dataclass\nclass BirthInput:\n    name: str\n    year: int\n    month: int\n    day: int\n    hour: int\n    minute: int\n    timezone: float\n    latitude: float\n    longitude: float\n    gender: str = "غير محدد"\n\n\n@dataclass\nclass TransitInput:\n    year: int\n    month: int\n    day: int\n    hour: int\n    minute: int\n    timezone: float\n    latitude: float\n    longitude: float\n\n\n@dataclass\nclass PlanetPosition:\n    name: str\n    degree: float\n    speed: float = 0.0\n    retrograde: bool = False\n\n\n@dataclass\nclass ChartData:\n    planets: Dict[str, PlanetPosition]\n    houses: Dict[int, float] = field(default_factory=dict)\n    asc: Optional[float] = None\n    mc: Optional[float] = None\n    jd: Optional[float] = None\n    latitude: Optional[float] = None\n    longitude: Optional[float] = None\n\n\n@dataclass\nclass MidpointPoint:\n    name: str\n    body1: str\n    body2: str\n    degree: float\n\n\n@dataclass\nclass Activation:\n    activator: str\n    target_name: str\n    target_degree: float\n    aspect: str\n    exact_aspect_degree: float\n    orb: float\n    applying: Optional[bool]\n    ptolemy_term: str\n    term_quality: str\n    strength_label: str\n    score: int\n    layer: str = "عبور"\n\n\n@dataclass\nclass TimeLayers:\n    annual_profection_house: int = 1\n    annual_lord: str = ""\n    monthly_profection_house: int = 1\n    monthly_lord: str = ""\n    daily_profection_house: int = 1\n    daily_lord: str = ""\n    firdaria_main: str = ""\n    firdaria_sub: str = ""\n    solar_return_chart: Optional[ChartData] = None\n    lunar_return_chart: Optional[ChartData] = None\n    progressed_chart: Optional[ChartData] = None\n    solar_arc_chart: Optional[ChartData] = None\n\n\n@dataclass\nclass TopicResult:\n    topic_key: str\n    topic_name: str\n    score: int\n    strength: str\n    event_type: str\n    activations: List[Activation] = field(default_factory=list)\n    supports: List[str] = field(default_factory=list)\n    warnings: List[str] = field(default_factory=list)\n    technical_notes: List[str] = field(default_factory=list)\n\n\n# =========================================================\n# 5. حساب Swiss Ephemeris\n# =========================================================\n\ndef require_swisseph():\n    if not SWISSEPH_AVAILABLE:\n        raise RuntimeError("مكتبة swisseph غير مثبتة. ثبّت pyswisseph أولًا.")\n\n\ndef calculate_julian_day(year: int, month: int, day: int, hour: int, minute: int, timezone: float) -> float:\n    require_swisseph()\n    utc_hour = to_utc_decimal_hour(hour, minute, timezone)\n    return swe.julday(year, month, day, utc_hour)\n\n\ndef calculate_planets(jd: float) -> Dict[str, PlanetPosition]:\n    require_swisseph()\n    planets: Dict[str, PlanetPosition] = {}\n    for name, sid in PLANETS.items():\n        try:\n            data, flag = swe.calc_ut(jd, sid, swe.FLG_SPEED)\n            lon = normalize_degree(data[0])\n            speed = data[3]\n            planets[name] = PlanetPosition(name=name, degree=lon, speed=speed, retrograde=speed < 0)\n        except Exception:\n            continue\n    return planets\n\n\ndef calculate_houses(jd: float, latitude: float, longitude: float, house_system: str = "P") -> Tuple[Dict[int, float], float, float]:\n    require_swisseph()\n    cusps, ascmc = swe.houses(jd, latitude, longitude, house_system.encode())\n    houses = {i: normalize_degree(cusps[i - 1]) for i in range(1, 13)}\n    asc = normalize_degree(ascmc[0])\n    mc = normalize_degree(ascmc[1])\n    return houses, asc, mc\n\n\ndef build_chart_from_birth(data: BirthInput) -> ChartData:\n    jd = calculate_julian_day(data.year, data.month, data.day, data.hour, data.minute, data.timezone)\n    planets = calculate_planets(jd)\n    houses, asc, mc = calculate_houses(jd, data.latitude, data.longitude, "P")\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=jd, latitude=data.latitude, longitude=data.longitude)\n\n\ndef build_chart_from_transit(data: TransitInput) -> ChartData:\n    jd = calculate_julian_day(data.year, data.month, data.day, data.hour, data.minute, data.timezone)\n    planets = calculate_planets(jd)\n    houses, asc, mc = calculate_houses(jd, data.latitude, data.longitude, "P")\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=jd, latitude=data.latitude, longitude=data.longitude)\n\n\ndef build_chart_from_jd(jd: float, latitude: float, longitude: float) -> ChartData:\n    planets = calculate_planets(jd)\n    houses, asc, mc = calculate_houses(jd, latitude, longitude, "P")\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=jd, latitude=latitude, longitude=longitude)\n\n\n# =========================================================\n# 6. البيوت والحكام\n# =========================================================\n\ndef house_of_degree(deg: float, houses: Dict[int, float]) -> int:\n    """\n    تحديد البيت الذي تقع فيه درجة معينة مع مراعاة عبور 0 حمل.\n    """\n    if not houses:\n        return 0\n    d = normalize_degree(deg)\n    cusps = [(i, normalize_degree(houses[i])) for i in range(1, 13)]\n    for idx in range(12):\n        house_num, start = cusps[idx]\n        next_house, end = cusps[(idx + 1) % 12]\n        if start <= end:\n            if start <= d < end:\n                return house_num\n        else:\n            if d >= start or d < end:\n                return house_num\n    return 12\n\n\ndef house_ruler(chart: ChartData, house_num: int) -> str:\n    if house_num not in chart.houses:\n        return ""\n    sign, _ = degree_to_sign(chart.houses[house_num])\n    return SIGN_RULERS.get(sign, "")\n\n\ndef ruler_degree(chart: ChartData, house_num: int) -> Optional[float]:\n    ruler = house_ruler(chart, house_num)\n    if ruler and ruler in chart.planets:\n        return chart.planets[ruler].degree\n    return None\n\n\n# =========================================================\n# 7. نقاط المنتصف والتفعيل\n# =========================================================\n\ndef calculate_midpoints(chart: ChartData, midpoint_pairs: List[Tuple[str, str]]) -> List[MidpointPoint]:\n    out = []\n    for b1, b2 in midpoint_pairs:\n        if b1 in chart.planets and b2 in chart.planets:\n            out.append(MidpointPoint(f"{b1}/{b2}", b1, b2, midpoint(chart.planets[b1].degree, chart.planets[b2].degree)))\n    return out\n\n\ndef orb_strength_label(orb: float) -> str:\n    if orb <= 0.5:\n        return "دقيق جدًا"\n    if orb <= 1.0:\n        return "قوي"\n    if orb <= 2.0:\n        return "فعّال"\n    if orb <= 3.0:\n        return "تمهيدي"\n    return "خلفية فقط"\n\n\ndef score_from_orb(orb: float, max_score: int = 20) -> int:\n    if orb <= 0.5:\n        return max_score\n    if orb <= 1.0:\n        return int(max_score * 0.8)\n    if orb <= 2.0:\n        return int(max_score * 0.5)\n    if orb <= 3.0:\n        return int(max_score * 0.25)\n    return 0\n\n\ndef is_applying(activator_degree: float, target_exact_degree: float, speed: float) -> Optional[bool]:\n    if abs(speed) < 0.00001:\n        return None\n    current = shortest_distance(activator_degree, target_exact_degree)\n    future = shortest_distance(normalize_degree(activator_degree + speed), target_exact_degree)\n    return future < current\n\n\ndef term_quality_for_topic(term_ruler: str, topic_key: str) -> str:\n    love_topics = {"love", "relationship_return", "marriage", "pregnancy"}\n    work_topics = {"career", "project"}\n    money_topics = {"money", "property", "car"}\n    health_topics = {"health", "surgery", "organ_sensitivity"}\n    travel_topics = {"travel", "study"}\n    legal_topics = {"legal"}\n    general_topics = {"general"}\n\n    if topic_key in love_topics:\n        if term_ruler in ["الزهرة", "المشتري"]:\n            return "داعم"\n        if term_ruler == "عطارد":\n            return "داعم للتواصل"\n        if term_ruler == "زحل":\n            return "ثقيل أو مؤخر"\n        if term_ruler == "المريخ":\n            return "مندفع أو متوتر"\n\n    if topic_key in work_topics:\n        if term_ruler in ["المشتري", "عطارد", "زحل"]:\n            return "داعم مهنيًا"\n        if term_ruler == "الزهرة":\n            return "قبول وتسهيل"\n        if term_ruler == "المريخ":\n            return "حركة وضغط"\n\n    if topic_key in money_topics:\n        if term_ruler in ["الزهرة", "المشتري"]:\n            return "داعم ماليًا"\n        if term_ruler == "عطارد":\n            return "داعم للتجارة والعقد"\n        if term_ruler == "زحل":\n            return "التزام أو تأخير"\n        if term_ruler == "المريخ":\n            return "استعجال أو مخاطرة"\n\n    if topic_key in health_topics:\n        if term_ruler == "المريخ":\n            return "حاد أو جراحي"\n        if term_ruler == "زحل":\n            return "ثقيل أو بطيء"\n        if term_ruler == "عطارد":\n            return "فحص أو تشخيص"\n        if term_ruler in ["الزهرة", "المشتري"]:\n            return "داعم للتلطيف أو التعافي"\n\n    if topic_key in travel_topics:\n        if term_ruler in ["عطارد", "المشتري"]:\n            return "داعم للحركة أو التعلم"\n        if term_ruler == "زحل":\n            return "إجراءات أو تأخير"\n        if term_ruler == "المريخ":\n            return "استعجال أو ضغط"\n        if term_ruler == "الزهرة":\n            return "راحة أو قبول"\n\n    if topic_key in legal_topics:\n        if term_ruler in ["عطارد", "المشتري"]:\n            return "داعم للعقود أو القانون"\n        if term_ruler == "الزهرة":\n            return "داعم للتسوية"\n        if term_ruler == "زحل":\n            return "رسمي أو مؤخر"\n        if term_ruler == "المريخ":\n            return "نزاع أو تصعيد"\n\n    if term_ruler in ["الزهرة", "المشتري"]:\n        return "داعم عام"\n    if term_ruler == "عطارد":\n        return "تواصل أو مراجعة"\n    if term_ruler == "المريخ":\n        return "حركة أو ضغط"\n    if term_ruler == "زحل":\n        return "مسؤولية أو تأخير"\n    return "محايد"\n\n\ndef check_activation(\n    activator: PlanetPosition,\n    target_name: str,\n    target_degree: float,\n    topic_key: str,\n    max_orb: float = 3.0,\n    layer: str = "عبور",\n    max_score: int = 20,\n) -> List[Activation]:\n    out = []\n    for aspect_name, aspect_deg in ASPECTS.items():\n        exact = normalize_degree(target_degree + aspect_deg)\n        orb = shortest_distance(activator.degree, exact)\n        if orb <= max_orb:\n            term = get_ptolemy_term(exact)\n            quality = term_quality_for_topic(term, topic_key)\n            score = score_from_orb(orb, max_score=max_score)\n            if "داعم" in quality:\n                score += 5\n            elif any(w in quality for w in ["ثقيل", "متوتر", "مخاطرة", "نزاع", "ضغط"]):\n                score += 2\n            out.append(Activation(\n                activator=activator.name,\n                target_name=target_name,\n                target_degree=target_degree,\n                aspect=aspect_name,\n                exact_aspect_degree=exact,\n                orb=orb,\n                applying=is_applying(activator.degree, exact, activator.speed),\n                ptolemy_term=term,\n                term_quality=quality,\n                strength_label=orb_strength_label(orb),\n                score=score,\n                layer=layer\n            ))\n    return out\n\n\n# =========================================================\n# 8. البروفكشن\n# =========================================================\n\ndef calculate_age_years(birth: BirthInput, transit: TransitInput) -> int:\n    bd = datetime(birth.year, birth.month, birth.day)\n    td = datetime(transit.year, transit.month, transit.day)\n    age = td.year - bd.year\n    if (td.month, td.day) < (bd.month, bd.day):\n        age -= 1\n    return max(0, age)\n\n\ndef profection_house_from_age(age: int) -> int:\n    return (age % 12) + 1\n\n\ndef monthly_profection_house(annual_house: int, birth: BirthInput, transit: TransitInput) -> int:\n    # كل شهر بعد عيد الميلاد ينتقل بيت واحد\n    bd_this_year = datetime(transit.year, birth.month, birth.day)\n    td = datetime(transit.year, transit.month, transit.day)\n    if td < bd_this_year:\n        start_year = transit.year - 1\n    else:\n        start_year = transit.year\n    start = datetime(start_year, birth.month, birth.day)\n    months = (td.year - start.year) * 12 + (td.month - start.month)\n    if td.day < start.day:\n        months -= 1\n    return ((annual_house - 1 + max(0, months)) % 12) + 1\n\n\ndef daily_profection_house(monthly_house: int, birth: BirthInput, transit: TransitInput) -> int:\n    # نموذج عملي أولي: كل يومين ونصف تقريبًا بيت، أو 30 يوم / 12 = 2.5\n    td = datetime(transit.year, transit.month, transit.day)\n    month_start = datetime(transit.year, transit.month, 1)\n    day_index = max(0, (td - month_start).days)\n    steps = int(day_index / 2.5)\n    return ((monthly_house - 1 + steps) % 12) + 1\n\n\ndef calculate_profections(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Tuple[int, str, int, str, int, str]:\n    age = calculate_age_years(birth, transit)\n    annual_house = profection_house_from_age(age)\n    monthly_house = monthly_profection_house(annual_house, birth, transit)\n    daily_house = daily_profection_house(monthly_house, birth, transit)\n    return (\n        annual_house, house_ruler(natal_chart, annual_house),\n        monthly_house, house_ruler(natal_chart, monthly_house),\n        daily_house, house_ruler(natal_chart, daily_house)\n    )\n\n\n# =========================================================\n# 9. الفريدار - نسخة عملية أولى\n# =========================================================\n\n# تسلسل الفريدار التقليدي يختلف بين النهاري والليلي.\n# هنا نعتمد ترتيبًا عمليًا شائعًا، مع إمكانية تعديله لاحقًا.\nFIRDARIA_DAY = [\n    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13), ("القمر", 9),\n    ("زحل", 11), ("المشتري", 12), ("المريخ", 7),\n    ("الرأس الشمالي", 3), ("الرأس الجنوبي", 2)\n]\n\nFIRDARIA_NIGHT = [\n    ("القمر", 9), ("زحل", 11), ("المشتري", 12), ("المريخ", 7),\n    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13),\n    ("الرأس الشمالي", 3), ("الرأس الجنوبي", 2)\n]\n\n\ndef is_day_chart(natal_chart: ChartData) -> bool:\n    if "الشمس" not in natal_chart.planets or not natal_chart.houses:\n        return True\n    sun_house = house_of_degree(natal_chart.planets["الشمس"].degree, natal_chart.houses)\n    # البيوت 7-12 فوق الأفق تقريبيًا\n    return sun_house in [7, 8, 9, 10, 11, 12]\n\n\ndef calculate_firdaria(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Tuple[str, str]:\n    age = calculate_age_years(birth, transit)\n    seq = FIRDARIA_DAY if is_day_chart(natal_chart) else FIRDARIA_NIGHT\n    remaining = age\n    main = seq[-1][0]\n    main_years = seq[-1][1]\n    start_age = 0\n    for planet, years in seq:\n        if remaining < years:\n            main = planet\n            main_years = years\n            break\n        remaining -= years\n        start_age += years\n\n    # الفرعي: تقسيم فترة الكوكب الرئيسي على 7 كواكب تقليدية بنفس ترتيب يبدأ من الرئيسي\n    traditional = ["زحل", "المشتري", "المريخ", "الشمس", "الزهرة", "عطارد", "القمر"]\n    if main in traditional:\n        idx = traditional.index(main)\n        sub_seq = traditional[idx:] + traditional[:idx]\n    else:\n        sub_seq = traditional\n\n    sub_period = main_years / 7.0\n    sub_index = min(6, int(remaining / sub_period))\n    sub = sub_seq[sub_index]\n    return main, sub\n\n\n# =========================================================\n# 10. العودة الشمسية والقمرية - بحث تقريبي\n# =========================================================\n\ndef sun_longitude_at_jd(jd: float) -> float:\n    return calculate_planets(jd)["الشمس"].degree\n\n\ndef moon_longitude_at_jd(jd: float) -> float:\n    return calculate_planets(jd)["القمر"].degree\n\n\ndef signed_angle_error(current: float, target: float) -> float:\n    # فرق بين -180 و +180\n    diff = (current - target + 180) % 360 - 180\n    return diff\n\n\ndef refine_return_jd(target_deg: float, start_jd: float, end_jd: float, body: str) -> float:\n    """\n    بحث بسيط بالتصغير لاستخراج وقت عودة الشمس/القمر.\n    """\n    getter = sun_longitude_at_jd if body == "الشمس" else moon_longitude_at_jd\n\n    # نبحث عن أقرب قيمة داخل المجال عبر تقسيم ثم تحسين.\n    best_jd = start_jd\n    best_err = 999\n    steps = 240\n    for i in range(steps + 1):\n        jd = start_jd + (end_jd - start_jd) * i / steps\n        err = abs(signed_angle_error(getter(jd), target_deg))\n        if err < best_err:\n            best_err = err\n            best_jd = jd\n\n    # تحسين حول أفضل نقطة\n    window = abs(end_jd - start_jd) / steps\n    lo = best_jd - window\n    hi = best_jd + window\n    for _ in range(30):\n        m1 = lo + (hi - lo) / 3\n        m2 = hi - (hi - lo) / 3\n        e1 = abs(signed_angle_error(getter(m1), target_deg))\n        e2 = abs(signed_angle_error(getter(m2), target_deg))\n        if e1 < e2:\n            hi = m2\n        else:\n            lo = m1\n    return (lo + hi) / 2\n\n\ndef calculate_solar_return_chart(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Optional[ChartData]:\n    if "الشمس" not in natal_chart.planets:\n        return None\n    target = natal_chart.planets["الشمس"].degree\n    # حول عيد الميلاد في سنة العبور\n    start = calculate_julian_day(transit.year, birth.month, birth.day, 0, 0, 0) - 3\n    end = start + 8\n    try:\n        sr_jd = refine_return_jd(target, start, end, "الشمس")\n        return build_chart_from_jd(sr_jd, transit.latitude, transit.longitude)\n    except Exception:\n        return None\n\n\ndef calculate_lunar_return_chart(transit: TransitInput, natal_chart: ChartData) -> Optional[ChartData]:\n    if "القمر" not in natal_chart.planets:\n        return None\n    target = natal_chart.planets["القمر"].degree\n    center = calculate_julian_day(transit.year, transit.month, transit.day, transit.hour, transit.minute, transit.timezone)\n    start = center - 15\n    end = center + 15\n    try:\n        lr_jd = refine_return_jd(target, start, end, "القمر")\n        return build_chart_from_jd(lr_jd, transit.latitude, transit.longitude)\n    except Exception:\n        return None\n\n\n# =========================================================\n# 11. التقدم الثانوي والقوس الشمسي\n# =========================================================\n\ndef calculate_secondary_progressed_chart(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Optional[ChartData]:\n    if natal_chart.jd is None:\n        return None\n    birth_dt = datetime(birth.year, birth.month, birth.day, birth.hour, birth.minute)\n    transit_dt = datetime(transit.year, transit.month, transit.day, transit.hour, transit.minute)\n    age_years_float = safe_days_between(birth_dt, transit_dt) / 365.2425\n    progressed_jd = natal_chart.jd + age_years_float\n    try:\n        return build_chart_from_jd(progressed_jd, birth.latitude, birth.longitude)\n    except Exception:\n        return None\n\n\ndef calculate_solar_arc_chart(natal_chart: ChartData, progressed_chart: Optional[ChartData]) -> Optional[ChartData]:\n    if not progressed_chart or "الشمس" not in natal_chart.planets or "الشمس" not in progressed_chart.planets:\n        return None\n    arc = zodiac_diff(natal_chart.planets["الشمس"].degree, progressed_chart.planets["الشمس"].degree)\n    planets = {}\n    for name, pos in natal_chart.planets.items():\n        planets[name] = PlanetPosition(name, normalize_degree(pos.degree + arc), pos.speed, pos.retrograde)\n    houses = {h: normalize_degree(d + arc) for h, d in natal_chart.houses.items()}\n    asc = normalize_degree(natal_chart.asc + arc) if natal_chart.asc is not None else None\n    mc = normalize_degree(natal_chart.mc + arc) if natal_chart.mc is not None else None\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=natal_chart.jd, latitude=natal_chart.latitude, longitude=natal_chart.longitude)\n\n\ndef build_time_layers(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> TimeLayers:\n    annual_h, annual_lord, monthly_h, monthly_lord, daily_h, daily_lord = calculate_profections(birth, transit, natal_chart)\n    f_main, f_sub = calculate_firdaria(birth, transit, natal_chart)\n\n    progressed = calculate_secondary_progressed_chart(birth, transit, natal_chart)\n    solar_arc = calculate_solar_arc_chart(natal_chart, progressed)\n    solar_return = calculate_solar_return_chart(birth, transit, natal_chart)\n    lunar_return = calculate_lunar_return_chart(transit, natal_chart)\n\n    return TimeLayers(\n        annual_profection_house=annual_h,\n        annual_lord=annual_lord,\n        monthly_profection_house=monthly_h,\n        monthly_lord=monthly_lord,\n        daily_profection_house=daily_h,\n        daily_lord=daily_lord,\n        firdaria_main=f_main,\n        firdaria_sub=f_sub,\n        solar_return_chart=solar_return,\n        lunar_return_chart=lunar_return,\n        progressed_chart=progressed,\n        solar_arc_chart=solar_arc,\n    )\n\n\n# =========================================================\n# 12. ملفات الحالات\n# =========================================================\n\nTOPIC_PROFILES: Dict[str, Dict[str, Any]] = {\n    "general": {\n        "name": "السياق العام",\n        "houses": [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12],\n        "planets": ["القمر", "الشمس", "عطارد", "الزهرة", "المريخ", "المشتري", "زحل"],\n        "midpoints": [\n            ("الشمس", "القمر"), ("القمر", "زحل"), ("الشمس", "زحل"),\n            ("القمر", "الزهرة"), ("الزهرة", "المريخ"),\n            ("الشمس", "المشتري"), ("عطارد", "المشتري"),\n            ("الزهرة", "المشتري"), ("المريخ", "زحل"),\n        ],\n        "profection_houses": [1, 6, 7, 10],\n        "firdaria_planets": ["القمر", "الشمس", "عطارد", "الزهرة", "المشتري", "زحل", "المريخ"],\n    },\n    "love": {\n        "name": "الحالة العاطفية",\n        "houses": [5, 7, 4, 8, 12],\n        "planets": ["القمر", "الزهرة", "المريخ", "عطارد", "المشتري", "زحل"],\n        "midpoints": [\n            ("الشمس", "الزهرة"), ("القمر", "الزهرة"), ("الزهرة", "المريخ"),\n            ("الشمس", "القمر"), ("عطارد", "الزهرة"), ("القمر", "المريخ"),\n            ("الزهرة", "نبتون"), ("الزهرة", "بلوتو"),\n        ],\n        "profection_houses": [5, 7, 4, 8, 12],\n        "firdaria_planets": ["الزهرة", "القمر", "المشتري", "عطارد"],\n    },\n    "relationship_return": {\n        "name": "عودة العلاقة أو التواصل",\n        "houses": [7, 3, 4, 5, 12, 8],\n        "planets": ["القمر", "الزهرة", "عطارد", "المريخ", "زحل", "أورانوس"],\n        "midpoints": [\n            ("القمر", "الزهرة"), ("عطارد", "الزهرة"), ("الزهرة", "المريخ"),\n            ("عطارد", "القمر"), ("الزهرة", "زحل"), ("الزهرة", "بلوتو"),\n            ("الشمس", "القمر"),\n        ],\n        "profection_houses": [7, 3, 4, 5, 12],\n        "firdaria_planets": ["الزهرة", "القمر", "عطارد", "المشتري", "زحل"],\n    },\n    "marriage": {\n        "name": "الزواج والخطوبة",\n        "houses": [7, 5, 4, 10, 2, 11],\n        "planets": ["الزهرة", "القمر", "المشتري", "زحل", "عطارد"],\n        "midpoints": [\n            ("الشمس", "القمر"), ("الزهرة", "المريخ"), ("الزهرة", "المشتري"),\n            ("القمر", "المشتري"), ("الزهرة", "زحل"),\n        ],\n        "profection_houses": [7, 5, 4, 10, 11],\n        "firdaria_planets": ["الزهرة", "القمر", "المشتري", "الشمس", "زحل"],\n    },\n    "career": {\n        "name": "العمل والمهنة",\n        "houses": [10, 6, 2, 11, 3, 9],\n        "planets": ["الشمس", "زحل", "المشتري", "عطارد", "المريخ"],\n        "midpoints": [\n            ("الشمس", "زحل"), ("الشمس", "المشتري"), ("الشمس", "المريخ"),\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("المشتري", "زحل"),\n        ],\n        "profection_houses": [10, 6, 2, 11],\n        "firdaria_planets": ["الشمس", "زحل", "المشتري", "عطارد"],\n    },\n    "money": {\n        "name": "المال والاستثمار",\n        "houses": [2, 8, 11, 10, 5],\n        "planets": ["الزهرة", "المشتري", "عطارد", "زحل", "المريخ", "القمر"],\n        "midpoints": [\n            ("الزهرة", "المشتري"), ("الزهرة", "زحل"), ("عطارد", "المشتري"),\n            ("عطارد", "زحل"), ("المشتري", "زحل"), ("الشمس", "المشتري"),\n            ("عطارد", "المريخ"),\n        ],\n        "profection_houses": [2, 8, 11, 10, 5],\n        "firdaria_planets": ["الزهرة", "المشتري", "عطارد", "زحل"],\n    },\n    "travel": {\n        "name": "السفر والهجرة",\n        "houses": [9, 3, 4, 12, 7, 10],\n        "planets": ["عطارد", "المشتري", "القمر", "أورانوس", "زحل"],\n        "midpoints": [\n            ("عطارد", "المشتري"), ("القمر", "المشتري"), ("القمر", "أورانوس"),\n            ("المشتري", "أورانوس"), ("الشمس", "المشتري"), ("عطارد", "أورانوس"),\n        ],\n        "profection_houses": [9, 3, 4, 12, 7, 10],\n        "firdaria_planets": ["عطارد", "المشتري", "القمر"],\n    },\n    "study": {\n        "name": "الدراسة والاختبارات",\n        "houses": [3, 9, 6, 10, 11],\n        "planets": ["عطارد", "المشتري", "زحل", "القمر", "الشمس"],\n        "midpoints": [\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("عطارد", "الشمس"),\n            ("عطارد", "القمر"), ("عطارد", "المريخ"), ("الشمس", "المشتري"),\n        ],\n        "profection_houses": [3, 9, 6, 10, 11],\n        "firdaria_planets": ["عطارد", "المشتري", "زحل", "الشمس"],\n    },\n    "health": {\n        "name": "الصحة العامة والعملية الجراحية",\n        "houses": [1, 6, 8, 12, 4, 10],\n        "planets": ["القمر", "المريخ", "زحل", "عطارد", "الشمس", "نبتون"],\n        "midpoints": [\n            ("المريخ", "زحل"), ("الشمس", "زحل"), ("الشمس", "المريخ"),\n            ("القمر", "زحل"), ("القمر", "المريخ"), ("عطارد", "زحل"),\n            ("نبتون", "القمر"), ("نبتون", "المريخ"),\n        ],\n        "profection_houses": [1, 6, 8, 12],\n        "firdaria_planets": ["المريخ", "زحل", "القمر", "عطارد"],\n    },\n    "organ_sensitivity": {\n        "name": "حساسية الأعضاء للضغوطات",\n        "houses": [1, 6, 8, 12],\n        "planets": ["القمر", "المريخ", "زحل", "عطارد", "الشمس", "نبتون", "الزهرة"],\n        "midpoints": [\n            ("المريخ", "زحل"), ("الشمس", "زحل"), ("القمر", "زحل"),\n            ("القمر", "المريخ"), ("عطارد", "زحل"), ("عطارد", "المريخ"),\n            ("الزهرة", "زحل"), ("نبتون", "القمر"), ("نبتون", "المريخ"),\n        ],\n        "profection_houses": [1, 6, 8, 12],\n        "firdaria_planets": ["المريخ", "زحل", "القمر", "عطارد", "نبتون"],\n    },\n    "property": {\n        "name": "شراء العقار والبيت",\n        "houses": [4, 2, 8, 3, 7, 10, 11],\n        "planets": ["زحل", "القمر", "الزهرة", "المشتري", "عطارد", "المريخ"],\n        "midpoints": [\n            ("القمر", "زحل"), ("الزهرة", "زحل"), ("المشتري", "زحل"),\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("القمر", "المشتري"),\n        ],\n        "profection_houses": [4, 2, 8, 3, 10],\n        "firdaria_planets": ["زحل", "القمر", "الزهرة", "المشتري", "عطارد"],\n    },\n    "car": {\n        "name": "شراء السيارة ووسائل النقل",\n        "houses": [3, 2, 8, 6, 7, 9, 10],\n        "planets": ["عطارد", "المريخ", "الزهرة", "المشتري", "زحل", "القمر", "أورانوس"],\n        "midpoints": [\n            ("عطارد", "المريخ"), ("عطارد", "الزهرة"), ("عطارد", "المشتري"),\n            ("عطارد", "زحل"), ("المريخ", "زحل"), ("عطارد", "أورانوس"),\n        ],\n        "profection_houses": [3, 2, 8, 6, 10],\n        "firdaria_planets": ["عطارد", "المريخ", "الزهرة", "المشتري"],\n    },\n    "legal": {\n        "name": "القضايا القانونية والعقود",\n        "houses": [3, 7, 9, 10, 8, 2, 12],\n        "planets": ["عطارد", "المشتري", "زحل", "الشمس", "الزهرة", "المريخ", "القمر"],\n        "midpoints": [\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("المشتري", "زحل"),\n            ("الشمس", "زحل"), ("الشمس", "المشتري"), ("الزهرة", "المشتري"),\n            ("المريخ", "زحل"),\n        ],\n        "profection_houses": [7, 9, 10, 3, 8],\n        "firdaria_planets": ["عطارد", "المشتري", "زحل", "الزهرة", "المريخ"],\n    },\n    "pregnancy": {\n        "name": "الحمل والإنجاب / الأبناء",\n        "houses": [5, 1, 4, 6, 8, 12, 11],\n        "planets": ["القمر", "الزهرة", "المشتري", "الشمس", "عطارد", "زحل", "المريخ", "نبتون"],\n        "midpoints": [\n            ("القمر", "الزهرة"), ("القمر", "المشتري"), ("الزهرة", "المشتري"),\n            ("الشمس", "القمر"), ("القمر", "زحل"), ("الزهرة", "زحل"),\n            ("المريخ", "زحل"), ("نبتون", "القمر"),\n        ],\n        "profection_houses": [5, 4, 1, 6, 8, 11],\n        "firdaria_planets": ["القمر", "الزهرة", "المشتري", "الشمس"],\n    },\n    "project": {\n        "name": "المشروع الجديد والقرار المهم",\n        "houses": [1, 2, 3, 5, 6, 7, 8, 9, 10, 11],\n        "planets": ["الشمس", "عطارد", "المريخ", "المشتري", "زحل", "الزهرة", "القمر", "أورانوس"],\n        "midpoints": [\n            ("الشمس", "المشتري"), ("الشمس", "زحل"), ("الشمس", "المريخ"),\n            ("عطارد", "المشتري"), ("عطارد", "زحل"), ("عطارد", "المريخ"),\n            ("المريخ", "زحل"), ("المشتري", "زحل"), ("الزهرة", "المشتري"),\n        ],\n        "profection_houses": [1, 2, 3, 5, 6, 7, 10, 11],\n        "firdaria_planets": ["الشمس", "عطارد", "المريخ", "المشتري", "زحل"],\n    },\n}\n\n\n\n# =========================================================\n# 12B. مفاتيح نوعية وسقوف ترجيح لمنع تضخم النتائج\n# =========================================================\n\nTOPIC_REQUIRED_MIDPOINT_KEYWORDS = {\n    "car": ["عطارد/المريخ", "عطارد/الزهرة", "عطارد/المشتري", "عطارد/زحل", "عطارد/أورانوس"],\n    "travel": ["عطارد/المشتري", "القمر/المشتري", "القمر/أورانوس", "المشتري/أورانوس", "عطارد/أورانوس"],\n    "money": ["الزهرة/المشتري", "عطارد/المشتري", "الزهرة/زحل", "المشتري/زحل"],\n    "career": ["الشمس/المشتري", "الشمس/زحل", "عطارد/زحل", "عطارد/المشتري", "المشتري/زحل"],\n    "love": ["القمر/الزهرة", "الزهرة/المريخ", "عطارد/الزهرة", "الشمس/الزهرة"],\n    "relationship_return": ["عطارد/الزهرة", "القمر/الزهرة", "الزهرة/زحل", "الزهرة/بلوتو"],\n    "marriage": ["الشمس/القمر", "الزهرة/المريخ", "الزهرة/المشتري", "القمر/المشتري", "الزهرة/زحل"],\n    "health": ["المريخ/زحل", "الشمس/زحل", "القمر/زحل", "القمر/المريخ", "نبتون/القمر"],\n    "organ_sensitivity": ["المريخ/زحل", "الشمس/زحل", "القمر/زحل", "القمر/المريخ", "عطارد/زحل", "نبتون/القمر"],\n    "property": ["القمر/زحل", "الزهرة/زحل", "المشتري/زحل", "عطارد/زحل", "القمر/المشتري"],\n    "legal": ["عطارد/زحل", "عطارد/المشتري", "المشتري/زحل", "الشمس/المشتري", "المريخ/زحل"],\n    "study": ["عطارد/زحل", "عطارد/المشتري", "عطارد/القمر", "الشمس/المشتري"],\n    "pregnancy": ["القمر/الزهرة", "القمر/المشتري", "الزهرة/المشتري", "الشمس/القمر"],\n    "project": ["الشمس/المشتري", "عطارد/المشتري", "المشتري/زحل", "الشمس/زحل", "عطارد/زحل"],\n}\n\nTOPIC_CORE_HOUSES = {"car":[3],"travel":[9,3],"money":[2,8,11],"career":[10,6],"love":[5,7],"relationship_return":[7,3],"marriage":[7,5],"health":[1,6],"organ_sensitivity":[1,6],"property":[4],"legal":[9,7,3,10],"study":[3,9],"pregnancy":[5,1],"project":[1,10,2],"general":[1]}\nTOPIC_CORE_PLANETS = {"car":["عطارد","المريخ"],"travel":["عطارد","المشتري"],"money":["الزهرة","المشتري","عطارد"],"career":["الشمس","زحل","المشتري","عطارد"],"love":["الزهرة","القمر"],"relationship_return":["عطارد","الزهرة","القمر"],"marriage":["الزهرة","القمر","المشتري","زحل"],"health":["القمر","المريخ","زحل"],"organ_sensitivity":["القمر","المريخ","زحل"],"property":["زحل","القمر","عطارد"],"legal":["عطارد","المشتري","زحل"],"study":["عطارد","المشتري","زحل"],"pregnancy":["القمر","الزهرة","المشتري"],"project":["الشمس","عطارد","المشتري","زحل"],"general":["القمر","الشمس"]}\n\ndef cap_value(value: int, cap: int) -> int:\n    return min(int(value), int(cap))\n\ndef has_required_midpoint(topic_key: str, activations: List[Activation]) -> bool:\n    req = TOPIC_REQUIRED_MIDPOINT_KEYWORDS.get(topic_key, [])\n    if not req:\n        return True\n    return any(key in act.target_name for act in activations for key in req)\n\ndef count_core_house_hits(topic_key: str, natal_chart: ChartData, transit_chart: ChartData) -> int:\n    houses = TOPIC_CORE_HOUSES.get(topic_key, [])\n    planets = TOPIC_CORE_PLANETS.get(topic_key, [])\n    hits = 0\n    for pname in planets:\n        if pname in transit_chart.planets:\n            h = house_of_degree(transit_chart.planets[pname].degree, natal_chart.houses)\n            if h in houses:\n                hits += 1\n    return hits\n\ndef evidence_level(topic_key: str, activations: List[Activation], natal_chart: ChartData, transit_chart: ChartData, layers: Optional[TimeLayers]) -> Tuple[int, List[str]]:\n    notes=[]; level=0\n    house_hits=count_core_house_hits(topic_key,natal_chart,transit_chart)\n    if house_hits:\n        level=max(level,1); notes.append(f"وجود {house_hits} تفعيل مباشر في البيوت الجوهرية للحالة")\n    if has_required_midpoint(topic_key,activations):\n        level=max(level,2); notes.append("ظهور مفتاح نوعي خاص بالحالة من نقاط المنتصف")\n    if layers:\n        prof_houses=TOPIC_PROFILES.get(topic_key,{}).get("profection_houses",[])\n        f_planets=TOPIC_PROFILES.get(topic_key,{}).get("firdaria_planets",[])\n        if layers.annual_profection_house in prof_houses or layers.firdaria_main in f_planets:\n            if level>=2:\n                level=max(level,3); notes.append("المفتاح النوعي مدعوم بطبقة زمنية كبرى")\n    return level, notes\n\n# =========================================================\n# 13. حساسية الأعضاء\n# =========================================================\n\nSIGN_BODY_AREAS = {\n    "الحمل": "الرأس، الوجه، العينان، الصداع والتوتر العصبي",\n    "الثور": "الحلق، الرقبة، الصوت، اللوز، الغدة الدرقية",\n    "الجوزاء": "الرئتان، التنفس، الذراعان، اليدان، الأعصاب",\n    "السرطان": "المعدة، الصدر، الثدي، السوائل والهضم",\n    "الأسد": "القلب، الظهر، العمود الفقري العلوي، الحيوية",\n    "العذراء": "الأمعاء، القولون، الهضم الدقيق، القلق الجسدي",\n    "الميزان": "الكليتان، أسفل الظهر، التوازن الداخلي والجلد",\n    "العقرب": "الجهاز التناسلي، المثانة، الإخراج، الهرمونات العميقة",\n    "القوس": "الكبد، الفخذان، الوركان، العصب الوركي",\n    "الجدي": "العظام، الركبتان، الأسنان، الجلد والمفاصل",\n    "الدلو": "الساقان، الكاحلان، الدورة الطرفية، الأعصاب المفاجئة",\n    "الحوت": "القدمان، المناعة، السوائل، النوم، الحساسية والأدوية",\n}\n\n\ndef infer_sensitive_organs(activations: List[Activation]) -> List[str]:\n    scores: Dict[str, int] = {}\n    for a in activations:\n        sign, _ = degree_to_sign(a.exact_aspect_degree)\n        scores[sign] = scores.get(sign, 0) + a.score\n    ordered = sorted(scores.items(), key=lambda x: x[1], reverse=True)\n    return [f"{SIGN_BODY_AREAS[s]}: {score} نقطة" for s, score in ordered[:3]]\n\n\n# =========================================================\n# 14. التقييم العام للحالات\n# =========================================================\n\ndef classify_score(score: int) -> str:\n    """0-39 ضعيفة، 40-59 متوسطة، 60-79 قوية، 80 فأكثر قوية جدًا."""\n    if score < 40:\n        return "ضعيفة"\n    if score < 60:\n        return "متوسطة"\n    if score < 80:\n        return "قوية"\n    return "قوية جدًا"\n\n\n\ndef classify_event_type(score: int, has_deep_layer: bool = False) -> str:\n    if score < 40:\n        return "مؤشر ضعيف أو شعور داخلي"\n    if score < 60:\n        return "حركة متوسطة أو مراجعة"\n    if score < 80:\n        return "محور قوي يحتاج متابعة"\n    if has_deep_layer:\n        return "حدث محتمل بشرط وجود خطوة واقعية"\n    return "محور قوي جدًا وليس حكمًا بحدث مؤكد"\n\n\n\ndef score_house_emphasis(natal_chart: ChartData, transit_chart: ChartData, profile: Dict[str, Any]) -> Tuple[int, List[str]]:\n    """ترجيح البيوت بعد منع التضخم: البيوت والكواكب الجوهرية فقط مع سقف 24 نقطة."""\n    topic_key=""\n    for key,val in TOPIC_PROFILES.items():\n        if val is profile:\n            topic_key=key; break\n    core_houses=TOPIC_CORE_HOUSES.get(topic_key, profile.get("houses", []))\n    core_planets=TOPIC_CORE_PLANETS.get(topic_key, profile.get("planets", []))\n    secondary_houses=[h for h in profile.get("houses", []) if h not in core_houses]\n    score=0; notes=[]; used=set()\n    for pname in core_planets:\n        if pname in transit_chart.planets:\n            h=house_of_degree(transit_chart.planets[pname].degree, natal_chart.houses)\n            if h in core_houses:\n                score+=8; text=f"{pname} العابر يقع في/ينشّط البيت {h}"\n                if text not in used: notes.append(text); used.add(text)\n            elif h in secondary_houses:\n                score+=3; text=f"{pname} العابر يلمّح للموضوع عبر البيت {h}"\n                if text not in used: notes.append(text); used.add(text)\n    for h in core_houses[:2]:\n        ruler=house_ruler(natal_chart,h)\n        if ruler and ruler in natal_chart.planets:\n            ruler_deg=natal_chart.planets[ruler].degree\n            for pname in core_planets:\n                if pname in transit_chart.planets:\n                    acts=check_activation(transit_chart.planets[pname], f"حاكم البيت {h} ({ruler})", ruler_deg, topic_key or "general", max_orb=1.5, max_score=10)\n                    if acts:\n                        score+=max(a.score for a in acts); notes.append(f"تفعيل حاكم البيت {h}: {ruler}"); break\n    return cap_value(score,24), notes[:5]\n\n\n\ndef score_time_layers(profile: Dict[str, Any], layers: TimeLayers, natal_chart: ChartData) -> Tuple[int, List[str], bool]:\n    score = 0\n    notes = []\n    deep = False\n\n    prof_houses = profile.get("profection_houses", [])\n    f_planets = profile.get("firdaria_planets", [])\n\n    if layers.annual_profection_house in prof_houses:\n        score += 12\n        notes.append(f"البروفكشن السنوي يدعم الحالة: البيت {layers.annual_profection_house}")\n        deep = True\n    if layers.monthly_profection_house in prof_houses:\n        score += 8\n        notes.append(f"البروفكشن الشهري يدعم الحالة: البيت {layers.monthly_profection_house}")\n    if layers.daily_profection_house in prof_houses:\n        score += 4\n        notes.append(f"البروفكشن اليومي يلمّح للحالة: البيت {layers.daily_profection_house}")\n\n    if layers.firdaria_main in f_planets:\n        score += 10\n        notes.append(f"الفريدار الرئيسي داعم: {layers.firdaria_main}")\n        deep = True\n    if layers.firdaria_sub in f_planets:\n        score += 5\n        notes.append(f"الفريدار الفرعي داعم: {layers.firdaria_sub}")\n\n    # العودة الشمسية: إذا كانت كواكب الملف في بيوت الملف\n    if layers.solar_return_chart:\n        sr_score, sr_notes = score_house_emphasis(natal_chart, layers.solar_return_chart, profile)\n        if sr_score > 0:\n            add = min(15, int(sr_score / 2))\n            score += add\n            notes.append(f"العودة الشمسية تدعم الحالة ({add} نقطة)")\n            deep = True\n\n    # العودة القمرية\n    if layers.lunar_return_chart:\n        lr_score, lr_notes = score_house_emphasis(natal_chart, layers.lunar_return_chart, profile)\n        if lr_score > 0:\n            add = min(10, int(lr_score / 2))\n            score += add\n            notes.append(f"العودة القمرية تدعم الحالة ({add} نقطة)")\n\n    return score, notes, deep\n\n\ndef evaluate_topic(\n    topic_key: str,\n    natal_chart: ChartData,\n    transit_chart: ChartData,\n    layers: Optional[TimeLayers] = None,\n) -> TopicResult:\n    profile=TOPIC_PROFILES[topic_key]\n    acts=[]; notes=[]; warnings=[]; technical=[]\n    mps=calculate_midpoints(natal_chart, profile["midpoints"])\n    for mp in mps:\n        for tpos in transit_chart.planets.values():\n            max_orb=2.0 if tpos.name in ["القمر","عطارد","الزهرة","المريخ","الشمس"] else 2.5\n            acts.extend(check_activation(tpos, mp.name, mp.degree, topic_key, max_orb=max_orb, layer="عبور", max_score=14))\n    if layers and layers.progressed_chart:\n        for mp in mps:\n            for pname in profile["planets"]:\n                if pname in layers.progressed_chart.planets:\n                    acts.extend(check_activation(layers.progressed_chart.planets[pname], mp.name, mp.degree, topic_key, max_orb=0.8, layer="تقدم ثانوي", max_score=18))\n    if layers and layers.solar_arc_chart:\n        for mp in mps:\n            for pname in profile["planets"]:\n                if pname in layers.solar_arc_chart.planets:\n                    acts.extend(check_activation(layers.solar_arc_chart.planets[pname], mp.name, mp.degree, topic_key, max_orb=0.8, layer="قوس شمسي", max_score=20))\n    midpoint_score=cap_value(sum(a.score for a in acts),36)\n    house_score,house_notes=score_house_emphasis(natal_chart,transit_chart,profile); notes.extend(house_notes)\n    layer_score=0; has_deep=False\n    if layers:\n        raw_layer_score,layer_notes,has_deep=score_time_layers(profile,layers,natal_chart)\n        layer_score=cap_value(raw_layer_score,26); notes.extend(layer_notes[:4])\n    ev_level,ev_notes=evidence_level(topic_key,acts,natal_chart,transit_chart,layers); notes.extend(ev_notes)\n    active_layers=set(a.layer for a in acts)\n    repetition_bonus=0\n    if len(active_layers)>=2: repetition_bonus+=6; notes.append("الدلالة ظهرت من أكثر من طبقة")\n    if acts and house_score>0 and layer_score>0: repetition_bonus+=6; notes.append("اجتمع التوقيت مع البيت والمرحلة الزمنية")\n    raw_total=midpoint_score+house_score+layer_score+repetition_bonus\n    if ev_level==0:\n        total=min(raw_total,35); technical.append("تم خفض النتيجة لأن الدلالة عامة ولا توجد مفاتيح نوعية كافية.")\n    elif ev_level==1:\n        total=min(raw_total,55); technical.append("تم تحديد السقف لأن الدلالة مبنية على بيوت/كواكب فقط دون نقطة نوعية واضحة.")\n    elif ev_level==2:\n        total=min(raw_total,75); technical.append("الدلالة قوية لأنها تملك مفتاحًا نوعيًا، لكنها تحتاج طبقة كبرى لتصبح حدثًا كبيرًا.")\n    else:\n        total=min(raw_total,95); technical.append("الدلالة قوية جدًا لأنها تملك مفتاحًا نوعيًا وطبقة زمنية داعمة.")\n    for a in acts:\n        if any(w in a.term_quality for w in ["ثقيل","متوتر","مخاطرة","نزاع","جراحي","بطيء"]): warnings.append(f"{a.target_name}: {a.term_quality}")\n    warnings=warnings[:3]\n    if topic_key=="organ_sensitivity":\n        organ_notes=infer_sensitive_organs(acts)\n        if organ_notes: notes.extend([f"محور جسدي حساس: {x}" for x in organ_notes])\n    strength=classify_score(total)\n    event_type=classify_event_type(total, has_deep_layer=(ev_level>=3) or ("قوس شمسي" in active_layers) or ("تقدم ثانوي" in active_layers))\n    if ev_level<3 and "حدث" in event_type: event_type="محور قوي يحتاج دليلًا واقعيًا قبل الحكم كحدث"\n    return TopicResult(topic_key=topic_key, topic_name=profile["name"], score=total, strength=strength, event_type=event_type, activations=sorted(acts,key=lambda x:x.score,reverse=True), supports=notes[:7], warnings=warnings[:3], technical_notes=technical)\n\n\n\ndef evaluate_all_topics(natal_chart: ChartData, transit_chart: ChartData, layers: Optional[TimeLayers] = None) -> List[TopicResult]:\n    results = [evaluate_topic(k, natal_chart, transit_chart, layers) for k in TOPIC_PROFILES.keys()]\n    results.sort(key=lambda r: r.score, reverse=True)\n    return results\n\n\n# =========================================================\n# 15. توليد تقارير\n# =========================================================\n\ndef generate_chart_summary(chart: ChartData, title: str) -> str:\n    lines = [title, "-" * 60]\n    if chart.asc is not None:\n        lines.append(f"الطالع: {format_degree(chart.asc)}")\n    if chart.mc is not None:\n        lines.append(f"MC: {format_degree(chart.mc)}")\n    lines.append("")\n    lines.append("الكواكب:")\n    for name, pos in chart.planets.items():\n        retro = " متراجع" if pos.retrograde else ""\n        lines.append(f"- {name}: {format_degree(pos.degree)}{retro} | السرعة: {pos.speed:.4f}")\n    lines.append("")\n    lines.append("البيوت:")\n    for i in range(1, 13):\n        if i in chart.houses:\n            ruler = house_ruler(chart, i)\n            lines.append(f"- البيت {i}: {format_degree(chart.houses[i])} | الحاكم: {ruler}")\n    return "\\n".join(lines)\n\n\ndef generate_layers_summary(layers: TimeLayers) -> str:\n    lines = ["الطبقات الزمنية", "-" * 60]\n    lines.append(f"البروفكشن السنوي: البيت {layers.annual_profection_house} | حاكمه: {layers.annual_lord}")\n    lines.append(f"البروفكشن الشهري: البيت {layers.monthly_profection_house} | حاكمه: {layers.monthly_lord}")\n    lines.append(f"البروفكشن اليومي: البيت {layers.daily_profection_house} | حاكمه: {layers.daily_lord}")\n    lines.append(f"الفريدار الرئيسي: {layers.firdaria_main}")\n    lines.append(f"الفريدار الفرعي: {layers.firdaria_sub}")\n    if layers.solar_return_chart and layers.solar_return_chart.asc is not None:\n        lines.append(f"طالع العودة الشمسية: {format_degree(layers.solar_return_chart.asc)}")\n    if layers.lunar_return_chart and layers.lunar_return_chart.asc is not None:\n        lines.append(f"طالع العودة القمرية: {format_degree(layers.lunar_return_chart.asc)}")\n    return "\\n".join(lines)\n\n\n\ndef topic_event_type_label(topic_key: str, score: int, raw_event_type: str) -> str:\n    practical_topics=["car","money","property","legal","study","travel","project"]\n    sensitive_topics=["health","organ_sensitivity","pregnancy"]\n    relation_topics=["love","relationship_return","marriage"]\n    if topic_key in practical_topics:\n        if score>=80: return "إجراء عملي قوي جدًا بشرط وجود خطوة واقعية"\n        if score>=60: return "محور عملي قوي يحتاج متابعة"\n        if score>=40: return "حركة أو مراجعة عملية متوسطة"\n        return "مؤشر ضعيف أو تفكير بالموضوع"\n    if topic_key in sensitive_topics:\n        if score>=80: return "تنبيه قوي جدًا يحتاج متابعة واقعية لا تشخيصًا"\n        if score>=60: return "تنبيه قوي للراحة والمتابعة"\n        if score>=40: return "تنبيه متوسط أو حساسية قابلة للملاحظة"\n        return "حساسية خفيفة أو ملاحظة وقائية"\n    if topic_key in relation_topics:\n        if score>=80: return "محور عاطفي قوي جدًا يحتاج دليلًا واقعيًا"\n        if score>=60: return "محور عاطفي قوي"\n        if score>=40: return "حركة شعورية أو تواصل متوسط"\n        return "شعور داخلي أو مؤشر ضعيف"\n    if score>=80: return "محور قوي جدًا وليس حكمًا بحدث مؤكد"\n    if score>=60: return "محور قوي وواضح"\n    if score>=40: return "حركة أو تفاعل متوسط"\n    return raw_event_type\n\ndef topic_display_score(topic_key: str, score: int) -> int:\n    practical_topics=["car","money","property","legal","travel","study","project"]\n    sensitive_topics=["health","organ_sensitivity","pregnancy"]\n    s=min(100,max(0,int(score)))\n    if topic_key in practical_topics and s>88: return 88\n    if topic_key in sensitive_topics and s>82: return 82\n    return s\n\ndef topic_display_strength(topic_key: str, score: int) -> str:\n    s=topic_display_score(topic_key,score)\n    if s<40: return "ضعيفة"\n    if s<60: return "متوسطة"\n    if s<80: return "قوية"\n    return "قوية جدًا"\n\ndef gender_sensitive_topic_name(topic_key: str, gender: str, default_name: str) -> str:\n    if topic_key=="pregnancy":\n        if gender=="ذكر": return "الإنجاب والأبناء أو متابعة تخص الشريكة"\n        if gender=="أنثى": return "الحمل والإنجاب"\n        return "الحمل والإنجاب / الأبناء"\n    return default_name\n\ndef gender_sensitive_pregnancy_intro(gender: str) -> str:\n    if gender=="ذكر": return "هذا الملف لا يعني حمل الرجل جسديًا، بل يقرأ مؤشرات البيت الخامس والإنجاب والأبناء أو موضوعًا يخص الشريكة/العائلة."\n    if gender=="أنثى": return "هذا الملف يقرأ مؤشرات الحمل والإنجاب والمتابعة الجسدية والخصوبة رمزيًا، ولا يؤكد الحمل إلا بالفحص الطبي."\n    return "هذا الملف يقرأ مؤشرات الإنجاب والأبناء والخصوبة رمزيًا، ولا يؤكد حملًا أو نتيجة طبية إلا بالفحص والواقع العملي."\n\ndef user_direction_text(result: TopicResult) -> str:\n    t = result.topic_key\n    if t == "love":\n        return "الفترة تنشّط المشاعر والرغبة في التقارب، لكن الحكم النهائي يعتمد على طريقة التعبير وعدم الضغط."\n    if t == "relationship_return":\n        return "هناك قابلية لعودة تفكير أو تواصل قديم، لكن لا تُفسَّر كل إشارة على أنها عودة مستقرة."\n    if t == "marriage":\n        return "المؤشرات تخص الارتباط الرسمي أو الخطوبة، وتحتاج وضوحًا عمليًا وعائليًا حتى تتحول إلى خطوة ثابتة."\n    if t == "career":\n        return "الفترة تضع العمل والمسؤوليات في الواجهة، وقد تحمل فرصة أو ضغطًا مهنيًا يحتاج تنظيمًا."\n    if t == "money":\n        return "هناك حركة مالية أو تفكير بالموارد، لكن القرار يحتاج حسابًا وتدقيقًا قبل المخاطرة."\n    if t == "travel":\n        return "ملف السفر أو الخارج قابل للتحرك، خصوصًا عبر الأوراق والمراسلات أو قرار انتقال."\n    if t == "study":\n        return "الفترة مناسبة للدراسة والمراجعة أو الاختبار إذا تم تنظيم الوقت وتجنب التشتت."\n    if t == "health":\n        return "الفترة تدعو للاهتمام بالصحة والطاقة اليومية، ولا تغني عن الطبيب أو الفحوصات."\n    if t == "organ_sensitivity":\n        return "هناك مناطق جسدية أكثر حساسية رمزيًا تحت الضغط، وهذا تنبيه وقائي لا تشخيص طبي."\n    if t == "property":\n        return "المؤشرات تدعم البحث أو التفاوض العقاري، بشرط فحص الأوراق والسعر والالتزامات."\n    if t == "car":\n        return "الفترة قد تفتح باب المعاينة أو الشراء أو التسجيل، لكنها لا تعني شراءً مؤكدًا ما لم توجد سيارة معروضة أو تفاوض أو خطوة واقعية."\n    if t == "legal":\n        return "الملف القانوني أو العقدي قابل للحركة، لكن يجب تدقيق المستندات واستشارة المختص عند الحاجة."\n    if t == "pregnancy":\n        return "المؤشرات تخص ملف الإنجاب أو الأبناء أو المتابعة الطبية رمزيًا. الحمل لا يؤكد فلكيًا، بل بالفحص الطبي فقط."\n    if t == "project":\n        return "الفترة تدعم التخطيط أو الإطلاق إذا كانت الموارد والخطة واضحة، مع تجنب الشراكات غير الموثقة."\n    return "الفترة تحمل محورًا عامًا واضحًا يحتاج تركيزًا وهدوءًا."\n\n\n\n\ndef opportunity_verdict(topic_key: str, score: int, gender: str = "غير محدد") -> Tuple[str, str]:\n    """\n    يعطي حكمًا مباشرًا للمستخدم:\n    - هل توجد فرصة؟\n    - هل المؤشرات غير كافية؟\n    - هل نحتاج انتظار/متابعة؟\n    هذا لا يحوّل التقرير إلى يقين، لكنه يمنع الغموض.\n    """\n    s = int(score)\n\n    if topic_key == "pregnancy":\n        if gender == "ذكر":\n            if s >= 80:\n                return (\n                    "نعم، ملف الإنجاب أو الأبناء قوي جدًا هذه الفترة",\n                    "لكن لا يُقرأ كحمل للرجل؛ بل كموضوع يخص الأبناء أو الشريكة أو قرارًا عائليًا. يحتاج دليلًا واقعيًا مثل فحص أو حديث عائلي أو متابعة تخص الشريكة."\n                )\n            if s >= 60:\n                return (\n                    "نعم، توجد فرصة أو حركة واضحة في ملف الأبناء أو الإنجاب",\n                    "لكنها ليست تأكيدًا لحدوث حمل، بل دلالة على أن الموضوع حاضر وقابل للمتابعة."\n                )\n            if s >= 40:\n                return (\n                    "الفرصة محدودة وتحتاج متابعة",\n                    "المؤشرات لا تكفي للحكم بحدث واضح، لكنها تسمح بمتابعة الموضوع أو مراقبة تطوره."\n                )\n            return (\n                "لا تظهر فرصة قوية حاليًا",\n                "المؤشرات ضعيفة، ولا تكفي للحكم بحدوث تطور واضح في ملف الإنجاب أو الأبناء."\n            )\n\n        if gender == "أنثى":\n            if s >= 80:\n                return (\n                    "نعم، توجد فرصة قوية في ملف الحمل أو الإنجاب",\n                    "لكن الحمل لا يُؤكد فلكيًا؛ التأكيد يكون بالفحص الطبي فقط. هذه الدرجة تعني أن الوقت داعم للمتابعة أو الفحص أو ظهور مؤشر واقعي."\n                )\n            if s >= 60:\n                return (\n                    "نعم، توجد فرصة واضحة للمتابعة أو احتمال إنجابي",\n                    "لكنها ليست تأكيد حمل. الأفضل إجراء فحص أو متابعة طبية إذا كان هناك تأخير أو أعراض أو خطة إنجاب."\n                )\n            if s >= 40:\n                return (\n                    "الفرصة موجودة لكنها محدودة",\n                    "المؤشرات متوسطة، لذلك الأفضل المتابعة أو الانتظار بدل الحكم بوجود حمل."\n                )\n            return (\n                "لا تظهر فرصة واضحة حاليًا",\n                "المؤشرات ضعيفة ولا تكفي لترجيح الحمل أو الإنجاب في هذه الفترة."\n            )\n\n        if s >= 80:\n            return ("نعم، الملف قوي جدًا", "توجد دلالة قوية على ملف الإنجاب أو الأبناء، لكنها تحتاج دليلًا واقعيًا أو طبيًا.")\n        if s >= 60:\n            return ("نعم، توجد فرصة واضحة", "المؤشرات داعمة لكنها غير حاسمة.")\n        if s >= 40:\n            return ("فرصة محدودة", "المؤشرات متوسطة وتحتاج متابعة.")\n        return ("لا توجد فرصة واضحة", "المؤشرات ضعيفة حاليًا.")\n\n    practical_topics = ["car", "money", "property", "legal", "study", "travel", "project"]\n    health_topics = ["health", "organ_sensitivity"]\n    relation_topics = ["love", "relationship_return", "marriage"]\n\n    if topic_key in practical_topics:\n        if s >= 80:\n            return (\n                "نعم، توجد فرصة قوية للتحرك العملي",\n                "النتيجة لا تعني أن الأمر يحدث وحده؛ لكنها تدعم الخطوة إذا كان هناك عرض، موعد، ورقة، تفاوض، دفع أو توقيع."\n            )\n        if s >= 60:\n            return (\n                "نعم، توجد فرصة عملية قابلة للمتابعة",\n                "الموضوع نشط، لكن يحتاج خطوة واقعية حتى يتحول إلى نتيجة."\n            )\n        if s >= 40:\n            return (\n                "الفرصة متوسطة أو محدودة",\n                "يمكن المتابعة، لكن لا يُنصح بالحسم قبل ظهور دليل عملي أقوى."\n            )\n        return (\n            "لا توجد فرصة قوية حاليًا",\n            "المؤشرات ضعيفة، والأفضل الانتظار أو عدم اتخاذ قرار كبير الآن."\n        )\n\n    if topic_key in health_topics:\n        if s >= 80:\n            return (\n                "نعم، يوجد تنبيه قوي يحتاج متابعة",\n                "هذا ليس تشخيصًا، لكنه يشير إلى ضرورة الانتباه للجسد ومراجعة المختص عند وجود عرض."\n            )\n        if s >= 60:\n            return (\n                "يوجد تنبيه واضح",\n                "المؤشرات تدعو للراحة أو الفحص أو تنظيم الروتين، لكنها لا تعني مرضًا مؤكدًا."\n            )\n        if s >= 40:\n            return (\n                "تنبيه متوسط",\n                "الموضوع يحتاج ملاحظة فقط، لا قلقًا زائدًا."\n            )\n        return (\n            "لا يظهر ضغط صحي قوي",\n            "المؤشرات ضعيفة، مع بقاء المتابعة الطبية ضرورية عند وجود عرض واقعي."\n        )\n\n    if topic_key in relation_topics:\n        if s >= 80:\n            return (\n                "نعم، توجد فرصة قوية أو حضور عاطفي قوي",\n                "لكن النتيجة لا تصبح مؤكدة إلا إذا ظهر فعل واضح: تواصل، اتفاق، خطوة رسمية أو موقف عملي."\n            )\n        if s >= 60:\n            return (\n                "نعم، توجد فرصة واضحة أو محور عاطفي نشط",\n                "الموضوع قابل للحركة، لكنه يحتاج تصرفًا واقعيًا من أحد الطرفين."\n            )\n        if s >= 40:\n            return (\n                "الفرصة موجودة لكنها محدودة",\n                "قد تظهر كمشاعر أو تفكير أكثر من حدث واضح."\n            )\n        return (\n            "لا توجد فرصة قوية حاليًا",\n            "المؤشرات ضعيفة ولا تكفي لترجيح حدث عاطفي واضح."\n        )\n\n    if s >= 80:\n        return ("نعم، المحور قوي جدًا", "توجد فرصة واضحة لكن ليست حكمًا حتميًا.")\n    if s >= 60:\n        return ("نعم، المحور قوي", "الموضوع يستحق المتابعة.")\n    if s >= 40:\n        return ("الفرصة متوسطة", "تحتاج مزيدًا من الدليل.")\n    return ("لا توجد دلالة كافية", "المؤشرات ضعيفة حاليًا.")\n\n\ndef opportunity_line(topic_key: str, score: int, gender: str = "غير محدد") -> str:\n    title, detail = opportunity_verdict(topic_key, score, gender)\n    return f"{title}. {detail}"\n\ndef filter_topic_warnings(topic_key: str, warnings: List[str]) -> List[str]:\n    """\n    فلترة التحذيرات حسب المحور.\n    في الحمل والإنجاب لا نعرض القمر/الزهرة أو الشمس/القمر كتحذير إلا إذا كان معها زحل/المريخ/نبتون أو دلالة ثقيلة واضحة.\n    """\n    if topic_key != "pregnancy":\n        return warnings\n\n    heavy_keys = ["زحل", "المريخ", "نبتون", "الثامن", "السادس", "الثاني عشر", "ثقيل", "متوتر", "جراحي", "بطيء"]\n    filtered = []\n    for w in warnings:\n        if any(k in w for k in heavy_keys):\n            filtered.append(w)\n    return filtered\n\ndef generate_user_report(results: List[TopicResult], selected_topic: str = "general", period: str = "هذا الأسبوع", gender: str = "غير محدد") -> str:\n    if selected_topic=="general":\n        visible=results[:3]; main=visible[0] if visible else None\n    else:\n        found=[r for r in results if r.topic_key==selected_topic]; main=found[0] if found else None; visible=[main] if main else []\n    if not main: return "لا توجد دلالات كافية لإصدار تقرير واضح."\n    shown_score=topic_display_score(main.topic_key,main.score)\n    shown_strength=topic_display_strength(main.topic_key,main.score)\n    topic_name=gender_sensitive_topic_name(main.topic_key,gender,main.topic_name)\n    lines=[]\n    lines.append("التقرير الشخصي"); lines.append("="*50)\n    lines.append(f"الموضوع المختار: {topic_name if selected_topic != \'general\' else \'السياق العام\'}")\n    lines.append(f"الفترة: {period}")\n    lines.append(f"قوة التفعيل: {shown_strength}")\n    lines.append(f"درجة التأثير التقريبية: {shown_score} من 100")\n    lines.append(f"نوع الدلالة: {topic_event_type_label(main.topic_key,main.score,main.event_type)}")\n    lines.append("سلم تقييم التأثير: أقل من 40 ضعيف، 40-59 متوسط، 60-79 قوي، 80 فأكثر قوي جدًا")\n    lines.append("")\n    lines.append("الاتجاه العام:")\n    lines.append(gender_sensitive_pregnancy_intro(gender) if main.topic_key=="pregnancy" else user_direction_text(main))\n    lines.append("")\n    lines.append("ما يدعم النتيجة:")\n    if main.supports:\n        for s in main.supports[:5]: lines.append(f"- {s}")\n    else: lines.append("- توجد تفعيلات فلكية متكررة ضمن المحور نفسه.")\n    lines.append("")\n    lines.append("ما الفرق بين هذه النتيجة والحدث المؤكد؟")\n    if main.topic_key in ["car","money","property","legal","travel","study","project"]:\n        lines.append("في الملفات العملية، الدرجة العالية لا تعني أن الأمر سيحدث وحده. هي تعني أن الملف نشط وقابل للحركة إذا وُجدت خطوة واقعية مثل معاينة، ورقة، موعد، عرض، تواصل، دفع، توقيع أو مراجعة.")\n    elif main.topic_key in ["health","organ_sensitivity","pregnancy"]:\n        lines.append("هنا لا تُقرأ الدرجة كتشخيص أو نتيجة طبية. هي فقط تشير إلى أن الملف الصحي أو الجسدي يحتاج انتباهًا أو متابعة، والقرار النهائي يكون بالفحص والمختص.")\n    elif main.topic_key in ["love","relationship_return","marriage"]:\n        lines.append("في الملفات العاطفية، الدرجة العالية قد تعني حضورًا نفسيًا أو عاطفيًا قويًا، لكنها لا تتحول إلى حدث خارجي إلا إذا ظهر فعل واضح مثل تواصل، اتفاق، خطوة رسمية أو موقف عملي.")\n    else:\n        lines.append("التقرير يحدد المحور الأكثر نشاطًا، لكنه لا يحوّل الدلالة إلى حكم قطعي.")\n    lines.append("")\n    lines.append("ما يحتاج حذرًا:")\n    if main.warnings:\n        for w in main.warnings[:2]: lines.append(f"- {w}")\n    else: lines.append("- لا توجد إشارة تحذير بارزة، لكن الأفضل تجنب التسرع.")\n    lines.append("")\n    lines.append("النصيحة العملية:")\n    if main.topic_key in ["health","organ_sensitivity","pregnancy"]: lines.append("تعامل مع التقرير كتنبيه وقائي، وراجع المختص إذا كان هناك عرض أو قرار طبي.")\n    elif main.topic_key in ["legal"]: lines.append("راجع الأوراق ولا تعتمد على اتفاق شفهي، واستشر مختصًا قانونيًا إذا كان الملف حساسًا.")\n    elif main.topic_key in ["money","property","car","project"]: lines.append("دقّق الأرقام والأوراق قبل القرار، واجعل الخطوة عملية لا انفعالية.")\n    elif main.topic_key in ["love","relationship_return","marriage"]: lines.append("اجعل التواصل هادئًا وواضحًا، ولا تضغط للحصول على نتيجة نهائية بسرعة.")\n    else: lines.append("ركّز على المحور الأقوى، وابدأ بخطوات صغيرة ومنظمة.")\n    lines.append("")\n    lines.append("الخلاصة:")\n    verdict_title, verdict_detail = opportunity_verdict(main.topic_key, main.score, gender)\n    if main.topic_key == "pregnancy":\n        lines.append(f"المحور الأبرز هو {topic_name}. تأثيره {shown_strength} خلال هذه الفترة.")\n        lines.append(f"النتيجة العملية: {verdict_title}.")\n        lines.append("ولا يُعتمد الحكم النهائي في الحمل أو الإنجاب إلا عبر الفحص أو المتابعة الواقعية.")\n    else:\n        lines.append(f"المحور الأبرز هو {topic_name}. تأثيره {shown_strength} خلال هذه الفترة.")\n        lines.append(f"النتيجة العملية: {verdict_title}.")\n    if selected_topic=="general" and len(visible)>1:\n        lines.append(""); lines.append("محاور ثانوية:")\n        for r in visible[1:]: lines.append(f"- {r.topic_name}: {topic_display_strength(r.topic_key,r.score)}")\n    return "\\n".join(lines)\n\n\n\ndef generate_technical_report(results: List[TopicResult], max_topics: int = 15) -> str:\n    lines = ["التقرير الفني للباحث", "=" * 70]\n    for r in results[:max_topics]:\n        lines.append("")\n        lines.append(f"المحور: {r.topic_name} ({r.topic_key})")\n        lines.append(f"المجموع الرقمي: {r.score}")\n        lines.append(f"التصنيف: {r.strength}")\n        lines.append(f"نوع الدلالة: {topic_event_type_label(r.topic_key, r.score, r.event_type)}")\n        if r.supports:\n            lines.append("الدعوم:")\n            for s in r.supports:\n                lines.append(f"- {s}")\n        if r.warnings:\n            lines.append("التحذيرات:")\n            for w in r.warnings:\n                lines.append(f"- {w}")\n\n        lines.append("أقوى التفعيلات:")\n        if not r.activations:\n            lines.append("- لا توجد تفعيلات مباشرة على نقاط المنتصف.")\n        for a in r.activations[:12]:\n            applying = "مقتربة" if a.applying is True else "منفصلة" if a.applying is False else "غير محدد"\n            lines.append(\n                f"- [{a.layer}] {a.activator} {a.aspect} {a.target_name} "\n                f"| الهدف: {format_degree(a.target_degree)} "\n                f"| درجة التفعيل: {format_degree(a.exact_aspect_degree)} "\n                f"| الأورب: {a.orb:.2f}° "\n                f"| {applying} "\n                f"| {a.strength_label} "\n                f"| حد بطليموس: {a.ptolemy_term} "\n                f"| نوعية الحد: {a.term_quality} "\n                f"| نقاط: {a.score}"\n            )\n    return "\\n".join(lines)\n\n\n# =========================================================\n# 16. دالة تشغيل كاملة\n# =========================================================\n\ndef run_forecast(\n    birth: BirthInput,\n    transit: TransitInput,\n    selected_topic: str = "general",\n    period: str = "هذا الأسبوع",\n    include_charts: bool = False,\n) -> str:\n    natal_chart=build_chart_from_birth(birth)\n    transit_chart=build_chart_from_transit(transit)\n    layers=build_time_layers(birth,transit,natal_chart)\n    results=evaluate_all_topics(natal_chart,transit_chart,layers)\n    technical_results=[r for r in results if r.topic_key==selected_topic] if selected_topic!="general" else results[:5]\n    parts=[]\n    if include_charts:\n        parts.append(generate_chart_summary(natal_chart,"خريطة الميلاد"))\n        parts.append(generate_chart_summary(transit_chart,"خريطة العبور"))\n        parts.append(generate_layers_summary(layers))\n    parts.append(generate_user_report(results,selected_topic=selected_topic,period=period,gender=birth.gender))\n    parts.append("")\n    parts.append(generate_technical_report(technical_results))\n    return "\\n\\n".join(parts)\n\n\n# =========================================================\n# 17. مثال اختبار\n# =========================================================\n\ndef demo():\n    birth = BirthInput(\n        name="اختبار",\n        year=1993,\n        month=2,\n        day=18,\n        hour=12,\n        minute=35,\n        timezone=3,\n        latitude=33.3152,\n        longitude=44.3661,\n        gender="أنثى"\n    )\n\n    transit = TransitInput(\n        year=2026,\n        month=5,\n        day=23,\n        hour=12,\n        minute=0,\n        timezone=3,\n        latitude=31.986,\n        longitude=44.598\n    )\n\n    print(run_forecast(\n        birth=birth,\n        transit=transit,\n        selected_topic="general",\n        period="هذا الأسبوع",\n        include_charts=True\n    ))\n\n\n\n\n\n# =========================================================\n# واجهة ويب Flask للمحرك V4\n# =========================================================\n\ntry:\n    from flask import Flask, request, render_template_string\n    FLASK_AVAILABLE = True\nexcept Exception:\n    FLASK_AVAILABLE = False\n\n\nTOPIC_OPTIONS = [\n    ("general", "السياق العام"),\n    ("love", "الحالة العاطفية"),\n    ("relationship_return", "عودة العلاقة أو التواصل"),\n    ("marriage", "الزواج والخطوبة"),\n    ("career", "العمل والمهنة"),\n    ("money", "المال والاستثمار"),\n    ("travel", "السفر والهجرة"),\n    ("study", "الدراسة والاختبارات"),\n    ("health", "الصحة العامة والعملية الجراحية"),\n    ("organ_sensitivity", "حساسية الأعضاء للضغوطات"),\n    ("property", "شراء العقار والبيت"),\n    ("car", "شراء السيارة ووسائل النقل"),\n    ("legal", "القضايا القانونية والعقود"),\n    ("pregnancy", "الحمل والإنجاب / الأبناء"),\n    ("project", "المشروع الجديد والقرار المهم"),\n]\n\nPERIOD_OPTIONS = ["اليوم", "هذا الأسبوع", "هذا الشهر", "خلال 3 أشهر", "خلال 6 أشهر", "خلال سنة"]\n\nTIMEZONE_OPTIONS = [\n    ("", "اختر فرق التوقيت"),\n    ("-12", "GMT -12"), ("-11", "GMT -11"), ("-10", "GMT -10"),\n    ("-9", "GMT -9"), ("-8", "GMT -8"), ("-7", "GMT -7"),\n    ("-6", "GMT -6"), ("-5", "GMT -5"), ("-4", "GMT -4"),\n    ("-3", "GMT -3"), ("-2", "GMT -2"), ("-1", "GMT -1"),\n    ("0", "GMT 0"), ("1", "GMT +1"), ("2", "GMT +2"),\n    ("3", "GMT +3 - العراق / السعودية / الكويت / قطر / البحرين / اليمن"),\n    ("3.5", "GMT +3:30 - إيران"),\n    ("4", "GMT +4 - الإمارات / عُمان"),\n    ("4.5", "GMT +4:30"), ("5", "GMT +5"), ("5.5", "GMT +5:30"),\n    ("6", "GMT +6"), ("7", "GMT +7"), ("8", "GMT +8"),\n    ("9", "GMT +9"), ("10", "GMT +10"), ("11", "GMT +11"),\n    ("12", "GMT +12"), ("13", "GMT +13"), ("14", "GMT +14"),\n]\n\nCITY_OPTIONS = [(\'\', \'اختر المدينة\'), (\'33.3152,44.3661,3\', \'العراق - بغداد\'), (\'32.0000,44.3333,3\', \'العراق - النجف\'), (\'31.9860,44.5980,3\', \'العراق - الشامية\'), (\'31.9840,44.9250,3\', \'العراق - الديوانية\'), (\'30.5085,47.7804,3\', \'العراق - البصرة\'), (\'36.1901,44.0092,3\', \'العراق - أربيل\'), (\'35.5611,45.4356,3\', \'العراق - السليمانية\'), (\'36.3489,43.1577,3\', \'العراق - الموصل\'), (\'32.6160,44.0249,3\', \'العراق - كربلاء\'), (\'31.0480,46.2573,3\', \'العراق - الناصرية\'), (\'24.7136,46.6753,3\', \'السعودية - الرياض\'), (\'21.4858,39.1925,3\', \'السعودية - جدة\'), (\'29.3759,47.9774,3\', \'الكويت - الكويت\'), (\'25.2854,51.5310,3\', \'قطر - الدوحة\'), (\'26.2235,50.5876,3\', \'البحرين - المنامة\'), (\'24.4539,54.3773,4\', \'الإمارات - أبوظبي\'), (\'25.2048,55.2708,4\', \'الإمارات - دبي\'), (\'23.5880,58.3829,4\', \'عُمان - مسقط\'), (\'15.3694,44.1910,3\', \'اليمن - صنعاء\'), (\'30.0444,31.2357,2\', \'مصر - القاهرة\'), (\'31.2001,29.9187,2\', \'مصر - الإسكندرية\'), (\'30.5852,36.2384,3\', \'الأردن - عمّان\'), (\'33.8938,35.5018,2\', \'لبنان - بيروت\'), (\'33.5138,36.2765,3\', \'سوريا - دمشق\'), (\'31.7683,35.2137,2\', \'فلسطين - القدس\'), (\'15.5007,32.5599,2\', \'السودان - الخرطوم\'), (\'32.8872,13.1913,2\', \'ليبيا - طرابلس\'), (\'36.8065,10.1815,1\', \'تونس - تونس\'), (\'36.7538,3.0588,1\', \'الجزائر - الجزائر\'), (\'34.0209,-6.8416,1\', \'المغرب - الرباط\'), (\'18.0735,-15.9582,0\', \'موريتانيا - نواكشوط\'), (\'39.9334,32.8597,3\', \'تركيا - أنقرة\'), (\'41.0082,28.9784,3\', \'تركيا - إسطنبول\'), (\'35.6892,51.3890,3.5\', \'إيران - طهران\'), (\'51.5074,-0.1278,0\', \'المملكة المتحدة - لندن\'), (\'48.8566,2.3522,1\', \'فرنسا - باريس\'), (\'52.5200,13.4050,1\', \'ألمانيا - برلين\'), (\'40.7128,-74.0060,-5\', \'أمريكا - نيويورك\'), (\'35.6762,139.6503,9\', \'اليابان - طوكيو\')]\n\n\nHTML_TEMPLATE = """\n<!doctype html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charset="utf-8">\n<title>التوقعات الشخصية</title>\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<style>\nbody{font-family:Tahoma,Arial,sans-serif;background:#f3f4f8;margin:0;color:#1f2937}\n.container{max-width:1080px;margin:auto;padding:14px}\n.header{background:linear-gradient(135deg,#172554,#581c87);color:white;padding:20px;border-radius:18px;margin-bottom:18px}\n.header h1{margin:0 0 8px 0;font-size:24px}.header p{margin:0;line-height:1.8;color:#e5e7eb}\n.card{background:white;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 16px rgba(0,0,0,.08)}\n.card h2{font-size:20px;margin-top:0;color:#172554;border-bottom:1px solid #e5e7eb;padding-bottom:10px}\n.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}\nlabel{display:block;font-weight:bold;margin-bottom:5px;font-size:14px;color:#374151}\ninput,select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;background:#f9fafb;font-size:15px}\nbutton,.linkbtn{background:#1d4ed8;color:white;border:none;padding:12px 18px;border-radius:12px;font-weight:bold;cursor:pointer;font-size:15px;text-decoration:none;display:inline-block}\n.secondary{background:#475569}.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}\n.note{background:#fff7ed;border-right:5px solid #f97316;padding:12px;border-radius:12px;line-height:1.8;color:#7c2d12;margin-bottom:16px}\n.result-box{white-space:pre-wrap;background:#0f172a;color:#e5e7eb;padding:16px;border-radius:14px;overflow-x:auto;line-height:1.9;font-size:14px}\n.user-report{background:#ecfdf5;color:#064e3b;border:1px solid #a7f3d0}\n.error{background:#fef2f2;color:#7f1d1d;border:1px solid #fecaca;padding:14px;border-radius:12px;line-height:1.8;white-space:pre-wrap;margin-bottom:16px}\n.small{font-size:13px;color:#64748b;line-height:1.7}\n@media(max-width:800px){.grid,.grid2{grid-template-columns:1fr}.container{padding:10px}.card{padding:14px}.result-box{padding:14px;font-size:14px}}\n</style>\n<script>\nfunction fillPlaceFromCity(selectEl, prefix) {\n    if (!selectEl || !selectEl.value) return;\n    const parts = selectEl.value.split(",");\n    if (parts.length < 3) return;\n    const latEl = document.querySelector("[name=\'" + prefix + "_latitude\']");\n    const lonEl = document.querySelector("[name=\'" + prefix + "_longitude\']");\n    const tzEl = document.querySelector("[name=\'" + prefix + "_timezone\']");\n    if (latEl) latEl.value = parts[0];\n    if (lonEl) lonEl.value = parts[1];\n    if (tzEl) tzEl.value = parts[2];\n}\nfunction fillCurrentQuestionTime() {\n    const now = new Date();\n    const setVal = function(name, value) {\n        const el = document.querySelector("[name=\'" + name + "\']");\n        if (el) el.value = value;\n    };\n    setVal("transit_year", now.getFullYear());\n    setVal("transit_month", now.getMonth() + 1);\n    setVal("transit_day", now.getDate());\n    setVal("transit_hour", now.getHours());\n    setVal("transit_minute", now.getMinutes());\n}\nfunction copyBirthPlaceToTransit() {\n    const get = function(name) { return document.querySelector("[name=\'" + name + "\']"); };\n    if(get("birth_timezone") && get("transit_timezone")) get("transit_timezone").value = get("birth_timezone").value;\n    if(get("birth_latitude") && get("transit_latitude")) get("transit_latitude").value = get("birth_latitude").value;\n    if(get("birth_longitude") && get("transit_longitude")) get("transit_longitude").value = get("birth_longitude").value;\n}\nfunction clearAllFields() {\n    const form = document.getElementById("forecastForm");\n    if (!form) return;\n    form.querySelectorAll("input, select").forEach(function(el){ el.value = ""; });\n}\n</script>\n</head>\n<body>\n<div class="container">\n<div class="header">\n<h1>التوقعات الشخصية</h1>\n<p>واجهة ويب للمحرك المعتمد V4. اختر الحالة، أدخل بيانات الميلاد، ثم استخرج التقرير.</p>\n</div>\n\n{% if error %}<div class="error">{{ error }}</div>{% endif %}\n\n<form method="post" id="forecastForm">\n<div class="card">\n<h2>بيانات الميلاد</h2>\n<div class="grid">\n<div><label>الاسم</label><input name="name" value="{{ form.name }}"></div>\n<div><label>الجنس</label><select name="gender">\n<option value=""></option>\n<option value="ذكر" {% if form.gender=="ذكر" %}selected{% endif %}>ذكر</option>\n<option value="أنثى" {% if form.gender=="أنثى" %}selected{% endif %}>أنثى</option>\n<option value="غير محدد" {% if form.gender=="غير محدد" %}selected{% endif %}>غير محدد</option>\n</select></div>\n<div><label>فرق التوقيت عند الولادة GMT</label><select name="birth_timezone">\n{% for value,label in timezones %}<option value="{{ value }}" {% if form.birth_timezone==value %}selected{% endif %}>{{ label }}</option>{% endfor %}\n</select></div>\n</div><br>\n<div class="grid">\n<div><label>سنة الميلاد</label><input name="birth_year" type="number" value="{{ form.birth_year }}"></div>\n<div><label>شهر الميلاد</label><input name="birth_month" type="number" value="{{ form.birth_month }}"></div>\n<div><label>يوم الميلاد</label><input name="birth_day" type="number" value="{{ form.birth_day }}"></div>\n</div><br>\n<div class="grid">\n<div><label>ساعة الميلاد</label><input name="birth_hour" type="number" value="{{ form.birth_hour }}"></div>\n<div><label>دقيقة الميلاد</label><input name="birth_minute" type="number" value="{{ form.birth_minute }}"></div>\n<div><label>نظام البيوت</label><input value="Placidus" disabled></div>\n</div><br>\n<h2>اختيار مدينة الولادة</h2>\n<p class="small">اختيار المدينة يملأ خط العرض والطول وفرق التوقيت تلقائيًا ويمكن تعديلها يدويًا.</p>\n<select name="birth_city" onchange="fillPlaceFromCity(this, \'birth\')">\n{% for value,label in cities %}<option value="{{ value }}">{{ label }}</option>{% endfor %}\n</select>\n<br><br>\n<div class="grid2">\n<div><label>خط العرض لمكان الولادة</label><input name="birth_latitude" type="number" step="0.000001" value="{{ form.birth_latitude }}"></div>\n<div><label>خط الطول لمكان الولادة</label><input name="birth_longitude" type="number" step="0.000001" value="{{ form.birth_longitude }}"></div>\n</div>\n</div>\n\n<div class="card">\n<h2>بيانات وقت ومكان السؤال</h2>\n<p class="small">وقت السؤال يُملأ تلقائيًا عند فتح الصفحة. استخدم زر تحديث الوقت عند الحاجة.</p>\n<div class="grid">\n<div><label>نوع التقرير</label><select name="selected_topic">\n{% for key,label in topics %}<option value="{{ key }}" {% if form.selected_topic==key %}selected{% endif %}>{{ label }}</option>{% endfor %}\n</select></div>\n<div><label>الفترة المطلوبة</label><select name="period">\n{% for item in periods %}<option value="{{ item }}" {% if form.period==item %}selected{% endif %}>{{ item }}</option>{% endfor %}\n</select></div>\n<div><label>فرق التوقيت الحالي GMT</label><select name="transit_timezone">\n{% for value,label in timezones %}<option value="{{ value }}" {% if form.transit_timezone==value %}selected{% endif %}>{{ label }}</option>{% endfor %}\n</select></div>\n</div><br>\n<div class="grid">\n<div><label>سنة السؤال</label><input name="transit_year" type="number" value="{{ form.transit_year }}"></div>\n<div><label>شهر السؤال</label><input name="transit_month" type="number" value="{{ form.transit_month }}"></div>\n<div><label>يوم السؤال</label><input name="transit_day" type="number" value="{{ form.transit_day }}"></div>\n</div><br>\n<div class="grid">\n<div><label>ساعة السؤال</label><input name="transit_hour" type="number" value="{{ form.transit_hour }}"></div>\n<div><label>دقيقة السؤال</label><input name="transit_minute" type="number" value="{{ form.transit_minute }}"></div>\n<div><label>إظهار الخرائط في التقرير الفني</label><select name="include_charts">\n<option value="no" {% if form.include_charts=="no" %}selected{% endif %}>لا</option>\n<option value="yes" {% if form.include_charts=="yes" %}selected{% endif %}>نعم</option>\n</select></div>\n</div><br>\n<h2>اختيار مدينة السؤال الحالية</h2>\n<select name="transit_city" onchange="fillPlaceFromCity(this, \'transit\')">\n{% for value,label in cities %}<option value="{{ value }}">{{ label }}</option>{% endfor %}\n</select>\n<br><br>\n<div class="grid2">\n<div><label>خط العرض للمكان الحالي</label><input name="transit_latitude" type="number" step="0.000001" value="{{ form.transit_latitude }}"></div>\n<div><label>خط الطول للمكان الحالي</label><input name="transit_longitude" type="number" step="0.000001" value="{{ form.transit_longitude }}"></div>\n</div>\n<div class="button-row">\n<button type="submit">استخراج التقرير</button>\n<button type="button" class="secondary" onclick="fillCurrentQuestionTime()">تحديث وقت السؤال الآن</button>\n\n<button type="button" class="secondary" onclick="clearAllFields()">مسح الحقول</button>\n<a class="linkbtn secondary" href="/">حالة جديدة</a>\n</div>\n</div>\n</form>\n\n<div class="note">ملاحظة: التقرير قراءة فلكية رمزية. في الصحة والقانون والمال القرار العملي يبقى للمختص.</div>\n\n{% if user_report %}\n<div class="card"><h2>تقرير المستخدم</h2><div class="result-box user-report">{{ user_report }}</div></div>\n{% endif %}\n{% if technical_report %}\n<div class="card"><h2>التقرير الفني للباحث</h2><div class="result-box">{{ technical_report }}</div></div>\n{% endif %}\n</div>\n</body>\n</html>\n"""\n\n\ndef _default_form():\n    now = datetime.now()\n    return {\n        "name": "",\n        "gender": "",\n        "birth_year": "",\n        "birth_month": "",\n        "birth_day": "",\n        "birth_hour": "",\n        "birth_minute": "",\n        "birth_timezone": "",\n        "birth_latitude": "",\n        "birth_longitude": "",\n        "birth_city": "",\n        "transit_year": str(now.year),\n        "transit_month": str(now.month),\n        "transit_day": str(now.day),\n        "transit_hour": str(now.hour),\n        "transit_minute": str(now.minute),\n        "transit_timezone": "",\n        "transit_latitude": "",\n        "transit_longitude": "",\n        "transit_city": "",\n        "selected_topic": "general",\n        "period": "هذا الأسبوع",\n        "include_charts": "no",\n    }\n\n\ndef _read_form(req_form):\n    form = _default_form()\n    for k in form.keys():\n        form[k] = str(req_form.get(k, form[k])).strip()\n    return form\n\n\ndef _require_fields(form, fields):\n    missing = []\n    for key, label in fields:\n        if str(form.get(key, "")).strip() == "":\n            missing.append(label)\n    if missing:\n        raise ValueError("يرجى ملء الحقول التالية قبل استخراج التقرير:\\n- " + "\\n- ".join(missing))\n\n\ndef _to_int(form, key, label):\n    try:\n        return int(str(form[key]).strip())\n    except Exception:\n        raise ValueError(f"قيمة الحقل غير صحيحة: {label}")\n\n\ndef _to_float(form, key, label):\n    try:\n        return float(str(form[key]).strip())\n    except Exception:\n        raise ValueError(f"قيمة الحقل غير صحيحة: {label}")\n\n\ndef _fill_missing_transit_place_from_birth(form):\n    if not form.get("transit_latitude"):\n        form["transit_latitude"] = form.get("birth_latitude", "")\n    if not form.get("transit_longitude"):\n        form["transit_longitude"] = form.get("birth_longitude", "")\n    if not form.get("transit_timezone"):\n        form["transit_timezone"] = form.get("birth_timezone", "")\n    return form\n\n\ndef split_user_and_technical(full_report):\n    marker = "التقرير الفني للباحث"\n    if marker in full_report:\n        before, after = full_report.split(marker, 1)\n        user_marker = "التقرير الشخصي"\n        if user_marker in before:\n            before = before[before.rfind(user_marker):]\n        return before.strip(), (marker + after).strip()\n    return full_report, ""\n\n\ndef create_web_app():\n    if not FLASK_AVAILABLE:\n        raise RuntimeError("مكتبة Flask غير مثبتة. ثبّتها بالأمر: pip install flask")\n\n    app = Flask(__name__)\n\n    @app.route("/", methods=["GET", "POST"])\n    def index():\n        form = _default_form()\n        user_report = ""\n        technical_report = ""\n        error = ""\n\n        if request.method == "POST":\n            try:\n                form = _read_form(request.form)\n                form = _fill_missing_transit_place_from_birth(form)\n\n                _require_fields(form, [\n                    ("name", "الاسم"),\n                    ("gender", "الجنس"),\n                    ("birth_timezone", "فرق التوقيت عند الولادة"),\n                    ("birth_year", "سنة الميلاد"),\n                    ("birth_month", "شهر الميلاد"),\n                    ("birth_day", "يوم الميلاد"),\n                    ("birth_hour", "ساعة الميلاد"),\n                    ("birth_minute", "دقيقة الميلاد"),\n                    ("birth_latitude", "خط العرض لمكان الولادة"),\n                    ("birth_longitude", "خط الطول لمكان الولادة"),\n                    ("transit_timezone", "فرق التوقيت الحالي"),\n                    ("transit_year", "سنة السؤال"),\n                    ("transit_month", "شهر السؤال"),\n                    ("transit_day", "يوم السؤال"),\n                    ("transit_hour", "ساعة السؤال"),\n                    ("transit_minute", "دقيقة السؤال"),\n                    ("transit_latitude", "خط العرض للمكان الحالي"),\n                    ("transit_longitude", "خط الطول للمكان الحالي"),\n                ])\n\n                birth = BirthInput(\n                    name=form["name"],\n                    year=_to_int(form, "birth_year", "سنة الميلاد"),\n                    month=_to_int(form, "birth_month", "شهر الميلاد"),\n                    day=_to_int(form, "birth_day", "يوم الميلاد"),\n                    hour=_to_int(form, "birth_hour", "ساعة الميلاد"),\n                    minute=_to_int(form, "birth_minute", "دقيقة الميلاد"),\n                    timezone=_to_float(form, "birth_timezone", "فرق التوقيت عند الولادة"),\n                    latitude=_to_float(form, "birth_latitude", "خط العرض لمكان الولادة"),\n                    longitude=_to_float(form, "birth_longitude", "خط الطول لمكان الولادة"),\n                    gender=form["gender"],\n                )\n\n                transit = TransitInput(\n                    year=_to_int(form, "transit_year", "سنة السؤال"),\n                    month=_to_int(form, "transit_month", "شهر السؤال"),\n                    day=_to_int(form, "transit_day", "يوم السؤال"),\n                    hour=_to_int(form, "transit_hour", "ساعة السؤال"),\n                    minute=_to_int(form, "transit_minute", "دقيقة السؤال"),\n                    timezone=_to_float(form, "transit_timezone", "فرق التوقيت الحالي"),\n                    latitude=_to_float(form, "transit_latitude", "خط العرض للمكان الحالي"),\n                    longitude=_to_float(form, "transit_longitude", "خط الطول للمكان الحالي"),\n                )\n\n                full_report = run_forecast(\n                    birth=birth,\n                    transit=transit,\n                    selected_topic=form["selected_topic"],\n                    period=form["period"],\n                    include_charts=(form.get("include_charts") == "yes"),\n                )\n\n                user_report, technical_report = split_user_and_technical(full_report)\n\n            except Exception as exc:\n                error = f"حدث خطأ أثناء استخراج التقرير:\\n{exc}"\n\n        return render_template_string(\n            HTML_TEMPLATE,\n            form=form,\n            topics=TOPIC_OPTIONS,\n            periods=PERIOD_OPTIONS,\n            timezones=TIMEZONE_OPTIONS,\n            cities=CITY_OPTIONS,\n            user_report=user_report,\n            technical_report=technical_report,\n            error=error,\n        )\n\n    return app\n\n\ndef run_web_server(host="127.0.0.1", port=5000, debug=True):\n    app = create_web_app()\n    app.run(host=host, port=port, debug=debug)\n\n\nif __name__ == "__main__":\n    if not FLASK_AVAILABLE:\n        print("مكتبة Flask غير مثبتة.")\n        print("ثبّتها بالأمر:")\n        print("pip install flask")\n    else:\n        print("تشغيل واجهة التوقعات الشخصية على المتصفح...")\n        print("افتح الرابط:")\n        print("http://127.0.0.1:5000")\n        run_web_server()\n'
+_FORECAST_ENGINE_CODE = '# -*- coding: utf-8 -*-\n"""\nPersonal Forecast Engine - Complete Prototype v3\nنواة التوقعات الشخصية الفلكية - نسخة شاملة أولية\n\nهذه النسخة تجمع:\n1) حساب خريطة الميلاد والعبور بواسطة Swiss Ephemeris.\n2) Placidus houses.\n3) حدود بطليموس.\n4) نقاط المنتصف وتفعيلها بالاقتران/المقابلة/التربيع.\n5) نظام الأورب: مقترب/منفصل، دقيق/قوي/فعال/تمهيدي.\n6) البروفكشن السنوي/الشهري/اليومي.\n7) الفريدار الرئيسي والفرعي بنسخة عملية أولى.\n8) العودة الشمسية والعودة القمرية بنسخة تقريبية قابلة للتطوير.\n9) التقدم الثانوي.\n10) القوس الشمسي.\n11) ملفات الحالات:\n    - السياق العام\n    - العاطفة\n    - عودة العلاقة\n    - الزواج والخطوبة\n    - العمل والمهنة\n    - المال والاستثمار\n    - السفر والهجرة\n    - الدراسة والاختبارات\n    - الصحة والعملية الجراحية\n    - حساسية الأعضاء\n    - شراء العقار\n    - شراء السيارة\n    - القضايا والعقود\n    - الحمل والإنجاب\n    - المشروع الجديد والقرار المهم\n12) نظام ترجيح رقمي عام.\n13) تقرير مستخدم مبسط.\n14) تقرير فني مفصل.\n\nملاحظات مهمة:\n- هذه نسخة نواة وليست واجهة تطبيق.\n- بعض التقنيات مثل العودة الشمسية/القمرية والفريدار مضافة بنسخة عملية أولى،\n  وتحتاج اختبارًا وتدقيقًا لاحقًا على حالات حقيقية.\n- التقرير الصحي ليس تشخيصًا طبيًا، والقرار الطبي للطبيب والفحوصات.\n- التقرير القانوني ليس استشارة قانونية، والقرار القانوني للمختص.\n"""\n\nfrom __future__ import annotations\n\nfrom dataclasses import dataclass, field\nfrom typing import Dict, List, Optional, Tuple, Any\nfrom datetime import datetime, timedelta\nimport math\n\ntry:\n    import swisseph as swe\n    SWISSEPH_AVAILABLE = True\nexcept Exception:\n    swe = None\n    SWISSEPH_AVAILABLE = False\n\n\n# =========================================================\n# 1. الثوابت العامة\n# =========================================================\n\nSIGNS = [\n    "الحمل", "الثور", "الجوزاء", "السرطان",\n    "الأسد", "العذراء", "الميزان", "العقرب",\n    "القوس", "الجدي", "الدلو", "الحوت"\n]\n\nSIGN_START = {sign: i * 30 for i, sign in enumerate(SIGNS)}\n\nSIGN_RULERS = {\n    "الحمل": "المريخ",\n    "الثور": "الزهرة",\n    "الجوزاء": "عطارد",\n    "السرطان": "القمر",\n    "الأسد": "الشمس",\n    "العذراء": "عطارد",\n    "الميزان": "الزهرة",\n    "العقرب": "المريخ",   # تقليديًا، ويمكن لاحقًا إضافة بلوتو كمساعد\n    "القوس": "المشتري",\n    "الجدي": "زحل",\n    "الدلو": "زحل",       # تقليديًا، ويمكن لاحقًا إضافة أورانوس كمساعد\n    "الحوت": "المشتري",  # تقليديًا، ويمكن لاحقًا إضافة نبتون كمساعد\n}\n\nPLANETS: Dict[str, int] = {}\nif SWISSEPH_AVAILABLE:\n    PLANETS = {\n        "الشمس": swe.SUN,\n        "القمر": swe.MOON,\n        "عطارد": swe.MERCURY,\n        "الزهرة": swe.VENUS,\n        "المريخ": swe.MARS,\n        "المشتري": swe.JUPITER,\n        "زحل": swe.SATURN,\n        "أورانوس": swe.URANUS,\n        "نبتون": swe.NEPTUNE,\n        "بلوتو": swe.PLUTO,\n        "الرأس الشمالي": swe.MEAN_NODE,\n        "كايرون": swe.CHIRON,\n    }\n\nASPECTS = {\n    "اقتران": 0.0,\n    "تربيع": 90.0,\n    "مقابلة": 180.0,\n    "تربيع معاكس": 270.0,\n}\n\nMAJOR_ASPECTS_ALL = {\n    "اقتران": 0.0,\n    "تسديس": 60.0,\n    "تربيع": 90.0,\n    "تثليث": 120.0,\n    "مقابلة": 180.0,\n}\n\n\n# =========================================================\n# 2. أدوات الدرجات والزمن\n# =========================================================\n\ndef normalize_degree(deg: float) -> float:\n    return deg % 360.0\n\n\ndef zodiac_diff(a: float, b: float) -> float:\n    """فرق موجه من a إلى b على دائرة 360."""\n    return (b - a) % 360.0\n\n\ndef shortest_distance(a: float, b: float) -> float:\n    diff = abs(normalize_degree(a) - normalize_degree(b))\n    return min(diff, 360.0 - diff)\n\n\ndef degree_to_sign(deg: float) -> Tuple[str, float]:\n    deg = normalize_degree(deg)\n    idx = int(deg // 30)\n    return SIGNS[idx], deg - idx * 30\n\n\ndef sign_index(sign: str) -> int:\n    return SIGNS.index(sign)\n\n\ndef format_degree(deg: float) -> str:\n    sign, d = degree_to_sign(deg)\n    whole = int(d)\n    minutes = int(round((d - whole) * 60))\n    if minutes == 60:\n        whole += 1\n        minutes = 0\n    if whole == 30:\n        idx = (SIGNS.index(sign) + 1) % 12\n        sign = SIGNS[idx]\n        whole = 0\n    return f"{whole}°{minutes:02d}′ {sign}"\n\n\ndef midpoint(deg1: float, deg2: float) -> float:\n    deg1 = normalize_degree(deg1)\n    deg2 = normalize_degree(deg2)\n    diff = (deg2 - deg1) % 360\n    if diff <= 180:\n        mid = deg1 + diff / 2\n    else:\n        mid = deg2 + (360 - diff) / 2\n    return normalize_degree(mid)\n\n\ndef decimal_hour(hour: int, minute: int) -> float:\n    return hour + minute / 60.0\n\n\ndef to_utc_decimal_hour(hour: int, minute: int, timezone: float) -> float:\n    return decimal_hour(hour, minute) - timezone\n\n\ndef date_to_datetime(year: int, month: int, day: int, hour: int, minute: int) -> datetime:\n    return datetime(year, month, day, hour, minute)\n\n\ndef safe_days_between(a: datetime, b: datetime) -> float:\n    return (b - a).total_seconds() / 86400.0\n\n\n# =========================================================\n# 3. حدود بطليموس\n# =========================================================\n\nPTOLEMY_TERMS = {\n    "الحمل": [(0, 6, "المشتري"), (6, 14, "الزهرة"), (14, 21, "عطارد"), (21, 26, "المريخ"), (26, 30, "زحل")],\n    "الثور": [(0, 8, "الزهرة"), (8, 14, "عطارد"), (14, 22, "المشتري"), (22, 27, "زحل"), (27, 30, "المريخ")],\n    "الجوزاء": [(0, 6, "عطارد"), (6, 12, "المشتري"), (12, 17, "الزهرة"), (17, 24, "المريخ"), (24, 30, "زحل")],\n    "السرطان": [(0, 7, "المريخ"), (7, 13, "الزهرة"), (13, 19, "عطارد"), (19, 26, "المشتري"), (26, 30, "زحل")],\n    "الأسد": [(0, 6, "زحل"), (6, 13, "عطارد"), (13, 19, "الزهرة"), (19, 25, "المشتري"), (25, 30, "المريخ")],\n    "العذراء": [(0, 7, "عطارد"), (7, 13, "الزهرة"), (13, 17, "المشتري"), (17, 21, "المريخ"), (21, 30, "زحل")],\n    "الميزان": [(0, 6, "زحل"), (6, 14, "عطارد"), (14, 21, "المشتري"), (21, 28, "الزهرة"), (28, 30, "المريخ")],\n    "العقرب": [(0, 7, "المريخ"), (7, 11, "الزهرة"), (11, 19, "عطارد"), (19, 24, "المشتري"), (24, 30, "زحل")],\n    "القوس": [(0, 12, "المشتري"), (12, 17, "الزهرة"), (17, 21, "عطارد"), (21, 26, "زحل"), (26, 30, "المريخ")],\n    "الجدي": [(0, 7, "عطارد"), (7, 14, "المشتري"), (14, 22, "الزهرة"), (22, 26, "زحل"), (26, 30, "المريخ")],\n    "الدلو": [(0, 7, "عطارد"), (7, 13, "الزهرة"), (13, 20, "المشتري"), (20, 25, "المريخ"), (25, 30, "زحل")],\n    "الحوت": [(0, 12, "الزهرة"), (12, 16, "المشتري"), (16, 19, "عطارد"), (19, 28, "المريخ"), (28, 30, "زحل")],\n}\n\n\ndef get_ptolemy_term(deg: float) -> str:\n    sign, d = degree_to_sign(deg)\n    for start, end, ruler in PTOLEMY_TERMS[sign]:\n        if start <= d < end:\n            return ruler\n    return "غير محدد"\n\n\n# =========================================================\n# 4. نماذج البيانات\n# =========================================================\n\n@dataclass\nclass BirthInput:\n    name: str\n    year: int\n    month: int\n    day: int\n    hour: int\n    minute: int\n    timezone: float\n    latitude: float\n    longitude: float\n    gender: str = "غير محدد"\n\n\n@dataclass\nclass TransitInput:\n    year: int\n    month: int\n    day: int\n    hour: int\n    minute: int\n    timezone: float\n    latitude: float\n    longitude: float\n\n\n@dataclass\nclass PlanetPosition:\n    name: str\n    degree: float\n    speed: float = 0.0\n    retrograde: bool = False\n\n\n@dataclass\nclass ChartData:\n    planets: Dict[str, PlanetPosition]\n    houses: Dict[int, float] = field(default_factory=dict)\n    asc: Optional[float] = None\n    mc: Optional[float] = None\n    jd: Optional[float] = None\n    latitude: Optional[float] = None\n    longitude: Optional[float] = None\n\n\n@dataclass\nclass MidpointPoint:\n    name: str\n    body1: str\n    body2: str\n    degree: float\n\n\n@dataclass\nclass Activation:\n    activator: str\n    target_name: str\n    target_degree: float\n    aspect: str\n    exact_aspect_degree: float\n    orb: float\n    applying: Optional[bool]\n    ptolemy_term: str\n    term_quality: str\n    strength_label: str\n    score: int\n    layer: str = "عبور"\n\n\n@dataclass\nclass TimeLayers:\n    annual_profection_house: int = 1\n    annual_lord: str = ""\n    monthly_profection_house: int = 1\n    monthly_lord: str = ""\n    daily_profection_house: int = 1\n    daily_lord: str = ""\n    firdaria_main: str = ""\n    firdaria_sub: str = ""\n    solar_return_chart: Optional[ChartData] = None\n    lunar_return_chart: Optional[ChartData] = None\n    progressed_chart: Optional[ChartData] = None\n    solar_arc_chart: Optional[ChartData] = None\n\n\n@dataclass\nclass TopicResult:\n    topic_key: str\n    topic_name: str\n    score: int\n    strength: str\n    event_type: str\n    activations: List[Activation] = field(default_factory=list)\n    supports: List[str] = field(default_factory=list)\n    warnings: List[str] = field(default_factory=list)\n    technical_notes: List[str] = field(default_factory=list)\n\n\n# =========================================================\n# 5. حساب Swiss Ephemeris\n# =========================================================\n\ndef require_swisseph():\n    if not SWISSEPH_AVAILABLE:\n        raise RuntimeError("مكتبة swisseph غير مثبتة. ثبّت pyswisseph أولًا.")\n\n\ndef calculate_julian_day(year: int, month: int, day: int, hour: int, minute: int, timezone: float) -> float:\n    require_swisseph()\n    utc_hour = to_utc_decimal_hour(hour, minute, timezone)\n    return swe.julday(year, month, day, utc_hour)\n\n\ndef calculate_planets(jd: float) -> Dict[str, PlanetPosition]:\n    require_swisseph()\n    planets: Dict[str, PlanetPosition] = {}\n    for name, sid in PLANETS.items():\n        try:\n            data, flag = swe.calc_ut(jd, sid, swe.FLG_SPEED)\n            lon = normalize_degree(data[0])\n            speed = data[3]\n            planets[name] = PlanetPosition(name=name, degree=lon, speed=speed, retrograde=speed < 0)\n        except Exception:\n            continue\n    return planets\n\n\ndef calculate_houses(jd: float, latitude: float, longitude: float, house_system: str = "P") -> Tuple[Dict[int, float], float, float]:\n    require_swisseph()\n    cusps, ascmc = swe.houses(jd, latitude, longitude, house_system.encode())\n    houses = {i: normalize_degree(cusps[i - 1]) for i in range(1, 13)}\n    asc = normalize_degree(ascmc[0])\n    mc = normalize_degree(ascmc[1])\n    return houses, asc, mc\n\n\ndef build_chart_from_birth(data: BirthInput) -> ChartData:\n    jd = calculate_julian_day(data.year, data.month, data.day, data.hour, data.minute, data.timezone)\n    planets = calculate_planets(jd)\n    houses, asc, mc = calculate_houses(jd, data.latitude, data.longitude, "P")\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=jd, latitude=data.latitude, longitude=data.longitude)\n\n\ndef build_chart_from_transit(data: TransitInput) -> ChartData:\n    jd = calculate_julian_day(data.year, data.month, data.day, data.hour, data.minute, data.timezone)\n    planets = calculate_planets(jd)\n    houses, asc, mc = calculate_houses(jd, data.latitude, data.longitude, "P")\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=jd, latitude=data.latitude, longitude=data.longitude)\n\n\ndef build_chart_from_jd(jd: float, latitude: float, longitude: float) -> ChartData:\n    planets = calculate_planets(jd)\n    houses, asc, mc = calculate_houses(jd, latitude, longitude, "P")\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=jd, latitude=latitude, longitude=longitude)\n\n\n# =========================================================\n# 6. البيوت والحكام\n# =========================================================\n\ndef house_of_degree(deg: float, houses: Dict[int, float]) -> int:\n    """\n    تحديد البيت الذي تقع فيه درجة معينة مع مراعاة عبور 0 حمل.\n    """\n    if not houses:\n        return 0\n    d = normalize_degree(deg)\n    cusps = [(i, normalize_degree(houses[i])) for i in range(1, 13)]\n    for idx in range(12):\n        house_num, start = cusps[idx]\n        next_house, end = cusps[(idx + 1) % 12]\n        if start <= end:\n            if start <= d < end:\n                return house_num\n        else:\n            if d >= start or d < end:\n                return house_num\n    return 12\n\n\ndef house_ruler(chart: ChartData, house_num: int) -> str:\n    if house_num not in chart.houses:\n        return ""\n    sign, _ = degree_to_sign(chart.houses[house_num])\n    return SIGN_RULERS.get(sign, "")\n\n\ndef ruler_degree(chart: ChartData, house_num: int) -> Optional[float]:\n    ruler = house_ruler(chart, house_num)\n    if ruler and ruler in chart.planets:\n        return chart.planets[ruler].degree\n    return None\n\n\n# =========================================================\n# 7. نقاط المنتصف والتفعيل\n# =========================================================\n\ndef calculate_midpoints(chart: ChartData, midpoint_pairs: List[Tuple[str, str]]) -> List[MidpointPoint]:\n    out = []\n    for b1, b2 in midpoint_pairs:\n        if b1 in chart.planets and b2 in chart.planets:\n            out.append(MidpointPoint(f"{b1}/{b2}", b1, b2, midpoint(chart.planets[b1].degree, chart.planets[b2].degree)))\n    return out\n\n\ndef orb_strength_label(orb: float) -> str:\n    if orb <= 0.5:\n        return "دقيق جدًا"\n    if orb <= 1.0:\n        return "قوي"\n    if orb <= 2.0:\n        return "فعّال"\n    if orb <= 3.0:\n        return "تمهيدي"\n    return "خلفية فقط"\n\n\ndef score_from_orb(orb: float, max_score: int = 20) -> int:\n    if orb <= 0.5:\n        return max_score\n    if orb <= 1.0:\n        return int(max_score * 0.8)\n    if orb <= 2.0:\n        return int(max_score * 0.5)\n    if orb <= 3.0:\n        return int(max_score * 0.25)\n    return 0\n\n\ndef is_applying(activator_degree: float, target_exact_degree: float, speed: float) -> Optional[bool]:\n    if abs(speed) < 0.00001:\n        return None\n    current = shortest_distance(activator_degree, target_exact_degree)\n    future = shortest_distance(normalize_degree(activator_degree + speed), target_exact_degree)\n    return future < current\n\n\ndef term_quality_for_topic(term_ruler: str, topic_key: str) -> str:\n    love_topics = {"love", "relationship_return", "marriage", "pregnancy"}\n    work_topics = {"career", "project"}\n    money_topics = {"money", "property", "car"}\n    health_topics = {"health", "surgery", "organ_sensitivity"}\n    travel_topics = {"travel", "study"}\n    legal_topics = {"legal"}\n    general_topics = {"general"}\n\n    if topic_key in love_topics:\n        if term_ruler in ["الزهرة", "المشتري"]:\n            return "داعم"\n        if term_ruler == "عطارد":\n            return "داعم للتواصل"\n        if term_ruler == "زحل":\n            return "ثقيل أو مؤخر"\n        if term_ruler == "المريخ":\n            return "مندفع أو متوتر"\n\n    if topic_key in work_topics:\n        if term_ruler in ["المشتري", "عطارد", "زحل"]:\n            return "داعم مهنيًا"\n        if term_ruler == "الزهرة":\n            return "قبول وتسهيل"\n        if term_ruler == "المريخ":\n            return "حركة وضغط"\n\n    if topic_key in money_topics:\n        if term_ruler in ["الزهرة", "المشتري"]:\n            return "داعم ماليًا"\n        if term_ruler == "عطارد":\n            return "داعم للتجارة والعقد"\n        if term_ruler == "زحل":\n            return "التزام أو تأخير"\n        if term_ruler == "المريخ":\n            return "استعجال أو مخاطرة"\n\n    if topic_key in health_topics:\n        if term_ruler == "المريخ":\n            return "حاد أو جراحي"\n        if term_ruler == "زحل":\n            return "ثقيل أو بطيء"\n        if term_ruler == "عطارد":\n            return "فحص أو تشخيص"\n        if term_ruler in ["الزهرة", "المشتري"]:\n            return "داعم للتلطيف أو التعافي"\n\n    if topic_key in travel_topics:\n        if term_ruler in ["عطارد", "المشتري"]:\n            return "داعم للحركة أو التعلم"\n        if term_ruler == "زحل":\n            return "إجراءات أو تأخير"\n        if term_ruler == "المريخ":\n            return "استعجال أو ضغط"\n        if term_ruler == "الزهرة":\n            return "راحة أو قبول"\n\n    if topic_key in legal_topics:\n        if term_ruler in ["عطارد", "المشتري"]:\n            return "داعم للعقود أو القانون"\n        if term_ruler == "الزهرة":\n            return "داعم للتسوية"\n        if term_ruler == "زحل":\n            return "رسمي أو مؤخر"\n        if term_ruler == "المريخ":\n            return "نزاع أو تصعيد"\n\n    if term_ruler in ["الزهرة", "المشتري"]:\n        return "داعم عام"\n    if term_ruler == "عطارد":\n        return "تواصل أو مراجعة"\n    if term_ruler == "المريخ":\n        return "حركة أو ضغط"\n    if term_ruler == "زحل":\n        return "مسؤولية أو تأخير"\n    return "محايد"\n\n\ndef check_activation(\n    activator: PlanetPosition,\n    target_name: str,\n    target_degree: float,\n    topic_key: str,\n    max_orb: float = 3.0,\n    layer: str = "عبور",\n    max_score: int = 20,\n) -> List[Activation]:\n    out = []\n    for aspect_name, aspect_deg in ASPECTS.items():\n        exact = normalize_degree(target_degree + aspect_deg)\n        orb = shortest_distance(activator.degree, exact)\n        if orb <= max_orb:\n            term = get_ptolemy_term(exact)\n            quality = term_quality_for_topic(term, topic_key)\n            score = score_from_orb(orb, max_score=max_score)\n            if "داعم" in quality:\n                score += 5\n            elif any(w in quality for w in ["ثقيل", "متوتر", "مخاطرة", "نزاع", "ضغط"]):\n                score += 2\n            out.append(Activation(\n                activator=activator.name,\n                target_name=target_name,\n                target_degree=target_degree,\n                aspect=aspect_name,\n                exact_aspect_degree=exact,\n                orb=orb,\n                applying=is_applying(activator.degree, exact, activator.speed),\n                ptolemy_term=term,\n                term_quality=quality,\n                strength_label=orb_strength_label(orb),\n                score=score,\n                layer=layer\n            ))\n    return out\n\n\n# =========================================================\n# 8. البروفكشن\n# =========================================================\n\ndef calculate_age_years(birth: BirthInput, transit: TransitInput) -> int:\n    bd = datetime(birth.year, birth.month, birth.day)\n    td = datetime(transit.year, transit.month, transit.day)\n    age = td.year - bd.year\n    if (td.month, td.day) < (bd.month, bd.day):\n        age -= 1\n    return max(0, age)\n\n\ndef profection_house_from_age(age: int) -> int:\n    return (age % 12) + 1\n\n\ndef monthly_profection_house(annual_house: int, birth: BirthInput, transit: TransitInput) -> int:\n    # كل شهر بعد عيد الميلاد ينتقل بيت واحد\n    bd_this_year = datetime(transit.year, birth.month, birth.day)\n    td = datetime(transit.year, transit.month, transit.day)\n    if td < bd_this_year:\n        start_year = transit.year - 1\n    else:\n        start_year = transit.year\n    start = datetime(start_year, birth.month, birth.day)\n    months = (td.year - start.year) * 12 + (td.month - start.month)\n    if td.day < start.day:\n        months -= 1\n    return ((annual_house - 1 + max(0, months)) % 12) + 1\n\n\ndef daily_profection_house(monthly_house: int, birth: BirthInput, transit: TransitInput) -> int:\n    # نموذج عملي أولي: كل يومين ونصف تقريبًا بيت، أو 30 يوم / 12 = 2.5\n    td = datetime(transit.year, transit.month, transit.day)\n    month_start = datetime(transit.year, transit.month, 1)\n    day_index = max(0, (td - month_start).days)\n    steps = int(day_index / 2.5)\n    return ((monthly_house - 1 + steps) % 12) + 1\n\n\ndef calculate_profections(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Tuple[int, str, int, str, int, str]:\n    age = calculate_age_years(birth, transit)\n    annual_house = profection_house_from_age(age)\n    monthly_house = monthly_profection_house(annual_house, birth, transit)\n    daily_house = daily_profection_house(monthly_house, birth, transit)\n    return (\n        annual_house, house_ruler(natal_chart, annual_house),\n        monthly_house, house_ruler(natal_chart, monthly_house),\n        daily_house, house_ruler(natal_chart, daily_house)\n    )\n\n\n# =========================================================\n# 9. الفريدار - نسخة عملية أولى\n# =========================================================\n\n# تسلسل الفريدار التقليدي يختلف بين النهاري والليلي.\n# هنا نعتمد ترتيبًا عمليًا شائعًا، مع إمكانية تعديله لاحقًا.\nFIRDARIA_DAY = [\n    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13), ("القمر", 9),\n    ("زحل", 11), ("المشتري", 12), ("المريخ", 7),\n    ("الرأس الشمالي", 3), ("الرأس الجنوبي", 2)\n]\n\nFIRDARIA_NIGHT = [\n    ("القمر", 9), ("زحل", 11), ("المشتري", 12), ("المريخ", 7),\n    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13),\n    ("الرأس الشمالي", 3), ("الرأس الجنوبي", 2)\n]\n\n\ndef is_day_chart(natal_chart: ChartData) -> bool:\n    if "الشمس" not in natal_chart.planets or not natal_chart.houses:\n        return True\n    sun_house = house_of_degree(natal_chart.planets["الشمس"].degree, natal_chart.houses)\n    # البيوت 7-12 فوق الأفق تقريبيًا\n    return sun_house in [7, 8, 9, 10, 11, 12]\n\n\ndef calculate_firdaria(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Tuple[str, str]:\n    age = calculate_age_years(birth, transit)\n    seq = FIRDARIA_DAY if is_day_chart(natal_chart) else FIRDARIA_NIGHT\n    remaining = age\n    main = seq[-1][0]\n    main_years = seq[-1][1]\n    start_age = 0\n    for planet, years in seq:\n        if remaining < years:\n            main = planet\n            main_years = years\n            break\n        remaining -= years\n        start_age += years\n\n    # الفرعي: تقسيم فترة الكوكب الرئيسي على 7 كواكب تقليدية بنفس ترتيب يبدأ من الرئيسي\n    traditional = ["زحل", "المشتري", "المريخ", "الشمس", "الزهرة", "عطارد", "القمر"]\n    if main in traditional:\n        idx = traditional.index(main)\n        sub_seq = traditional[idx:] + traditional[:idx]\n    else:\n        sub_seq = traditional\n\n    sub_period = main_years / 7.0\n    sub_index = min(6, int(remaining / sub_period))\n    sub = sub_seq[sub_index]\n    return main, sub\n\n\n# =========================================================\n# 10. العودة الشمسية والقمرية - بحث تقريبي\n# =========================================================\n\ndef sun_longitude_at_jd(jd: float) -> float:\n    return calculate_planets(jd)["الشمس"].degree\n\n\ndef moon_longitude_at_jd(jd: float) -> float:\n    return calculate_planets(jd)["القمر"].degree\n\n\ndef signed_angle_error(current: float, target: float) -> float:\n    # فرق بين -180 و +180\n    diff = (current - target + 180) % 360 - 180\n    return diff\n\n\ndef refine_return_jd(target_deg: float, start_jd: float, end_jd: float, body: str) -> float:\n    """\n    بحث بسيط بالتصغير لاستخراج وقت عودة الشمس/القمر.\n    """\n    getter = sun_longitude_at_jd if body == "الشمس" else moon_longitude_at_jd\n\n    # نبحث عن أقرب قيمة داخل المجال عبر تقسيم ثم تحسين.\n    best_jd = start_jd\n    best_err = 999\n    steps = 240\n    for i in range(steps + 1):\n        jd = start_jd + (end_jd - start_jd) * i / steps\n        err = abs(signed_angle_error(getter(jd), target_deg))\n        if err < best_err:\n            best_err = err\n            best_jd = jd\n\n    # تحسين حول أفضل نقطة\n    window = abs(end_jd - start_jd) / steps\n    lo = best_jd - window\n    hi = best_jd + window\n    for _ in range(30):\n        m1 = lo + (hi - lo) / 3\n        m2 = hi - (hi - lo) / 3\n        e1 = abs(signed_angle_error(getter(m1), target_deg))\n        e2 = abs(signed_angle_error(getter(m2), target_deg))\n        if e1 < e2:\n            hi = m2\n        else:\n            lo = m1\n    return (lo + hi) / 2\n\n\ndef calculate_solar_return_chart(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Optional[ChartData]:\n    if "الشمس" not in natal_chart.planets:\n        return None\n    target = natal_chart.planets["الشمس"].degree\n    # حول عيد الميلاد في سنة العبور\n    start = calculate_julian_day(transit.year, birth.month, birth.day, 0, 0, 0) - 3\n    end = start + 8\n    try:\n        sr_jd = refine_return_jd(target, start, end, "الشمس")\n        return build_chart_from_jd(sr_jd, transit.latitude, transit.longitude)\n    except Exception:\n        return None\n\n\ndef calculate_lunar_return_chart(transit: TransitInput, natal_chart: ChartData) -> Optional[ChartData]:\n    if "القمر" not in natal_chart.planets:\n        return None\n    target = natal_chart.planets["القمر"].degree\n    center = calculate_julian_day(transit.year, transit.month, transit.day, transit.hour, transit.minute, transit.timezone)\n    start = center - 15\n    end = center + 15\n    try:\n        lr_jd = refine_return_jd(target, start, end, "القمر")\n        return build_chart_from_jd(lr_jd, transit.latitude, transit.longitude)\n    except Exception:\n        return None\n\n\n# =========================================================\n# 11. التقدم الثانوي والقوس الشمسي\n# =========================================================\n\ndef calculate_secondary_progressed_chart(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> Optional[ChartData]:\n    if natal_chart.jd is None:\n        return None\n    birth_dt = datetime(birth.year, birth.month, birth.day, birth.hour, birth.minute)\n    transit_dt = datetime(transit.year, transit.month, transit.day, transit.hour, transit.minute)\n    age_years_float = safe_days_between(birth_dt, transit_dt) / 365.2425\n    progressed_jd = natal_chart.jd + age_years_float\n    try:\n        return build_chart_from_jd(progressed_jd, birth.latitude, birth.longitude)\n    except Exception:\n        return None\n\n\ndef calculate_solar_arc_chart(natal_chart: ChartData, progressed_chart: Optional[ChartData]) -> Optional[ChartData]:\n    if not progressed_chart or "الشمس" not in natal_chart.planets or "الشمس" not in progressed_chart.planets:\n        return None\n    arc = zodiac_diff(natal_chart.planets["الشمس"].degree, progressed_chart.planets["الشمس"].degree)\n    planets = {}\n    for name, pos in natal_chart.planets.items():\n        planets[name] = PlanetPosition(name, normalize_degree(pos.degree + arc), pos.speed, pos.retrograde)\n    houses = {h: normalize_degree(d + arc) for h, d in natal_chart.houses.items()}\n    asc = normalize_degree(natal_chart.asc + arc) if natal_chart.asc is not None else None\n    mc = normalize_degree(natal_chart.mc + arc) if natal_chart.mc is not None else None\n    return ChartData(planets=planets, houses=houses, asc=asc, mc=mc, jd=natal_chart.jd, latitude=natal_chart.latitude, longitude=natal_chart.longitude)\n\n\ndef build_time_layers(birth: BirthInput, transit: TransitInput, natal_chart: ChartData) -> TimeLayers:\n    annual_h, annual_lord, monthly_h, monthly_lord, daily_h, daily_lord = calculate_profections(birth, transit, natal_chart)\n    f_main, f_sub = calculate_firdaria(birth, transit, natal_chart)\n\n    progressed = calculate_secondary_progressed_chart(birth, transit, natal_chart)\n    solar_arc = calculate_solar_arc_chart(natal_chart, progressed)\n    solar_return = calculate_solar_return_chart(birth, transit, natal_chart)\n    lunar_return = calculate_lunar_return_chart(transit, natal_chart)\n\n    return TimeLayers(\n        annual_profection_house=annual_h,\n        annual_lord=annual_lord,\n        monthly_profection_house=monthly_h,\n        monthly_lord=monthly_lord,\n        daily_profection_house=daily_h,\n        daily_lord=daily_lord,\n        firdaria_main=f_main,\n        firdaria_sub=f_sub,\n        solar_return_chart=solar_return,\n        lunar_return_chart=lunar_return,\n        progressed_chart=progressed,\n        solar_arc_chart=solar_arc,\n    )\n\n\n# =========================================================\n# 12. ملفات الحالات\n# =========================================================\n\nTOPIC_PROFILES: Dict[str, Dict[str, Any]] = {\n    "general": {\n        "name": "السياق العام",\n        "houses": [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12],\n        "planets": ["القمر", "الشمس", "عطارد", "الزهرة", "المريخ", "المشتري", "زحل"],\n        "midpoints": [\n            ("الشمس", "القمر"), ("القمر", "زحل"), ("الشمس", "زحل"),\n            ("القمر", "الزهرة"), ("الزهرة", "المريخ"),\n            ("الشمس", "المشتري"), ("عطارد", "المشتري"),\n            ("الزهرة", "المشتري"), ("المريخ", "زحل"),\n        ],\n        "profection_houses": [1, 6, 7, 10],\n        "firdaria_planets": ["القمر", "الشمس", "عطارد", "الزهرة", "المشتري", "زحل", "المريخ"],\n    },\n    "love": {\n        "name": "الحالة العاطفية",\n        "houses": [5, 7, 4, 8, 12],\n        "planets": ["القمر", "الزهرة", "المريخ", "عطارد", "المشتري", "زحل"],\n        "midpoints": [\n            ("الشمس", "الزهرة"), ("القمر", "الزهرة"), ("الزهرة", "المريخ"),\n            ("الشمس", "القمر"), ("عطارد", "الزهرة"), ("القمر", "المريخ"),\n            ("الزهرة", "نبتون"), ("الزهرة", "بلوتو"),\n        ],\n        "profection_houses": [5, 7, 4, 8, 12],\n        "firdaria_planets": ["الزهرة", "القمر", "المشتري", "عطارد"],\n    },\n    "relationship_return": {\n        "name": "عودة العلاقة أو التواصل",\n        "houses": [7, 3, 4, 5, 12, 8],\n        "planets": ["القمر", "الزهرة", "عطارد", "المريخ", "زحل", "أورانوس"],\n        "midpoints": [\n            ("القمر", "الزهرة"), ("عطارد", "الزهرة"), ("الزهرة", "المريخ"),\n            ("عطارد", "القمر"), ("الزهرة", "زحل"), ("الزهرة", "بلوتو"),\n            ("الشمس", "القمر"),\n        ],\n        "profection_houses": [7, 3, 4, 5, 12],\n        "firdaria_planets": ["الزهرة", "القمر", "عطارد", "المشتري", "زحل"],\n    },\n    "marriage": {\n        "name": "الزواج والخطوبة",\n        "houses": [7, 5, 4, 10, 2, 11],\n        "planets": ["الزهرة", "القمر", "المشتري", "زحل", "عطارد"],\n        "midpoints": [\n            ("الشمس", "القمر"), ("الزهرة", "المريخ"), ("الزهرة", "المشتري"),\n            ("القمر", "المشتري"), ("الزهرة", "زحل"),\n        ],\n        "profection_houses": [7, 5, 4, 10, 11],\n        "firdaria_planets": ["الزهرة", "القمر", "المشتري", "الشمس", "زحل"],\n    },\n    "career": {\n        "name": "العمل والمهنة",\n        "houses": [10, 6, 2, 11, 3, 9],\n        "planets": ["الشمس", "زحل", "المشتري", "عطارد", "المريخ"],\n        "midpoints": [\n            ("الشمس", "زحل"), ("الشمس", "المشتري"), ("الشمس", "المريخ"),\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("المشتري", "زحل"),\n        ],\n        "profection_houses": [10, 6, 2, 11],\n        "firdaria_planets": ["الشمس", "زحل", "المشتري", "عطارد"],\n    },\n    "money": {\n        "name": "المال والاستثمار",\n        "houses": [2, 8, 11, 10, 5],\n        "planets": ["الزهرة", "المشتري", "عطارد", "زحل", "المريخ", "القمر"],\n        "midpoints": [\n            ("الزهرة", "المشتري"), ("الزهرة", "زحل"), ("عطارد", "المشتري"),\n            ("عطارد", "زحل"), ("المشتري", "زحل"), ("الشمس", "المشتري"),\n            ("عطارد", "المريخ"),\n        ],\n        "profection_houses": [2, 8, 11, 10, 5],\n        "firdaria_planets": ["الزهرة", "المشتري", "عطارد", "زحل"],\n    },\n    "travel": {\n        "name": "السفر والهجرة",\n        "houses": [9, 3, 4, 12, 7, 10],\n        "planets": ["عطارد", "المشتري", "القمر", "أورانوس", "زحل"],\n        "midpoints": [\n            ("عطارد", "المشتري"), ("القمر", "المشتري"), ("القمر", "أورانوس"),\n            ("المشتري", "أورانوس"), ("الشمس", "المشتري"), ("عطارد", "أورانوس"),\n        ],\n        "profection_houses": [9, 3, 4, 12, 7, 10],\n        "firdaria_planets": ["عطارد", "المشتري", "القمر"],\n    },\n    "study": {\n        "name": "الدراسة والاختبارات",\n        "houses": [3, 9, 6, 10, 11],\n        "planets": ["عطارد", "المشتري", "زحل", "القمر", "الشمس"],\n        "midpoints": [\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("عطارد", "الشمس"),\n            ("عطارد", "القمر"), ("عطارد", "المريخ"), ("الشمس", "المشتري"),\n        ],\n        "profection_houses": [3, 9, 6, 10, 11],\n        "firdaria_planets": ["عطارد", "المشتري", "زحل", "الشمس"],\n    },\n    "health": {\n        "name": "الصحة العامة والعملية الجراحية",\n        "houses": [1, 6, 8, 12, 4, 10],\n        "planets": ["القمر", "المريخ", "زحل", "عطارد", "الشمس", "نبتون"],\n        "midpoints": [\n            ("المريخ", "زحل"), ("الشمس", "زحل"), ("الشمس", "المريخ"),\n            ("القمر", "زحل"), ("القمر", "المريخ"), ("عطارد", "زحل"),\n            ("نبتون", "القمر"), ("نبتون", "المريخ"),\n        ],\n        "profection_houses": [1, 6, 8, 12],\n        "firdaria_planets": ["المريخ", "زحل", "القمر", "عطارد"],\n    },\n    "organ_sensitivity": {\n        "name": "حساسية الأعضاء للضغوطات",\n        "houses": [1, 6, 8, 12],\n        "planets": ["القمر", "المريخ", "زحل", "عطارد", "الشمس", "نبتون", "الزهرة"],\n        "midpoints": [\n            ("المريخ", "زحل"), ("الشمس", "زحل"), ("القمر", "زحل"),\n            ("القمر", "المريخ"), ("عطارد", "زحل"), ("عطارد", "المريخ"),\n            ("الزهرة", "زحل"), ("نبتون", "القمر"), ("نبتون", "المريخ"),\n        ],\n        "profection_houses": [1, 6, 8, 12],\n        "firdaria_planets": ["المريخ", "زحل", "القمر", "عطارد", "نبتون"],\n    },\n    "property": {\n        "name": "شراء العقار والبيت",\n        "houses": [4, 2, 8, 3, 7, 10, 11],\n        "planets": ["زحل", "القمر", "الزهرة", "المشتري", "عطارد", "المريخ"],\n        "midpoints": [\n            ("القمر", "زحل"), ("الزهرة", "زحل"), ("المشتري", "زحل"),\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("القمر", "المشتري"),\n        ],\n        "profection_houses": [4, 2, 8, 3, 10],\n        "firdaria_planets": ["زحل", "القمر", "الزهرة", "المشتري", "عطارد"],\n    },\n    "car": {\n        "name": "شراء السيارة ووسائل النقل",\n        "houses": [3, 2, 8, 6, 7, 9, 10],\n        "planets": ["عطارد", "المريخ", "الزهرة", "المشتري", "زحل", "القمر", "أورانوس"],\n        "midpoints": [\n            ("عطارد", "المريخ"), ("عطارد", "الزهرة"), ("عطارد", "المشتري"),\n            ("عطارد", "زحل"), ("المريخ", "زحل"), ("عطارد", "أورانوس"),\n        ],\n        "profection_houses": [3, 2, 8, 6, 10],\n        "firdaria_planets": ["عطارد", "المريخ", "الزهرة", "المشتري"],\n    },\n    "legal": {\n        "name": "القضايا القانونية والعقود",\n        "houses": [3, 7, 9, 10, 8, 2, 12],\n        "planets": ["عطارد", "المشتري", "زحل", "الشمس", "الزهرة", "المريخ", "القمر"],\n        "midpoints": [\n            ("عطارد", "زحل"), ("عطارد", "المشتري"), ("المشتري", "زحل"),\n            ("الشمس", "زحل"), ("الشمس", "المشتري"), ("الزهرة", "المشتري"),\n            ("المريخ", "زحل"),\n        ],\n        "profection_houses": [7, 9, 10, 3, 8],\n        "firdaria_planets": ["عطارد", "المشتري", "زحل", "الزهرة", "المريخ"],\n    },\n    "pregnancy": {\n        "name": "الحمل والإنجاب / الأبناء",\n        "houses": [5, 1, 4, 6, 8, 12, 11],\n        "planets": ["القمر", "الزهرة", "المشتري", "الشمس", "عطارد", "زحل", "المريخ", "نبتون"],\n        "midpoints": [\n            ("القمر", "الزهرة"), ("القمر", "المشتري"), ("الزهرة", "المشتري"),\n            ("الشمس", "القمر"), ("القمر", "زحل"), ("الزهرة", "زحل"),\n            ("المريخ", "زحل"), ("نبتون", "القمر"),\n        ],\n        "profection_houses": [5, 4, 1, 6, 8, 11],\n        "firdaria_planets": ["القمر", "الزهرة", "المشتري", "الشمس"],\n    },\n    "project": {\n        "name": "المشروع الجديد والقرار المهم",\n        "houses": [1, 2, 3, 5, 6, 7, 8, 9, 10, 11],\n        "planets": ["الشمس", "عطارد", "المريخ", "المشتري", "زحل", "الزهرة", "القمر", "أورانوس"],\n        "midpoints": [\n            ("الشمس", "المشتري"), ("الشمس", "زحل"), ("الشمس", "المريخ"),\n            ("عطارد", "المشتري"), ("عطارد", "زحل"), ("عطارد", "المريخ"),\n            ("المريخ", "زحل"), ("المشتري", "زحل"), ("الزهرة", "المشتري"),\n        ],\n        "profection_houses": [1, 2, 3, 5, 6, 7, 10, 11],\n        "firdaria_planets": ["الشمس", "عطارد", "المريخ", "المشتري", "زحل"],\n    },\n}\n\n\n\n# =========================================================\n# 12B. مفاتيح نوعية وسقوف ترجيح لمنع تضخم النتائج\n# =========================================================\n\nTOPIC_REQUIRED_MIDPOINT_KEYWORDS = {\n    "car": ["عطارد/المريخ", "عطارد/الزهرة", "عطارد/المشتري", "عطارد/زحل", "عطارد/أورانوس"],\n    "travel": ["عطارد/المشتري", "القمر/المشتري", "القمر/أورانوس", "المشتري/أورانوس", "عطارد/أورانوس"],\n    "money": ["الزهرة/المشتري", "عطارد/المشتري", "الزهرة/زحل", "المشتري/زحل"],\n    "career": ["الشمس/المشتري", "الشمس/زحل", "عطارد/زحل", "عطارد/المشتري", "المشتري/زحل"],\n    "love": ["القمر/الزهرة", "الزهرة/المريخ", "عطارد/الزهرة", "الشمس/الزهرة"],\n    "relationship_return": ["عطارد/الزهرة", "القمر/الزهرة", "الزهرة/زحل", "الزهرة/بلوتو"],\n    "marriage": ["الشمس/القمر", "الزهرة/المريخ", "الزهرة/المشتري", "القمر/المشتري", "الزهرة/زحل"],\n    "health": ["المريخ/زحل", "الشمس/زحل", "القمر/زحل", "القمر/المريخ", "نبتون/القمر"],\n    "organ_sensitivity": ["المريخ/زحل", "الشمس/زحل", "القمر/زحل", "القمر/المريخ", "عطارد/زحل", "نبتون/القمر"],\n    "property": ["القمر/زحل", "الزهرة/زحل", "المشتري/زحل", "عطارد/زحل", "القمر/المشتري"],\n    "legal": ["عطارد/زحل", "عطارد/المشتري", "المشتري/زحل", "الشمس/المشتري", "المريخ/زحل"],\n    "study": ["عطارد/زحل", "عطارد/المشتري", "عطارد/القمر", "الشمس/المشتري"],\n    "pregnancy": ["القمر/الزهرة", "القمر/المشتري", "الزهرة/المشتري", "الشمس/القمر"],\n    "project": ["الشمس/المشتري", "عطارد/المشتري", "المشتري/زحل", "الشمس/زحل", "عطارد/زحل"],\n}\n\nTOPIC_CORE_HOUSES = {"car":[3],"travel":[9,3],"money":[2,8,11],"career":[10,6],"love":[5,7],"relationship_return":[7,3],"marriage":[7,5],"health":[1,6],"organ_sensitivity":[1,6],"property":[4],"legal":[9,7,3,10],"study":[3,9],"pregnancy":[5,1],"project":[1,10,2],"general":[1]}\nTOPIC_CORE_PLANETS = {"car":["عطارد","المريخ"],"travel":["عطارد","المشتري"],"money":["الزهرة","المشتري","عطارد"],"career":["الشمس","زحل","المشتري","عطارد"],"love":["الزهرة","القمر"],"relationship_return":["عطارد","الزهرة","القمر"],"marriage":["الزهرة","القمر","المشتري","زحل"],"health":["القمر","المريخ","زحل"],"organ_sensitivity":["القمر","المريخ","زحل"],"property":["زحل","القمر","عطارد"],"legal":["عطارد","المشتري","زحل"],"study":["عطارد","المشتري","زحل"],"pregnancy":["القمر","الزهرة","المشتري"],"project":["الشمس","عطارد","المشتري","زحل"],"general":["القمر","الشمس"]}\n\ndef cap_value(value: int, cap: int) -> int:\n    return min(int(value), int(cap))\n\ndef has_required_midpoint(topic_key: str, activations: List[Activation]) -> bool:\n    req = TOPIC_REQUIRED_MIDPOINT_KEYWORDS.get(topic_key, [])\n    if not req:\n        return True\n    return any(key in act.target_name for act in activations for key in req)\n\ndef count_core_house_hits(topic_key: str, natal_chart: ChartData, transit_chart: ChartData) -> int:\n    houses = TOPIC_CORE_HOUSES.get(topic_key, [])\n    planets = TOPIC_CORE_PLANETS.get(topic_key, [])\n    hits = 0\n    for pname in planets:\n        if pname in transit_chart.planets:\n            h = house_of_degree(transit_chart.planets[pname].degree, natal_chart.houses)\n            if h in houses:\n                hits += 1\n    return hits\n\ndef evidence_level(topic_key: str, activations: List[Activation], natal_chart: ChartData, transit_chart: ChartData, layers: Optional[TimeLayers]) -> Tuple[int, List[str]]:\n    notes=[]; level=0\n    house_hits=count_core_house_hits(topic_key,natal_chart,transit_chart)\n    if house_hits:\n        level=max(level,1); notes.append(f"وجود {house_hits} تفعيل مباشر في البيوت الجوهرية للحالة")\n    if has_required_midpoint(topic_key,activations):\n        level=max(level,2); notes.append("ظهور مفتاح نوعي خاص بالحالة من نقاط المنتصف")\n    if layers:\n        prof_houses=TOPIC_PROFILES.get(topic_key,{}).get("profection_houses",[])\n        f_planets=TOPIC_PROFILES.get(topic_key,{}).get("firdaria_planets",[])\n        if layers.annual_profection_house in prof_houses or layers.firdaria_main in f_planets:\n            if level>=2:\n                level=max(level,3); notes.append("المفتاح النوعي مدعوم بطبقة زمنية كبرى")\n    return level, notes\n\n# =========================================================\n# 13. حساسية الأعضاء\n# =========================================================\n\nSIGN_BODY_AREAS = {\n    "الحمل": "الرأس، الوجه، العينان، الصداع والتوتر العصبي",\n    "الثور": "الحلق، الرقبة، الصوت، اللوز، الغدة الدرقية",\n    "الجوزاء": "الرئتان، التنفس، الذراعان، اليدان، الأعصاب",\n    "السرطان": "المعدة، الصدر، الثدي، السوائل والهضم",\n    "الأسد": "القلب، الظهر، العمود الفقري العلوي، الحيوية",\n    "العذراء": "الأمعاء، القولون، الهضم الدقيق، القلق الجسدي",\n    "الميزان": "الكليتان، أسفل الظهر، التوازن الداخلي والجلد",\n    "العقرب": "الجهاز التناسلي، المثانة، الإخراج، الهرمونات العميقة",\n    "القوس": "الكبد، الفخذان، الوركان، العصب الوركي",\n    "الجدي": "العظام، الركبتان، الأسنان، الجلد والمفاصل",\n    "الدلو": "الساقان، الكاحلان، الدورة الطرفية، الأعصاب المفاجئة",\n    "الحوت": "القدمان، المناعة، السوائل، النوم، الحساسية والأدوية",\n}\n\n\ndef infer_sensitive_organs(activations: List[Activation]) -> List[str]:\n    scores: Dict[str, int] = {}\n    for a in activations:\n        sign, _ = degree_to_sign(a.exact_aspect_degree)\n        scores[sign] = scores.get(sign, 0) + a.score\n    ordered = sorted(scores.items(), key=lambda x: x[1], reverse=True)\n    return [f"{SIGN_BODY_AREAS[s]}: {score} نقطة" for s, score in ordered[:3]]\n\n\n# =========================================================\n# 14. التقييم العام للحالات\n# =========================================================\n\ndef classify_score(score: int) -> str:\n    """0-39 ضعيفة، 40-59 متوسطة، 60-79 قوية، 80 فأكثر قوية جدًا."""\n    if score < 40:\n        return "ضعيفة"\n    if score < 60:\n        return "متوسطة"\n    if score < 80:\n        return "قوية"\n    return "قوية جدًا"\n\n\n\ndef classify_event_type(score: int, has_deep_layer: bool = False) -> str:\n    if score < 40:\n        return "مؤشر ضعيف أو شعور داخلي"\n    if score < 60:\n        return "حركة متوسطة أو مراجعة"\n    if score < 80:\n        return "محور قوي يحتاج متابعة"\n    if has_deep_layer:\n        return "حدث محتمل بشرط وجود خطوة واقعية"\n    return "محور قوي جدًا وليس حكمًا بحدث مؤكد"\n\n\n\ndef score_house_emphasis(natal_chart: ChartData, transit_chart: ChartData, profile: Dict[str, Any]) -> Tuple[int, List[str]]:\n    """ترجيح البيوت بعد منع التضخم: البيوت والكواكب الجوهرية فقط مع سقف 24 نقطة."""\n    topic_key=""\n    for key,val in TOPIC_PROFILES.items():\n        if val is profile:\n            topic_key=key; break\n    core_houses=TOPIC_CORE_HOUSES.get(topic_key, profile.get("houses", []))\n    core_planets=TOPIC_CORE_PLANETS.get(topic_key, profile.get("planets", []))\n    secondary_houses=[h for h in profile.get("houses", []) if h not in core_houses]\n    score=0; notes=[]; used=set()\n    for pname in core_planets:\n        if pname in transit_chart.planets:\n            h=house_of_degree(transit_chart.planets[pname].degree, natal_chart.houses)\n            if h in core_houses:\n                score+=8; text=f"{pname} العابر يقع في/ينشّط البيت {h}"\n                if text not in used: notes.append(text); used.add(text)\n            elif h in secondary_houses:\n                score+=3; text=f"{pname} العابر يلمّح للموضوع عبر البيت {h}"\n                if text not in used: notes.append(text); used.add(text)\n    for h in core_houses[:2]:\n        ruler=house_ruler(natal_chart,h)\n        if ruler and ruler in natal_chart.planets:\n            ruler_deg=natal_chart.planets[ruler].degree\n            for pname in core_planets:\n                if pname in transit_chart.planets:\n                    acts=check_activation(transit_chart.planets[pname], f"حاكم البيت {h} ({ruler})", ruler_deg, topic_key or "general", max_orb=1.5, max_score=10)\n                    if acts:\n                        score+=max(a.score for a in acts); notes.append(f"تفعيل حاكم البيت {h}: {ruler}"); break\n    return cap_value(score,24), notes[:5]\n\n\n\ndef score_time_layers(profile: Dict[str, Any], layers: TimeLayers, natal_chart: ChartData) -> Tuple[int, List[str], bool]:\n    score = 0\n    notes = []\n    deep = False\n\n    prof_houses = profile.get("profection_houses", [])\n    f_planets = profile.get("firdaria_planets", [])\n\n    if layers.annual_profection_house in prof_houses:\n        score += 12\n        notes.append(f"البروفكشن السنوي يدعم الحالة: البيت {layers.annual_profection_house}")\n        deep = True\n    if layers.monthly_profection_house in prof_houses:\n        score += 8\n        notes.append(f"البروفكشن الشهري يدعم الحالة: البيت {layers.monthly_profection_house}")\n    if layers.daily_profection_house in prof_houses:\n        score += 4\n        notes.append(f"البروفكشن اليومي يلمّح للحالة: البيت {layers.daily_profection_house}")\n\n    if layers.firdaria_main in f_planets:\n        score += 10\n        notes.append(f"الفريدار الرئيسي داعم: {layers.firdaria_main}")\n        deep = True\n    if layers.firdaria_sub in f_planets:\n        score += 5\n        notes.append(f"الفريدار الفرعي داعم: {layers.firdaria_sub}")\n\n    # العودة الشمسية: إذا كانت كواكب الملف في بيوت الملف\n    if layers.solar_return_chart:\n        sr_score, sr_notes = score_house_emphasis(natal_chart, layers.solar_return_chart, profile)\n        if sr_score > 0:\n            add = min(15, int(sr_score / 2))\n            score += add\n            notes.append(f"العودة الشمسية تدعم الحالة ({add} نقطة)")\n            deep = True\n\n    # العودة القمرية\n    if layers.lunar_return_chart:\n        lr_score, lr_notes = score_house_emphasis(natal_chart, layers.lunar_return_chart, profile)\n        if lr_score > 0:\n            add = min(10, int(lr_score / 2))\n            score += add\n            notes.append(f"العودة القمرية تدعم الحالة ({add} نقطة)")\n\n    return score, notes, deep\n\n\ndef evaluate_topic(\n    topic_key: str,\n    natal_chart: ChartData,\n    transit_chart: ChartData,\n    layers: Optional[TimeLayers] = None,\n) -> TopicResult:\n    profile=TOPIC_PROFILES[topic_key]\n    acts=[]; notes=[]; warnings=[]; technical=[]\n    mps=calculate_midpoints(natal_chart, profile["midpoints"])\n    for mp in mps:\n        for tpos in transit_chart.planets.values():\n            max_orb=2.0 if tpos.name in ["القمر","عطارد","الزهرة","المريخ","الشمس"] else 2.5\n            acts.extend(check_activation(tpos, mp.name, mp.degree, topic_key, max_orb=max_orb, layer="عبور", max_score=14))\n    if layers and layers.progressed_chart:\n        for mp in mps:\n            for pname in profile["planets"]:\n                if pname in layers.progressed_chart.planets:\n                    acts.extend(check_activation(layers.progressed_chart.planets[pname], mp.name, mp.degree, topic_key, max_orb=0.8, layer="تقدم ثانوي", max_score=18))\n    if layers and layers.solar_arc_chart:\n        for mp in mps:\n            for pname in profile["planets"]:\n                if pname in layers.solar_arc_chart.planets:\n                    acts.extend(check_activation(layers.solar_arc_chart.planets[pname], mp.name, mp.degree, topic_key, max_orb=0.8, layer="قوس شمسي", max_score=20))\n    midpoint_score=cap_value(sum(a.score for a in acts),36)\n    house_score,house_notes=score_house_emphasis(natal_chart,transit_chart,profile); notes.extend(house_notes)\n    layer_score=0; has_deep=False\n    if layers:\n        raw_layer_score,layer_notes,has_deep=score_time_layers(profile,layers,natal_chart)\n        layer_score=cap_value(raw_layer_score,26); notes.extend(layer_notes[:4])\n    ev_level,ev_notes=evidence_level(topic_key,acts,natal_chart,transit_chart,layers); notes.extend(ev_notes)\n    active_layers=set(a.layer for a in acts)\n    repetition_bonus=0\n    if len(active_layers)>=2: repetition_bonus+=6; notes.append("الدلالة ظهرت من أكثر من طبقة")\n    if acts and house_score>0 and layer_score>0: repetition_bonus+=6; notes.append("اجتمع التوقيت مع البيت والمرحلة الزمنية")\n    raw_total=midpoint_score+house_score+layer_score+repetition_bonus\n    if ev_level==0:\n        total=min(raw_total,35); technical.append("تم خفض النتيجة لأن الدلالة عامة ولا توجد مفاتيح نوعية كافية.")\n    elif ev_level==1:\n        total=min(raw_total,55); technical.append("تم تحديد السقف لأن الدلالة مبنية على بيوت/كواكب فقط دون نقطة نوعية واضحة.")\n    elif ev_level==2:\n        total=min(raw_total,75); technical.append("الدلالة قوية لأنها تملك مفتاحًا نوعيًا، لكنها تحتاج طبقة كبرى لتصبح حدثًا كبيرًا.")\n    else:\n        total=min(raw_total,95); technical.append("الدلالة قوية جدًا لأنها تملك مفتاحًا نوعيًا وطبقة زمنية داعمة.")\n    for a in acts:\n        if any(w in a.term_quality for w in ["ثقيل","متوتر","مخاطرة","نزاع","جراحي","بطيء"]): warnings.append(f"{a.target_name}: {a.term_quality}")\n    warnings=warnings[:3]\n    if topic_key=="organ_sensitivity":\n        organ_notes=infer_sensitive_organs(acts)\n        if organ_notes: notes.extend([f"محور جسدي حساس: {x}" for x in organ_notes])\n    strength=classify_score(total)\n    event_type=classify_event_type(total, has_deep_layer=(ev_level>=3) or ("قوس شمسي" in active_layers) or ("تقدم ثانوي" in active_layers))\n    if ev_level<3 and "حدث" in event_type: event_type="محور قوي يحتاج دليلًا واقعيًا قبل الحكم كحدث"\n    return TopicResult(topic_key=topic_key, topic_name=profile["name"], score=total, strength=strength, event_type=event_type, activations=sorted(acts,key=lambda x:x.score,reverse=True), supports=notes[:7], warnings=warnings[:3], technical_notes=technical)\n\n\n\ndef evaluate_all_topics(natal_chart: ChartData, transit_chart: ChartData, layers: Optional[TimeLayers] = None) -> List[TopicResult]:\n    results = [evaluate_topic(k, natal_chart, transit_chart, layers) for k in TOPIC_PROFILES.keys()]\n    results.sort(key=lambda r: r.score, reverse=True)\n    return results\n\n\n# =========================================================\n# 15. توليد تقارير\n# =========================================================\n\ndef generate_chart_summary(chart: ChartData, title: str) -> str:\n    lines = [title, "-" * 60]\n    if chart.asc is not None:\n        lines.append(f"الطالع: {format_degree(chart.asc)}")\n    if chart.mc is not None:\n        lines.append(f"MC: {format_degree(chart.mc)}")\n    lines.append("")\n    lines.append("الكواكب:")\n    for name, pos in chart.planets.items():\n        retro = " متراجع" if pos.retrograde else ""\n        lines.append(f"- {name}: {format_degree(pos.degree)}{retro} | السرعة: {pos.speed:.4f}")\n    lines.append("")\n    lines.append("البيوت:")\n    for i in range(1, 13):\n        if i in chart.houses:\n            ruler = house_ruler(chart, i)\n            lines.append(f"- البيت {i}: {format_degree(chart.houses[i])} | الحاكم: {ruler}")\n    return "\\n".join(lines)\n\n\ndef generate_layers_summary(layers: TimeLayers) -> str:\n    lines = ["الطبقات الزمنية", "-" * 60]\n    lines.append(f"البروفكشن السنوي: البيت {layers.annual_profection_house} | حاكمه: {layers.annual_lord}")\n    lines.append(f"البروفكشن الشهري: البيت {layers.monthly_profection_house} | حاكمه: {layers.monthly_lord}")\n    lines.append(f"البروفكشن اليومي: البيت {layers.daily_profection_house} | حاكمه: {layers.daily_lord}")\n    lines.append(f"الفريدار الرئيسي: {layers.firdaria_main}")\n    lines.append(f"الفريدار الفرعي: {layers.firdaria_sub}")\n    if layers.solar_return_chart and layers.solar_return_chart.asc is not None:\n        lines.append(f"طالع العودة الشمسية: {format_degree(layers.solar_return_chart.asc)}")\n    if layers.lunar_return_chart and layers.lunar_return_chart.asc is not None:\n        lines.append(f"طالع العودة القمرية: {format_degree(layers.lunar_return_chart.asc)}")\n    return "\\n".join(lines)\n\n\n\ndef topic_event_type_label(topic_key: str, score: int, raw_event_type: str) -> str:\n    practical_topics=["car","money","property","legal","study","travel","project"]\n    sensitive_topics=["health","organ_sensitivity","pregnancy"]\n    relation_topics=["love","relationship_return","marriage"]\n    if topic_key in practical_topics:\n        if score>=80: return "إجراء عملي قوي جدًا بشرط وجود خطوة واقعية"\n        if score>=60: return "محور عملي قوي يحتاج متابعة"\n        if score>=40: return "حركة أو مراجعة عملية متوسطة"\n        return "مؤشر ضعيف أو تفكير بالموضوع"\n    if topic_key in sensitive_topics:\n        if score>=80: return "تنبيه قوي جدًا يحتاج متابعة واقعية لا تشخيصًا"\n        if score>=60: return "تنبيه قوي للراحة والمتابعة"\n        if score>=40: return "تنبيه متوسط أو حساسية قابلة للملاحظة"\n        return "حساسية خفيفة أو ملاحظة وقائية"\n    if topic_key in relation_topics:\n        if score>=80: return "محور عاطفي قوي جدًا يحتاج دليلًا واقعيًا"\n        if score>=60: return "محور عاطفي قوي"\n        if score>=40: return "حركة شعورية أو تواصل متوسط"\n        return "شعور داخلي أو مؤشر ضعيف"\n    if score>=80: return "محور قوي جدًا وليس حكمًا بحدث مؤكد"\n    if score>=60: return "محور قوي وواضح"\n    if score>=40: return "حركة أو تفاعل متوسط"\n    return raw_event_type\n\ndef topic_display_score(topic_key: str, score: int) -> int:\n    practical_topics=["car","money","property","legal","travel","study","project"]\n    sensitive_topics=["health","organ_sensitivity","pregnancy"]\n    s=min(100,max(0,int(score)))\n    if topic_key in practical_topics and s>88: return 88\n    if topic_key in sensitive_topics and s>82: return 82\n    return s\n\ndef topic_display_strength(topic_key: str, score: int) -> str:\n    s=topic_display_score(topic_key,score)\n    if s<40: return "ضعيفة"\n    if s<60: return "متوسطة"\n    if s<80: return "قوية"\n    return "قوية جدًا"\n\ndef gender_sensitive_topic_name(topic_key: str, gender: str, default_name: str) -> str:\n    if topic_key=="pregnancy":\n        if gender=="ذكر": return "الإنجاب والأبناء أو متابعة تخص الشريكة"\n        if gender=="أنثى": return "الحمل والإنجاب"\n        return "الحمل والإنجاب / الأبناء"\n    return default_name\n\ndef gender_sensitive_pregnancy_intro(gender: str) -> str:\n    if gender=="ذكر": return "هذا الملف لا يعني حمل الرجل جسديًا، بل يقرأ مؤشرات البيت الخامس والإنجاب والأبناء أو موضوعًا يخص الشريكة/العائلة."\n    if gender=="أنثى": return "هذا الملف يقرأ مؤشرات الحمل والإنجاب والمتابعة الجسدية والخصوبة رمزيًا، ولا يؤكد الحمل إلا بالفحص الطبي."\n    return "هذا الملف يقرأ مؤشرات الإنجاب والأبناء والخصوبة رمزيًا، ولا يؤكد حملًا أو نتيجة طبية إلا بالفحص والواقع العملي."\n\ndef user_direction_text(result: TopicResult) -> str:\n    t = result.topic_key\n    if t == "love":\n        return "الفترة تنشّط المشاعر والرغبة في التقارب، لكن الحكم النهائي يعتمد على طريقة التعبير وعدم الضغط."\n    if t == "relationship_return":\n        return "هناك قابلية لعودة تفكير أو تواصل قديم، لكن لا تُفسَّر كل إشارة على أنها عودة مستقرة."\n    if t == "marriage":\n        return "المؤشرات تخص الارتباط الرسمي أو الخطوبة، وتحتاج وضوحًا عمليًا وعائليًا حتى تتحول إلى خطوة ثابتة."\n    if t == "career":\n        return "الفترة تضع العمل والمسؤوليات في الواجهة، وقد تحمل فرصة أو ضغطًا مهنيًا يحتاج تنظيمًا."\n    if t == "money":\n        return "هناك حركة مالية أو تفكير بالموارد، لكن القرار يحتاج حسابًا وتدقيقًا قبل المخاطرة."\n    if t == "travel":\n        return "ملف السفر أو الخارج قابل للتحرك، خصوصًا عبر الأوراق والمراسلات أو قرار انتقال."\n    if t == "study":\n        return "الفترة مناسبة للدراسة والمراجعة أو الاختبار إذا تم تنظيم الوقت وتجنب التشتت."\n    if t == "health":\n        return "الفترة تدعو للاهتمام بالصحة والطاقة اليومية، ولا تغني عن الطبيب أو الفحوصات."\n    if t == "organ_sensitivity":\n        return "هناك مناطق جسدية أكثر حساسية رمزيًا تحت الضغط، وهذا تنبيه وقائي لا تشخيص طبي."\n    if t == "property":\n        return "المؤشرات تدعم البحث أو التفاوض العقاري، بشرط فحص الأوراق والسعر والالتزامات."\n    if t == "car":\n        return "الفترة قد تفتح باب المعاينة أو الشراء أو التسجيل، لكنها لا تعني شراءً مؤكدًا ما لم توجد سيارة معروضة أو تفاوض أو خطوة واقعية."\n    if t == "legal":\n        return "الملف القانوني أو العقدي قابل للحركة، لكن يجب تدقيق المستندات واستشارة المختص عند الحاجة."\n    if t == "pregnancy":\n        return "المؤشرات تخص ملف الإنجاب أو الأبناء أو المتابعة الطبية رمزيًا. الحمل لا يؤكد فلكيًا، بل بالفحص الطبي فقط."\n    if t == "project":\n        return "الفترة تدعم التخطيط أو الإطلاق إذا كانت الموارد والخطة واضحة، مع تجنب الشراكات غير الموثقة."\n    return "الفترة تحمل محورًا عامًا واضحًا يحتاج تركيزًا وهدوءًا."\n\n\n\n\ndef opportunity_verdict(topic_key: str, score: int, gender: str = "غير محدد") -> Tuple[str, str]:\n    """\n    يعطي حكمًا مباشرًا للمستخدم:\n    - هل توجد فرصة؟\n    - هل المؤشرات غير كافية؟\n    - هل نحتاج انتظار/متابعة؟\n    هذا لا يحوّل التقرير إلى يقين، لكنه يمنع الغموض.\n    """\n    s = int(score)\n\n    if topic_key == "pregnancy":\n        if gender == "ذكر":\n            if s >= 80:\n                return (\n                    "نعم، ملف الإنجاب أو الأبناء قوي جدًا هذه الفترة",\n                    "لكن لا يُقرأ كحمل للرجل؛ بل كموضوع يخص الأبناء أو الشريكة أو قرارًا عائليًا. يحتاج دليلًا واقعيًا مثل فحص أو حديث عائلي أو متابعة تخص الشريكة."\n                )\n            if s >= 60:\n                return (\n                    "نعم، توجد فرصة أو حركة واضحة في ملف الأبناء أو الإنجاب",\n                    "لكنها ليست تأكيدًا لحدوث حمل، بل دلالة على أن الموضوع حاضر وقابل للمتابعة."\n                )\n            if s >= 40:\n                return (\n                    "الفرصة محدودة وتحتاج متابعة",\n                    "المؤشرات لا تكفي للحكم بحدث واضح، لكنها تسمح بمتابعة الموضوع أو مراقبة تطوره."\n                )\n            return (\n                "لا تظهر فرصة قوية حاليًا",\n                "المؤشرات ضعيفة، ولا تكفي للحكم بحدوث تطور واضح في ملف الإنجاب أو الأبناء."\n            )\n\n        if gender == "أنثى":\n            if s >= 80:\n                return (\n                    "نعم، توجد فرصة قوية في ملف الحمل أو الإنجاب",\n                    "لكن الحمل لا يُؤكد فلكيًا؛ التأكيد يكون بالفحص الطبي فقط. هذه الدرجة تعني أن الوقت داعم للمتابعة أو الفحص أو ظهور مؤشر واقعي."\n                )\n            if s >= 60:\n                return (\n                    "نعم، توجد فرصة واضحة للمتابعة أو احتمال إنجابي",\n                    "لكنها ليست تأكيد حمل. الأفضل إجراء فحص أو متابعة طبية إذا كان هناك تأخير أو أعراض أو خطة إنجاب."\n                )\n            if s >= 40:\n                return (\n                    "الفرصة موجودة لكنها محدودة",\n                    "المؤشرات متوسطة، لذلك الأفضل المتابعة أو الانتظار بدل الحكم بوجود حمل."\n                )\n            return (\n                "لا تظهر فرصة واضحة حاليًا",\n                "المؤشرات ضعيفة ولا تكفي لترجيح الحمل أو الإنجاب في هذه الفترة."\n            )\n\n        if s >= 80:\n            return ("نعم، الملف قوي جدًا", "توجد دلالة قوية على ملف الإنجاب أو الأبناء، لكنها تحتاج دليلًا واقعيًا أو طبيًا.")\n        if s >= 60:\n            return ("نعم، توجد فرصة واضحة", "المؤشرات داعمة لكنها غير حاسمة.")\n        if s >= 40:\n            return ("فرصة محدودة", "المؤشرات متوسطة وتحتاج متابعة.")\n        return ("لا توجد فرصة واضحة", "المؤشرات ضعيفة حاليًا.")\n\n    practical_topics = ["car", "money", "property", "legal", "study", "travel", "project"]\n    health_topics = ["health", "organ_sensitivity"]\n    relation_topics = ["love", "relationship_return", "marriage"]\n\n    if topic_key in practical_topics:\n        if s >= 80:\n            return (\n                "نعم، توجد فرصة قوية للتحرك العملي",\n                "النتيجة لا تعني أن الأمر يحدث وحده؛ لكنها تدعم الخطوة إذا كان هناك عرض، موعد، ورقة، تفاوض، دفع أو توقيع."\n            )\n        if s >= 60:\n            return (\n                "نعم، توجد فرصة عملية قابلة للمتابعة",\n                "الموضوع نشط، لكن يحتاج خطوة واقعية حتى يتحول إلى نتيجة."\n            )\n        if s >= 40:\n            return (\n                "الفرصة متوسطة أو محدودة",\n                "يمكن المتابعة، لكن لا يُنصح بالحسم قبل ظهور دليل عملي أقوى."\n            )\n        return (\n            "لا توجد فرصة قوية حاليًا",\n            "المؤشرات ضعيفة، والأفضل الانتظار أو عدم اتخاذ قرار كبير الآن."\n        )\n\n    if topic_key in health_topics:\n        if s >= 80:\n            return (\n                "نعم، يوجد تنبيه قوي يحتاج متابعة",\n                "هذا ليس تشخيصًا، لكنه يشير إلى ضرورة الانتباه للجسد ومراجعة المختص عند وجود عرض."\n            )\n        if s >= 60:\n            return (\n                "يوجد تنبيه واضح",\n                "المؤشرات تدعو للراحة أو الفحص أو تنظيم الروتين، لكنها لا تعني مرضًا مؤكدًا."\n            )\n        if s >= 40:\n            return (\n                "تنبيه متوسط",\n                "الموضوع يحتاج ملاحظة فقط، لا قلقًا زائدًا."\n            )\n        return (\n            "لا يظهر ضغط صحي قوي",\n            "المؤشرات ضعيفة، مع بقاء المتابعة الطبية ضرورية عند وجود عرض واقعي."\n        )\n\n    if topic_key in relation_topics:\n        if s >= 80:\n            return (\n                "نعم، توجد فرصة قوية أو حضور عاطفي قوي",\n                "لكن النتيجة لا تصبح مؤكدة إلا إذا ظهر فعل واضح: تواصل، اتفاق، خطوة رسمية أو موقف عملي."\n            )\n        if s >= 60:\n            return (\n                "نعم، توجد فرصة واضحة أو محور عاطفي نشط",\n                "الموضوع قابل للحركة، لكنه يحتاج تصرفًا واقعيًا من أحد الطرفين."\n            )\n        if s >= 40:\n            return (\n                "الفرصة موجودة لكنها محدودة",\n                "قد تظهر كمشاعر أو تفكير أكثر من حدث واضح."\n            )\n        return (\n            "لا توجد فرصة قوية حاليًا",\n            "المؤشرات ضعيفة ولا تكفي لترجيح حدث عاطفي واضح."\n        )\n\n    if s >= 80:\n        return ("نعم، المحور قوي جدًا", "توجد فرصة واضحة لكن ليست حكمًا حتميًا.")\n    if s >= 60:\n        return ("نعم، المحور قوي", "الموضوع يستحق المتابعة.")\n    if s >= 40:\n        return ("الفرصة متوسطة", "تحتاج مزيدًا من الدليل.")\n    return ("لا توجد دلالة كافية", "المؤشرات ضعيفة حاليًا.")\n\n\ndef opportunity_line(topic_key: str, score: int, gender: str = "غير محدد") -> str:\n    title, detail = opportunity_verdict(topic_key, score, gender)\n    return f"{title}. {detail}"\n\ndef filter_topic_warnings(topic_key: str, warnings: List[str]) -> List[str]:\n    """\n    فلترة التحذيرات حسب المحور.\n    في الحمل والإنجاب لا نعرض القمر/الزهرة أو الشمس/القمر كتحذير إلا إذا كان معها زحل/المريخ/نبتون أو دلالة ثقيلة واضحة.\n    """\n    if topic_key != "pregnancy":\n        return warnings\n\n    heavy_keys = ["زحل", "المريخ", "نبتون", "الثامن", "السادس", "الثاني عشر", "ثقيل", "متوتر", "جراحي", "بطيء"]\n    filtered = []\n    for w in warnings:\n        if any(k in w for k in heavy_keys):\n            filtered.append(w)\n    return filtered\n\ndef generate_user_report(results: List[TopicResult], selected_topic: str = "general", period: str = "هذا الأسبوع", gender: str = "غير محدد") -> str:\n    if selected_topic=="general":\n        visible=results[:3]; main=visible[0] if visible else None\n    else:\n        found=[r for r in results if r.topic_key==selected_topic]; main=found[0] if found else None; visible=[main] if main else []\n    if not main: return "لا توجد دلالات كافية لإصدار تقرير واضح."\n    shown_score=topic_display_score(main.topic_key,main.score)\n    shown_strength=topic_display_strength(main.topic_key,main.score)\n    topic_name=gender_sensitive_topic_name(main.topic_key,gender,main.topic_name)\n    lines=[]\n    lines.append("التقرير الشخصي"); lines.append("="*50)\n    lines.append(f"الموضوع المختار: {topic_name if selected_topic != \'general\' else \'السياق العام\'}")\n    lines.append(f"الفترة: {period}")\n    lines.append(f"قوة التفعيل: {shown_strength}")\n    lines.append(f"درجة التأثير التقريبية: {shown_score} من 100")\n    lines.append(f"نوع الدلالة: {topic_event_type_label(main.topic_key,main.score,main.event_type)}")\n    lines.append("سلم تقييم التأثير: أقل من 40 ضعيف، 40-59 متوسط، 60-79 قوي، 80 فأكثر قوي جدًا")\n    lines.append("")\n    lines.append("الاتجاه العام:")\n    lines.append(gender_sensitive_pregnancy_intro(gender) if main.topic_key=="pregnancy" else user_direction_text(main))\n    lines.append("")\n    lines.append("ما يدعم النتيجة:")\n    if main.supports:\n        for s in main.supports[:5]: lines.append(f"- {s}")\n    else: lines.append("- توجد تفعيلات فلكية متكررة ضمن المحور نفسه.")\n    lines.append("")\n    lines.append("ما الفرق بين هذه النتيجة والحدث المؤكد؟")\n    if main.topic_key in ["car","money","property","legal","travel","study","project"]:\n        lines.append("في الملفات العملية، الدرجة العالية لا تعني أن الأمر سيحدث وحده. هي تعني أن الملف نشط وقابل للحركة إذا وُجدت خطوة واقعية مثل معاينة، ورقة، موعد، عرض، تواصل، دفع، توقيع أو مراجعة.")\n    elif main.topic_key in ["health","organ_sensitivity","pregnancy"]:\n        lines.append("هنا لا تُقرأ الدرجة كتشخيص أو نتيجة طبية. هي فقط تشير إلى أن الملف الصحي أو الجسدي يحتاج انتباهًا أو متابعة، والقرار النهائي يكون بالفحص والمختص.")\n    elif main.topic_key in ["love","relationship_return","marriage"]:\n        lines.append("في الملفات العاطفية، الدرجة العالية قد تعني حضورًا نفسيًا أو عاطفيًا قويًا، لكنها لا تتحول إلى حدث خارجي إلا إذا ظهر فعل واضح مثل تواصل، اتفاق، خطوة رسمية أو موقف عملي.")\n    else:\n        lines.append("التقرير يحدد المحور الأكثر نشاطًا، لكنه لا يحوّل الدلالة إلى حكم قطعي.")\n    lines.append("")\n    lines.append("ما يحتاج حذرًا:")\n    if main.warnings:\n        for w in main.warnings[:2]: lines.append(f"- {w}")\n    else: lines.append("- لا توجد إشارة تحذير بارزة، لكن الأفضل تجنب التسرع.")\n    lines.append("")\n    lines.append("النصيحة العملية:")\n    if main.topic_key in ["health","organ_sensitivity","pregnancy"]: lines.append("تعامل مع التقرير كتنبيه وقائي، وراجع المختص إذا كان هناك عرض أو قرار طبي.")\n    elif main.topic_key in ["legal"]: lines.append("راجع الأوراق ولا تعتمد على اتفاق شفهي، واستشر مختصًا قانونيًا إذا كان الملف حساسًا.")\n    elif main.topic_key in ["money","property","car","project"]: lines.append("دقّق الأرقام والأوراق قبل القرار، واجعل الخطوة عملية لا انفعالية.")\n    elif main.topic_key in ["love","relationship_return","marriage"]: lines.append("اجعل التواصل هادئًا وواضحًا، ولا تضغط للحصول على نتيجة نهائية بسرعة.")\n    else: lines.append("ركّز على المحور الأقوى، وابدأ بخطوات صغيرة ومنظمة.")\n    lines.append("")\n    lines.append("الخلاصة:")\n    verdict_title, verdict_detail = opportunity_verdict(main.topic_key, main.score, gender)\n    if main.topic_key == "pregnancy":\n        lines.append(f"المحور الأبرز هو {topic_name}. تأثيره {shown_strength} خلال هذه الفترة.")\n        lines.append(f"النتيجة العملية: {verdict_title}.")\n        lines.append("ولا يُعتمد الحكم النهائي في الحمل أو الإنجاب إلا عبر الفحص أو المتابعة الواقعية.")\n    else:\n        lines.append(f"المحور الأبرز هو {topic_name}. تأثيره {shown_strength} خلال هذه الفترة.")\n        lines.append(f"النتيجة العملية: {verdict_title}.")\n    if selected_topic=="general" and len(visible)>1:\n        lines.append(""); lines.append("محاور ثانوية:")\n        for r in visible[1:]: lines.append(f"- {r.topic_name}: {topic_display_strength(r.topic_key,r.score)}")\n    return "\\n".join(lines)\n\n\n\ndef generate_technical_report(results: List[TopicResult], max_topics: int = 15) -> str:\n    lines = ["التقرير الفني للباحث", "=" * 70]\n    for r in results[:max_topics]:\n        lines.append("")\n        lines.append(f"المحور: {r.topic_name} ({r.topic_key})")\n        lines.append(f"المجموع الرقمي: {r.score}")\n        lines.append(f"التصنيف: {r.strength}")\n        lines.append(f"نوع الدلالة: {topic_event_type_label(r.topic_key, r.score, r.event_type)}")\n        if r.supports:\n            lines.append("الدعوم:")\n            for s in r.supports:\n                lines.append(f"- {s}")\n        if r.warnings:\n            lines.append("التحذيرات:")\n            for w in r.warnings:\n                lines.append(f"- {w}")\n\n        lines.append("أقوى التفعيلات:")\n        if not r.activations:\n            lines.append("- لا توجد تفعيلات مباشرة على نقاط المنتصف.")\n        for a in r.activations[:12]:\n            applying = "مقتربة" if a.applying is True else "منفصلة" if a.applying is False else "غير محدد"\n            lines.append(\n                f"- [{a.layer}] {a.activator} {a.aspect} {a.target_name} "\n                f"| الهدف: {format_degree(a.target_degree)} "\n                f"| درجة التفعيل: {format_degree(a.exact_aspect_degree)} "\n                f"| الأورب: {a.orb:.2f}° "\n                f"| {applying} "\n                f"| {a.strength_label} "\n                f"| حد بطليموس: {a.ptolemy_term} "\n                f"| نوعية الحد: {a.term_quality} "\n                f"| نقاط: {a.score}"\n            )\n    return "\\n".join(lines)\n\n\n# =========================================================\n# 16. دالة تشغيل كاملة\n# =========================================================\n\ndef run_forecast(\n    birth: BirthInput,\n    transit: TransitInput,\n    selected_topic: str = "general",\n    period: str = "هذا الأسبوع",\n    include_charts: bool = False,\n) -> str:\n    natal_chart=build_chart_from_birth(birth)\n    transit_chart=build_chart_from_transit(transit)\n    layers=build_time_layers(birth,transit,natal_chart)\n    results=evaluate_all_topics(natal_chart,transit_chart,layers)\n    technical_results=[r for r in results if r.topic_key==selected_topic] if selected_topic!="general" else results[:5]\n    parts=[]\n    if include_charts:\n        parts.append(generate_chart_summary(natal_chart,"خريطة الميلاد"))\n        parts.append(generate_chart_summary(transit_chart,"خريطة العبور"))\n        parts.append(generate_layers_summary(layers))\n    parts.append(generate_user_report(results,selected_topic=selected_topic,period=period,gender=birth.gender))\n    parts.append("")\n    parts.append(generate_technical_report(technical_results))\n    return "\\n\\n".join(parts)\n\n\n# =========================================================\n# 17. مثال اختبار\n# =========================================================\n\ndef demo():\n    birth = BirthInput(\n        name="اختبار",\n        year=1993,\n        month=2,\n        day=18,\n        hour=12,\n        minute=35,\n        timezone=3,\n        latitude=33.3152,\n        longitude=44.3661,\n        gender="أنثى"\n    )\n\n    transit = TransitInput(\n        year=2026,\n        month=5,\n        day=23,\n        hour=12,\n        minute=0,\n        timezone=3,\n        latitude=31.986,\n        longitude=44.598\n    )\n\n    print(run_forecast(\n        birth=birth,\n        transit=transit,\n        selected_topic="general",\n        period="هذا الأسبوع",\n        include_charts=True\n    ))\n\n\n\n\n\n# =========================================================\n# واجهة ويب Flask للمحرك V4\n# =========================================================\n\ntry:\n    from flask import Flask, request, render_template_string\n    FLASK_AVAILABLE = True\nexcept Exception:\n    FLASK_AVAILABLE = False\n\n\nTOPIC_OPTIONS = [\n    ("general", "السياق العام"),\n    ("love", "الحالة العاطفية"),\n    ("relationship_return", "عودة العلاقة أو التواصل"),\n    ("marriage", "الزواج والخطوبة"),\n    ("career", "العمل والمهنة"),\n    ("money", "المال والاستثمار"),\n    ("travel", "السفر والهجرة"),\n    ("study", "الدراسة والاختبارات"),\n    ("health", "الصحة العامة والعملية الجراحية"),\n    ("organ_sensitivity", "حساسية الأعضاء للضغوطات"),\n    ("property", "شراء العقار والبيت"),\n    ("car", "شراء السيارة ووسائل النقل"),\n    ("legal", "القضايا القانونية والعقود"),\n    ("pregnancy", "الحمل والإنجاب / الأبناء"),\n    ("project", "المشروع الجديد والقرار المهم"),\n]\n\nPERIOD_OPTIONS = ["اليوم", "هذا الأسبوع", "هذا الشهر", "خلال 3 أشهر", "خلال 6 أشهر", "خلال سنة"]\n\nTIMEZONE_OPTIONS = [\n    ("", "اختر فرق التوقيت"),\n    ("-12", "GMT -12"), ("-11", "GMT -11"), ("-10", "GMT -10"),\n    ("-9", "GMT -9"), ("-8", "GMT -8"), ("-7", "GMT -7"),\n    ("-6", "GMT -6"), ("-5", "GMT -5"), ("-4", "GMT -4"),\n    ("-3", "GMT -3"), ("-2", "GMT -2"), ("-1", "GMT -1"),\n    ("0", "GMT 0"), ("1", "GMT +1"), ("2", "GMT +2"),\n    ("3", "GMT +3 - العراق / السعودية / الكويت / قطر / البحرين / اليمن"),\n    ("3.5", "GMT +3:30 - إيران"),\n    ("4", "GMT +4 - الإمارات / عُمان"),\n    ("4.5", "GMT +4:30"), ("5", "GMT +5"), ("5.5", "GMT +5:30"),\n    ("6", "GMT +6"), ("7", "GMT +7"), ("8", "GMT +8"),\n    ("9", "GMT +9"), ("10", "GMT +10"), ("11", "GMT +11"),\n    ("12", "GMT +12"), ("13", "GMT +13"), ("14", "GMT +14"),\n]\n\nCITY_OPTIONS = [(\'\', \'اختر المدينة\'), (\'33.3152,44.3661,3\', \'العراق - بغداد\'), (\'32.0000,44.3333,3\', \'العراق - النجف\'), (\'31.9860,44.5980,3\', \'العراق - الشامية\'), (\'31.9840,44.9250,3\', \'العراق - الديوانية\'), (\'30.5085,47.7804,3\', \'العراق - البصرة\'), (\'36.1901,44.0092,3\', \'العراق - أربيل\'), (\'35.5611,45.4356,3\', \'العراق - السليمانية\'), (\'36.3489,43.1577,3\', \'العراق - الموصل\'), (\'32.6160,44.0249,3\', \'العراق - كربلاء\'), (\'31.0480,46.2573,3\', \'العراق - الناصرية\'), (\'24.7136,46.6753,3\', \'السعودية - الرياض\'), (\'21.4858,39.1925,3\', \'السعودية - جدة\'), (\'29.3759,47.9774,3\', \'الكويت - الكويت\'), (\'25.2854,51.5310,3\', \'قطر - الدوحة\'), (\'26.2235,50.5876,3\', \'البحرين - المنامة\'), (\'24.4539,54.3773,4\', \'الإمارات - أبوظبي\'), (\'25.2048,55.2708,4\', \'الإمارات - دبي\'), (\'23.5880,58.3829,4\', \'عُمان - مسقط\'), (\'15.3694,44.1910,3\', \'اليمن - صنعاء\'), (\'30.0444,31.2357,2\', \'مصر - القاهرة\'), (\'31.2001,29.9187,2\', \'مصر - الإسكندرية\'), (\'30.5852,36.2384,3\', \'الأردن - عمّان\'), (\'33.8938,35.5018,2\', \'لبنان - بيروت\'), (\'33.5138,36.2765,3\', \'سوريا - دمشق\'), (\'31.7683,35.2137,2\', \'فلسطين - القدس\'), (\'15.5007,32.5599,2\', \'السودان - الخرطوم\'), (\'32.8872,13.1913,2\', \'ليبيا - طرابلس\'), (\'36.8065,10.1815,1\', \'تونس - تونس\'), (\'36.7538,3.0588,1\', \'الجزائر - الجزائر\'), (\'34.0209,-6.8416,1\', \'المغرب - الرباط\'), (\'18.0735,-15.9582,0\', \'موريتانيا - نواكشوط\'), (\'39.9334,32.8597,3\', \'تركيا - أنقرة\'), (\'41.0082,28.9784,3\', \'تركيا - إسطنبول\'), (\'35.6892,51.3890,3.5\', \'إيران - طهران\'), (\'51.5074,-0.1278,0\', \'المملكة المتحدة - لندن\'), (\'48.8566,2.3522,1\', \'فرنسا - باريس\'), (\'52.5200,13.4050,1\', \'ألمانيا - برلين\'), (\'40.7128,-74.0060,-5\', \'أمريكا - نيويورك\'), (\'35.6762,139.6503,9\', \'اليابان - طوكيو\')]\n\n\nHTML_TEMPLATE = """\n<!doctype html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charset="utf-8">\n<title>التوقعات الشخصية</title>\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<style>\nbody{font-family:Tahoma,Arial,sans-serif;background:#f3f4f8;margin:0;color:#1f2937}\n.container{max-width:1080px;margin:auto;padding:14px}\n.header{background:linear-gradient(135deg,#172554,#581c87);color:white;padding:20px;border-radius:18px;margin-bottom:18px}\n.header h1{margin:0 0 8px 0;font-size:24px}.header p{margin:0;line-height:1.8;color:#e5e7eb}\n.card{background:white;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 16px rgba(0,0,0,.08)}\n.card h2{font-size:20px;margin-top:0;color:#172554;border-bottom:1px solid #e5e7eb;padding-bottom:10px}\n.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}\nlabel{display:block;font-weight:bold;margin-bottom:5px;font-size:14px;color:#374151}\ninput,select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;background:#f9fafb;font-size:15px}\nbutton,.linkbtn{background:#1d4ed8;color:white;border:none;padding:12px 18px;border-radius:12px;font-weight:bold;cursor:pointer;font-size:15px;text-decoration:none;display:inline-block}\n.secondary{background:#475569}.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}\n.note{background:#fff7ed;border-right:5px solid #f97316;padding:12px;border-radius:12px;line-height:1.8;color:#7c2d12;margin-bottom:16px}\n.result-box{white-space:pre-wrap;background:#0f172a;color:#e5e7eb;padding:16px;border-radius:14px;overflow-x:auto;line-height:1.9;font-size:14px}\n.user-report{background:#ecfdf5;color:#064e3b;border:1px solid #a7f3d0}\n.error{background:#fef2f2;color:#7f1d1d;border:1px solid #fecaca;padding:14px;border-radius:12px;line-height:1.8;white-space:pre-wrap;margin-bottom:16px}\n.small{font-size:13px;color:#64748b;line-height:1.7}\n@media(max-width:800px){.grid,.grid2{grid-template-columns:1fr}.container{padding:10px}.card{padding:14px}.result-box{padding:14px;font-size:14px}}\n</style>\n<script>\nfunction fillPlaceFromCity(selectEl, prefix) {\n    if (!selectEl || !selectEl.value) return;\n    const parts = selectEl.value.split(",");\n    if (parts.length < 3) return;\n    const latEl = document.querySelector("[name=\'" + prefix + "_latitude\']");\n    const lonEl = document.querySelector("[name=\'" + prefix + "_longitude\']");\n    const tzEl = document.querySelector("[name=\'" + prefix + "_timezone\']");\n    if (latEl) latEl.value = parts[0];\n    if (lonEl) lonEl.value = parts[1];\n    if (tzEl) tzEl.value = parts[2];\n}\nfunction fillCurrentQuestionTime() {\n    const now = new Date();\n    const setVal = function(name, value) {\n        const el = document.querySelector("[name=\'" + name + "\']");\n        if (el) el.value = value;\n    };\n    setVal("transit_year", now.getFullYear());\n    setVal("transit_month", now.getMonth() + 1);\n    setVal("transit_day", now.getDate());\n    setVal("transit_hour", now.getHours());\n    setVal("transit_minute", now.getMinutes());\n}\nfunction copyBirthPlaceToTransit() {\n    const get = function(name) { return document.querySelector("[name=\'" + name + "\']"); };\n    if(get("birth_timezone") && get("transit_timezone")) get("transit_timezone").value = get("birth_timezone").value;\n    if(get("birth_latitude") && get("transit_latitude")) get("transit_latitude").value = get("birth_latitude").value;\n    if(get("birth_longitude") && get("transit_longitude")) get("transit_longitude").value = get("birth_longitude").value;\n}\nfunction clearAllFields() {\n    const form = document.getElementById("forecastForm");\n    if (!form) return;\n    form.querySelectorAll("input, select").forEach(function(el){ el.value = ""; });\n}\n</script>\n</head>\n<body>\n<div class="container">\n<div class="header">\n<h1>التوقعات الشخصية</h1>\n<p>واجهة ويب للمحرك المعتمد V4. اختر الحالة، أدخل بيانات الميلاد، ثم استخرج التقرير.</p>\n</div>\n\n{% if error %}<div class="error">{{ error }}</div>{% endif %}\n\n<form method="post" id="forecastForm" onsubmit="return submitForecastWithProgress();">\n<div class="card">\n<h2>بيانات الميلاد</h2>\n<div class="grid">\n<div><label>الاسم</label><input name="name" value="{{ form.name }}"></div>\n<div><label>الجنس</label><select name="gender">\n<option value=""></option>\n<option value="ذكر" {% if form.gender=="ذكر" %}selected{% endif %}>ذكر</option>\n<option value="أنثى" {% if form.gender=="أنثى" %}selected{% endif %}>أنثى</option>\n<option value="غير محدد" {% if form.gender=="غير محدد" %}selected{% endif %}>غير محدد</option>\n</select></div>\n<div><label>فرق التوقيت عند الولادة GMT</label><select name="birth_timezone">\n{% for value,label in timezones %}<option value="{{ value }}" {% if form.birth_timezone==value %}selected{% endif %}>{{ label }}</option>{% endfor %}\n</select></div>\n</div><br>\n<div class="grid">\n<div><label>سنة الميلاد</label><input name="birth_year" type="number" value="{{ form.birth_year }}"></div>\n<div><label>شهر الميلاد</label><input name="birth_month" type="number" value="{{ form.birth_month }}"></div>\n<div><label>يوم الميلاد</label><input name="birth_day" type="number" value="{{ form.birth_day }}"></div>\n</div><br>\n<div class="grid">\n<div><label>ساعة الميلاد</label><input name="birth_hour" type="number" value="{{ form.birth_hour }}"></div>\n<div><label>دقيقة الميلاد</label><input name="birth_minute" type="number" value="{{ form.birth_minute }}"></div>\n<div><label>نظام البيوت</label><input value="Placidus" disabled></div>\n</div><br>\n<h2>اختيار مدينة الولادة</h2>\n<p class="small">اختيار المدينة يملأ خط العرض والطول وفرق التوقيت تلقائيًا ويمكن تعديلها يدويًا.</p>\n<select name="birth_city" onchange="fillPlaceFromCity(this, \'birth\')">\n{% for value,label in cities %}<option value="{{ value }}">{{ label }}</option>{% endfor %}\n</select>\n<br><br>\n<div class="grid2">\n<div><label>خط العرض لمكان الولادة</label><input name="birth_latitude" type="number" step="0.000001" value="{{ form.birth_latitude }}"></div>\n<div><label>خط الطول لمكان الولادة</label><input name="birth_longitude" type="number" step="0.000001" value="{{ form.birth_longitude }}"></div>\n</div>\n</div>\n\n<div class="card">\n<h2>بيانات وقت ومكان السؤال</h2>\n<p class="small">وقت السؤال يُملأ تلقائيًا عند فتح الصفحة. استخدم زر تحديث الوقت عند الحاجة.</p>\n<div class="grid">\n<div><label>نوع التقرير</label><select name="selected_topic">\n{% for key,label in topics %}<option value="{{ key }}" {% if form.selected_topic==key %}selected{% endif %}>{{ label }}</option>{% endfor %}\n</select></div>\n<div><label>الفترة المطلوبة</label><select name="period">\n{% for item in periods %}<option value="{{ item }}" {% if form.period==item %}selected{% endif %}>{{ item }}</option>{% endfor %}\n</select></div>\n<div><label>فرق التوقيت الحالي GMT</label><select name="transit_timezone">\n{% for value,label in timezones %}<option value="{{ value }}" {% if form.transit_timezone==value %}selected{% endif %}>{{ label }}</option>{% endfor %}\n</select></div>\n</div><br>\n<div class="grid">\n<div><label>سنة السؤال</label><input name="transit_year" type="number" value="{{ form.transit_year }}"></div>\n<div><label>شهر السؤال</label><input name="transit_month" type="number" value="{{ form.transit_month }}"></div>\n<div><label>يوم السؤال</label><input name="transit_day" type="number" value="{{ form.transit_day }}"></div>\n</div><br>\n<div class="grid">\n<div><label>ساعة السؤال</label><input name="transit_hour" type="number" value="{{ form.transit_hour }}"></div>\n<div><label>دقيقة السؤال</label><input name="transit_minute" type="number" value="{{ form.transit_minute }}"></div>\n<div><label>إظهار الخرائط في التقرير الفني</label><select name="include_charts">\n<option value="no" {% if form.include_charts=="no" %}selected{% endif %}>لا</option>\n<option value="yes" {% if form.include_charts=="yes" %}selected{% endif %}>نعم</option>\n</select></div>\n</div><br>\n<h2>اختيار مدينة السؤال الحالية</h2>\n<select name="transit_city" onchange="fillPlaceFromCity(this, \'transit\')">\n{% for value,label in cities %}<option value="{{ value }}">{{ label }}</option>{% endfor %}\n</select>\n<br><br>\n<div class="grid2">\n<div><label>خط العرض للمكان الحالي</label><input name="transit_latitude" type="number" step="0.000001" value="{{ form.transit_latitude }}"></div>\n<div><label>خط الطول للمكان الحالي</label><input name="transit_longitude" type="number" step="0.000001" value="{{ form.transit_longitude }}"></div>\n</div>\n<div class="button-row">\n<button type="submit">استخراج التقرير</button>\n<button type="button" class="secondary" onclick="fillCurrentQuestionTime()">تحديث وقت السؤال الآن</button>\n\n<button type="button" class="secondary" onclick="clearAllFields()">مسح الحقول</button>\n<a class="linkbtn secondary" href="/">حالة جديدة</a>\n</div>\n</div>\n</form>\n\n<div class="note">ملاحظة: التقرير قراءة فلكية رمزية. في الصحة والقانون والمال القرار العملي يبقى للمختص.</div>\n\n{% if user_report %}\n<div class="card"><h2>تقرير المستخدم</h2><div class="result-box user-report">{{ user_report }}</div></div>\n{% endif %}\n{% if technical_report %}\n<div class="card"><h2>التقرير الفني للباحث</h2><div class="result-box">{{ technical_report }}</div></div>\n{% endif %}\n</div>\n</body>\n</html>\n"""\n\n\ndef _default_form():\n    now = datetime.now()\n    return {\n        "name": "",\n        "gender": "",\n        "birth_year": "",\n        "birth_month": "",\n        "birth_day": "",\n        "birth_hour": "",\n        "birth_minute": "",\n        "birth_timezone": "",\n        "birth_latitude": "",\n        "birth_longitude": "",\n        "birth_city": "",\n        "transit_year": str(now.year),\n        "transit_month": str(now.month),\n        "transit_day": str(now.day),\n        "transit_hour": str(now.hour),\n        "transit_minute": str(now.minute),\n        "transit_timezone": "",\n        "transit_latitude": "",\n        "transit_longitude": "",\n        "transit_city": "",\n        "selected_topic": "general",\n        "period": "هذا الأسبوع",\n        "include_charts": "no",\n    }\n\n\ndef _read_form(req_form):\n    form = _default_form()\n    for k in form.keys():\n        form[k] = str(req_form.get(k, form[k])).strip()\n    return form\n\n\ndef _require_fields(form, fields):\n    missing = []\n    for key, label in fields:\n        if str(form.get(key, "")).strip() == "":\n            missing.append(label)\n    if missing:\n        raise ValueError("يرجى ملء الحقول التالية قبل استخراج التقرير:\\n- " + "\\n- ".join(missing))\n\n\ndef _to_int(form, key, label):\n    try:\n        return int(str(form[key]).strip())\n    except Exception:\n        raise ValueError(f"قيمة الحقل غير صحيحة: {label}")\n\n\ndef _to_float(form, key, label):\n    try:\n        return float(str(form[key]).strip())\n    except Exception:\n        raise ValueError(f"قيمة الحقل غير صحيحة: {label}")\n\n\ndef _fill_missing_transit_place_from_birth(form):\n    if not form.get("transit_latitude"):\n        form["transit_latitude"] = form.get("birth_latitude", "")\n    if not form.get("transit_longitude"):\n        form["transit_longitude"] = form.get("birth_longitude", "")\n    if not form.get("transit_timezone"):\n        form["transit_timezone"] = form.get("birth_timezone", "")\n    return form\n\n\ndef split_user_and_technical(full_report):\n    marker = "التقرير الفني للباحث"\n    if marker in full_report:\n        before, after = full_report.split(marker, 1)\n        user_marker = "التقرير الشخصي"\n        if user_marker in before:\n            before = before[before.rfind(user_marker):]\n        return before.strip(), (marker + after).strip()\n    return full_report, ""\n\n\ndef create_web_app():\n    if not FLASK_AVAILABLE:\n        raise RuntimeError("مكتبة Flask غير مثبتة. ثبّتها بالأمر: pip install flask")\n\n    app = Flask(__name__)\n\n    @app.route("/", methods=["GET", "POST"])\n    def index():\n        form = _default_form()\n        user_report = ""\n        technical_report = ""\n        error = ""\n\n        if request.method == "POST":\n            try:\n                form = _read_form(request.form)\n                form = _fill_missing_transit_place_from_birth(form)\n\n                _require_fields(form, [\n                    ("name", "الاسم"),\n                    ("gender", "الجنس"),\n                    ("birth_timezone", "فرق التوقيت عند الولادة"),\n                    ("birth_year", "سنة الميلاد"),\n                    ("birth_month", "شهر الميلاد"),\n                    ("birth_day", "يوم الميلاد"),\n                    ("birth_hour", "ساعة الميلاد"),\n                    ("birth_minute", "دقيقة الميلاد"),\n                    ("birth_latitude", "خط العرض لمكان الولادة"),\n                    ("birth_longitude", "خط الطول لمكان الولادة"),\n                    ("transit_timezone", "فرق التوقيت الحالي"),\n                    ("transit_year", "سنة السؤال"),\n                    ("transit_month", "شهر السؤال"),\n                    ("transit_day", "يوم السؤال"),\n                    ("transit_hour", "ساعة السؤال"),\n                    ("transit_minute", "دقيقة السؤال"),\n                    ("transit_latitude", "خط العرض للمكان الحالي"),\n                    ("transit_longitude", "خط الطول للمكان الحالي"),\n                ])\n\n                birth = BirthInput(\n                    name=form["name"],\n                    year=_to_int(form, "birth_year", "سنة الميلاد"),\n                    month=_to_int(form, "birth_month", "شهر الميلاد"),\n                    day=_to_int(form, "birth_day", "يوم الميلاد"),\n                    hour=_to_int(form, "birth_hour", "ساعة الميلاد"),\n                    minute=_to_int(form, "birth_minute", "دقيقة الميلاد"),\n                    timezone=_to_float(form, "birth_timezone", "فرق التوقيت عند الولادة"),\n                    latitude=_to_float(form, "birth_latitude", "خط العرض لمكان الولادة"),\n                    longitude=_to_float(form, "birth_longitude", "خط الطول لمكان الولادة"),\n                    gender=form["gender"],\n                )\n\n                transit = TransitInput(\n                    year=_to_int(form, "transit_year", "سنة السؤال"),\n                    month=_to_int(form, "transit_month", "شهر السؤال"),\n                    day=_to_int(form, "transit_day", "يوم السؤال"),\n                    hour=_to_int(form, "transit_hour", "ساعة السؤال"),\n                    minute=_to_int(form, "transit_minute", "دقيقة السؤال"),\n                    timezone=_to_float(form, "transit_timezone", "فرق التوقيت الحالي"),\n                    latitude=_to_float(form, "transit_latitude", "خط العرض للمكان الحالي"),\n                    longitude=_to_float(form, "transit_longitude", "خط الطول للمكان الحالي"),\n                )\n\n                full_report = run_forecast(\n                    birth=birth,\n                    transit=transit,\n                    selected_topic=form["selected_topic"],\n                    period=form["period"],\n                    include_charts=(form.get("include_charts") == "yes"),\n                )\n\n                user_report, technical_report = split_user_and_technical(full_report)\n\n            except Exception as exc:\n                error = f"حدث خطأ أثناء استخراج التقرير:\\n{exc}"\n\n        return render_template_string(\n            HTML_TEMPLATE,\n            form=form,\n            topics=TOPIC_OPTIONS,\n            periods=PERIOD_OPTIONS,\n            timezones=TIMEZONE_OPTIONS,\n            cities=CITY_OPTIONS,\n            user_report=user_report,\n            technical_report=technical_report,\n            error=error,\n        )\n\n    return app\n\n\ndef run_web_server(host="127.0.0.1", port=5000, debug=True):\n    app = create_web_app()\n    app.run(host=host, port=port, debug=debug)\n\n\nif __name__ == "__main__":\n    if not FLASK_AVAILABLE:\n        print("مكتبة Flask غير مثبتة.")\n        print("ثبّتها بالأمر:")\n        print("pip install flask")\n    else:\n        print("تشغيل واجهة التوقعات الشخصية على المتصفح...")\n        print("افتح الرابط:")\n        print("http://127.0.0.1:5000")\n        run_web_server()\n'
 # تشغيل محرك التوقعات داخل موديول حقيقي حتى تعمل dataclass بدون خطأ __dict__
 import sys as _forecast_sys
 import types as _forecast_types
@@ -6163,13 +6599,55 @@ function submitForecastWithProgress() {
     startForecastProgressTimer();
 
     // نؤخر الإرسال قليلًا حتى يضمن المتصفح رسم شريط التقدم على الهاتف قبل بدء الطلب.
+    // بعض متصفحات الهاتف لا ترسم الشريط إذا بدأ الطلب مباشرة.
+    setTimeout(function(){ updateForecastProgress(28, "بدء الحساب الفلكي..."); }, 450);
+    setTimeout(function(){ updateForecastProgress(44, "فحص العبور والبيوت..."); }, 950);
     setTimeout(function(){
         try {
             HTMLFormElement.prototype.submit.call(form);
         } catch (e) {
             form.submit();
         }
-    }, 900);
+    }, 1600);
+
+    return false;
+}
+
+function submitForecastPremiumWithProgress() {
+    const form = document.getElementById("forecastPremiumForm");
+    if (!form) return false;
+    if (window.forecastSubmittingNow === true) return false;
+
+    window.forecastSubmittingNow = true;
+    showForecastLoadingUI();
+    startForecastProgressTimer();
+
+    const mainBtn = document.getElementById("forecastSubmitBtn");
+    const premiumBtn = document.getElementById("forecastPremiumSubmitBtn");
+    if (mainBtn) {
+        mainBtn.disabled = true;
+        mainBtn.classList.add("loading-disabled");
+    }
+    if (premiumBtn) {
+        premiumBtn.disabled = true;
+        premiumBtn.classList.add("loading-disabled");
+        premiumBtn.innerHTML = "جارٍ فتح التقرير الاحترافي...";
+    }
+
+    updateForecastProgress(8, "قراءة كود التفعيل...");
+    setTimeout(function(){ updateForecastProgress(24, "التحقق من صلاحية الكود..."); }, 350);
+    setTimeout(function(){ updateForecastProgress(42, "إعادة بناء التقرير من بياناتك المحفوظة..."); }, 800);
+    setTimeout(function(){ updateForecastProgress(62, "صياغة الخلاصة العملية..."); }, 1250);
+    setTimeout(function(){ updateForecastProgress(78, "ترتيب الفرص والتحديات..."); }, 1700);
+    setTimeout(function(){ updateForecastProgress(92, "إعداد التقرير الاحترافي الكامل..."); }, 2150);
+
+    setTimeout(function(){
+        try {
+            HTMLFormElement.prototype.submit.call(form);
+        } catch (e) {
+            form.submit();
+        }
+    }, 2600);
 
     return false;
 }
@@ -6189,6 +6667,12 @@ window.addEventListener("pageshow", function(){
         btn.disabled = false;
         btn.classList.remove("loading-disabled");
         btn.innerHTML = "استخراج التقرير الأولي";
+    }
+    const premiumBtn = document.getElementById("forecastPremiumSubmitBtn");
+    if (premiumBtn) {
+        premiumBtn.disabled = false;
+        premiumBtn.classList.remove("loading-disabled");
+        premiumBtn.innerHTML = "فتح التقرير الاحترافي";
     }
 });
 
@@ -6211,7 +6695,7 @@ window.addEventListener("pageshow", function(){
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 {% if linked_profile %}<div class="profile-linked">تم ربط بياناتك المحفوظة: {{ linked_profile_name }}. لن تظهر بيانات الميلاد أو وقت السؤال هنا، اختر نوع التقرير والفترة فقط ثم استخرج النتيجة.</div>{% else %}<div class="profile-missing">لم يتم العثور على بيانات ميلاد محفوظة. يرجى حفظ بياناتك مرة واحدة من صفحة <a href="/profile">بياناتي الفلكية</a> ثم العودة إلى التوقعات الشخصية.</div>{% endif %}
 {% if not engine_ready %}<div class="error">محرك التوقعات غير جاهز حاليًا: {{ engine_error }}</div>{% endif %}
-<form method="post" id="forecastForm">
+<form method="post" id="forecastForm" onsubmit="return submitForecastWithProgress();">
 <input type="hidden" name="name" value="{{ form.name }}">
 <input type="hidden" name="gender" value="{{ form.gender }}">
 <input type="hidden" name="birth_timezone" value="{{ form.birth_timezone }}">
@@ -6250,7 +6734,7 @@ window.addEventListener("pageshow", function(){
     {% endfor %}
   </div>
 </div>
-<div class="button-row"><button id="forecastSubmitBtn" type="button" onclick="return submitForecastWithProgress();">استخراج التقرير الأولي</button></div>
+<div class="button-row"><button id="forecastSubmitBtn" type="submit">استخراج التقرير الأولي</button></div>
 <div id="inlineLoadingBox" class="inline-loading-box">
   <strong>جارٍ تحليل الخريطة الفلكية...</strong>
   <div class="loading-sub">يتم الآن فحص مئات العلاقات الكوكبية والزوايا الفلكية ونقاط التفعيل.</div>
@@ -6261,7 +6745,7 @@ window.addEventListener("pageshow", function(){
 </div>
 </form>
 <div class="note">ملاحظة: التقرير قراءة فلكية رمزية. في الصحة والقانون والمال القرار العملي يبقى للمختص.</div>
-{% if user_report %}<div class="card"><h2>التقرير الأولي المجاني</h2><div class="result-box">{{ user_report }}</div><div class="locked-reason">لماذا ظهرت هذه النتيجة؟ التفاصيل الفنية، نقاط المنتصف، حدود بطليموس، البروفكشن، الفريدار، التقدم الثانوي، والقوس الشمسي متاحة في التقرير الاحترافي.</div></div><div class="pro-box"><div class="pro-title">🔒 التقرير الاحترافي الكامل</div><p>هذا التقرير يعطيك القراءة العميقة للحالة المختارة، وليس مجرد نتيجة مختصرة.</p><div class="pro-grid"><div class="pro-item">تحليل نقاط المنتصف المفعلة</div><div class="pro-item">البروفكشن السنوي والشهري واليومي</div><div class="pro-item">الفريدار والمرحلة الزمنية</div><div class="pro-item">العودة الشمسية والقمرية</div><div class="pro-item">التقدم الثانوي والقوس الشمسي</div><div class="pro-item">أفضل الفترات وفترات الحذر</div><div class="pro-item">التقرير الفني للباحث</div></div><p>رقم الطلب: <span class="order-code">{{ forecast_order_id }}</span></p><p class="muted">بعد التواصل عبر @Astrol25 ستحصل على كود فتح مخصص لهذه الخدمة ويعمل مرة واحدة فقط.</p><a class="telegram-btn" href="{{ forecast_telegram_url }}" target="_blank" rel="noopener">طلب كود فتح التقرير الاحترافي</a><form method="post" style="margin-top:14px"><input type="hidden" name="selected_topic" value="{{ form.selected_topic }}"><input type="hidden" name="period" value="{{ form.period }}"><input type="hidden" name="premium_action" value="unlock_report"><input name="premium_code" placeholder="أدخل كود الفتح هنا" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c9b58d;text-align:center;font-weight:bold;margin:8px 0"><button class="telegram-btn" type="submit" style="border:0;width:100%">فتح التقرير الاحترافي</button></form>{% if premium_message %}<p class="muted">{{ premium_message }}</p>{% endif %}</div>{% endif %}{% if premium_report %}<div class="card"><h2>التقرير الاحترافي الكامل</h2><div class="result-box">{{ premium_report }}</div></div>{% endif %}
+{% if user_report %}<div class="card"><h2>التقرير الأولي المجاني</h2><div class="result-box">{{ user_report }}</div><div class="locked-reason">لماذا ظهرت هذه النتيجة؟ التفاصيل الفنية، نقاط المنتصف، حدود بطليموس، البروفكشن، الفريدار، التقدم الثانوي، والقوس الشمسي متاحة في التقرير الاحترافي.</div></div><div class="pro-box"><div class="pro-title">🔒 التقرير الاحترافي الكامل</div><p>هذا التقرير يعطيك القراءة العميقة للحالة المختارة، وليس مجرد نتيجة مختصرة.</p><div class="pro-grid"><div class="pro-item">تحليل نقاط المنتصف المفعلة</div><div class="pro-item">البروفكشن السنوي والشهري واليومي</div><div class="pro-item">الفريدار والمرحلة الزمنية</div><div class="pro-item">العودة الشمسية والقمرية</div><div class="pro-item">التقدم الثانوي والقوس الشمسي</div><div class="pro-item">أفضل الفترات وفترات الحذر</div><div class="pro-item">التقرير الفني للباحث</div></div><p>رقم الطلب: <span class="order-code">{{ forecast_order_id }}</span></p><p class="muted">بعد التواصل عبر @Astrol25 ستحصل على كود فتح مخصص لهذه الخدمة ويعمل مرة واحدة فقط.</p><a class="telegram-btn" href="{{ forecast_telegram_url }}" target="_blank" rel="noopener">طلب كود فتح التقرير الاحترافي</a><form method="post" id="forecastPremiumForm" style="margin-top:14px" onsubmit="return submitForecastPremiumWithProgress();"><input type="hidden" name="selected_topic" value="{{ form.selected_topic }}"><input type="hidden" name="period" value="{{ form.period }}"><input type="hidden" name="premium_action" value="unlock_report"><input name="premium_code" placeholder="أدخل كود الفتح هنا" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c9b58d;text-align:center;font-weight:bold;margin:8px 0"><button id="forecastPremiumSubmitBtn" class="telegram-btn" type="submit" style="border:0;width:100%">فتح التقرير الاحترافي</button></form>{% if premium_message %}<p class="muted">{{ premium_message }}</p>{% endif %}</div>{% endif %}{% if premium_report %}<div class="card"><h2>التقرير الاحترافي الكامل</h2><div class="result-box">{{ premium_report }}</div></div>{% endif %}
 </div></body></html>
 """
 
@@ -6330,6 +6814,311 @@ def build_forecast_form_from_saved_profile(default_form_func):
             linked_name = ""
     return form, linked, linked_name
 
+
+
+# ============================================================
+# تحويل التقرير الاحترافي للتوقعات من صيغة فنية إلى صيغة نافعة للمستخدم
+# ============================================================
+def forecast_clean_topic_name(topic_key: str) -> str:
+    try:
+        return forecast_topic_label(topic_key)
+    except Exception:
+        return str(topic_key or "الحالة المختارة")
+
+
+def forecast_score_level(score: int) -> str:
+    if score >= 85:
+        return "قوي جدًا"
+    if score >= 70:
+        return "قوي"
+    if score >= 55:
+        return "متوسط يميل إلى القوة"
+    if score >= 40:
+        return "متوسط"
+    return "ضعيف أو يحتاج إلى وقت"
+
+
+FORECAST_HOUSE_SIMPLE_MEANINGS = {
+    1: "الذات، الحضور الشخصي، الجسد، وبداية الحركة في الحياة",
+    2: "المال، الدخل، الموارد، والثقة بالقيمة الشخصية",
+    3: "التفكير، الكلام، الدراسة اليومية، الاتصالات، والتنقلات القريبة",
+    4: "العائلة، البيت، السكن، العقار، والأمان الداخلي",
+    5: "الحب، الأبناء، المتعة، الإبداع، والهوايات",
+    6: "العمل اليومي، المسؤوليات المتكررة، الصحة، الروتين، وتنظيم نمط الحياة",
+    7: "العلاقات المهمة، الزواج، الشراكات، الاتفاقات، والتعامل المباشر مع الآخرين",
+    8: "الأموال المشتركة، الديون، الإرث، الأزمات، والتحولات العميقة",
+    9: "السفر البعيد، الدراسة العليا، القوانين، الرؤية الواسعة، والتطور المعرفي",
+    10: "المهنة، المنصب، السمعة، الطموح، والظهور أمام المسؤولين أو المجتمع",
+    11: "الأصدقاء، الدعم، العلاقات الاجتماعية، الأمنيات، والمشاريع الجماعية",
+    12: "الراحة النفسية، العزلة، الأسرار، اللاوعي، وما يحدث خلف الكواليس",
+}
+
+FORECAST_AXIS_KEYWORDS = {
+    "الشخصية": "الذات والحضور الشخصي وطريقة التعامل مع المرحلة",
+    "المال": "المال والدخل والموارد والقرارات المادية",
+    "التفكير": "التفكير والتواصل والتنقلات القريبة والدراسة اليومية",
+    "العائلة": "العائلة والبيت والسكن والعقار والأمان الداخلي",
+    "الحب": "الحب والأبناء والمتعة والإبداع",
+    "الصحة": "الصحة والعمل اليومي والروتين والمسؤوليات المتكررة",
+    "العمل اليومي": "الصحة والعمل اليومي والروتين والمسؤوليات المتكررة",
+    "الزواج": "العلاقات المهمة والزواج والشراكات والاتفاقات",
+    "الشراكات": "العلاقات المهمة والزواج والشراكات والاتفاقات",
+    "الأزمات": "الأموال المشتركة والديون والتحولات والملفات الحساسة",
+    "السفر": "السفر البعيد والدراسة العليا والتطور المعرفي",
+    "الدراسة": "الدراسة والتعلم والتطور المعرفي",
+    "المهنة": "المهنة والمنصب والسمعة والفرص العملية",
+    "المنصب": "المهنة والمنصب والسمعة والفرص العملية",
+    "الأصدقاء": "الأصدقاء والدعم الاجتماعي والمشاريع الجماعية",
+    "العزلة": "الراحة النفسية وما يحدث خلف الكواليس",
+}
+
+
+def forecast_axis_plain_name(axis_name: str) -> str:
+    """تحويل أسماء المحاور الفنية إلى معنى واضح للمستخدم."""
+    text = str(axis_name or "").strip()
+    import re
+    # أمثلة محتملة: البيت 6، البيت السادس، House 10، المحور: البيت العاشر
+    digits = re.findall(r"(?:البيت|بيت|house|House)\s*(\d{1,2})", text)
+    if digits:
+        n = int(digits[0])
+        return FORECAST_HOUSE_SIMPLE_MEANINGS.get(n, text)
+
+    arabic_nums = {
+        "الأول": 1, "الاول": 1, "الثاني": 2, "الثالث": 3, "الرابع": 4,
+        "الخامس": 5, "السادس": 6, "السابع": 7, "الثامن": 8,
+        "التاسع": 9, "العاشر": 10, "الحادي عشر": 11, "الحادى عشر": 11,
+        "الثاني عشر": 12, "الثانى عشر": 12,
+    }
+    for word, n in arabic_nums.items():
+        if word in text and ("بيت" in text or "البيت" in text or "محور" in text):
+            return FORECAST_HOUSE_SIMPLE_MEANINGS.get(n, text)
+
+    for key, val in FORECAST_AXIS_KEYWORDS.items():
+        if key in text:
+            return val
+
+    # إزالة بعض المفردات الفنية إذا ظهرت
+    replacements = {
+        "محور": "مجال",
+        "البيت": "مجال",
+        "حاكم": "مؤشر",
+        "عبور": "تنشيط",
+        "بروفكشن": "مرحلة زمنية",
+        "فريدار": "دورة زمنية",
+    }
+    for old, new_val in replacements.items():
+        text = text.replace(old, new_val)
+    return text or "مجال مؤثر في هذه الفترة"
+
+
+def forecast_topic_plain_context(topic_key: str) -> str:
+    topic_key = str(topic_key or "general")
+    return {
+        "general": "المرحلة العامة في الحياة",
+        "love": "الجانب العاطفي والمشاعر والتقارب",
+        "relationship_return": "احتمال عودة العلاقة أو فتح باب التواصل",
+        "marriage": "الارتباط والزواج وتثبيت العلاقة",
+        "career": "العمل والمهنة والمنصب والسمعة العملية",
+        "money": "المال والدخل والقرارات المادية",
+        "travel": "السفر أو الانتقال أو فتح باب خارجي",
+        "study": "الدراسة والاختبارات والتعلم",
+        "health": "الصحة والروتين ونمط الحياة اليومي",
+        "surgery": "التوقيت الصحي الحساس والقرارات الطبية",
+        "property": "السكن والعقار والأوراق المرتبطة بالبيت",
+        "vehicle": "المركبة والتنقل والإصلاح أو الشراء",
+        "legal": "العقود والقضايا والأوراق الرسمية",
+        "pregnancy": "الحمل والإنجاب والخصوبة",
+        "project": "المشروع الجديد أو القرار المهم",
+    }.get(topic_key, "الموضوع المختار")
+
+
+def forecast_practical_meaning(topic_key: str, score: int) -> str:
+    level = forecast_score_level(score)
+    topic_key = str(topic_key or "general")
+    if score >= 70:
+        base = {
+            "love": "توجد قابلية واضحة لتحريك الجانب العاطفي. قد يظهر تواصل، تقارب، أو وضوح أكبر في المشاعر إذا كانت الظروف الواقعية تسمح بذلك.",
+            "relationship_return": "توجد فرصة لفتح باب تواصل أو تليين موقف قديم. الأفضل عدم الاستعجال، بل التعامل بهدوء وترك مساحة للطرف الآخر.",
+            "marriage": "المؤشرات تدعم موضوع الارتباط أو تثبيت العلاقة، خصوصًا إذا كانت العلاقة قائمة أو توجد نية واقعية للاتفاق.",
+            "career": "توجد فرصة مهنية واضحة: تحسن في السمعة، مسؤولية جديدة، مقابلة مهمة، أو انتباه من المسؤولين إلى الجهد المبذول.",
+            "money": "هناك قابلية لتحسن مالي أو فرصة دخل أو ترتيب أفضل للموارد. القرار جيد إذا كان محسوبًا وغير مبني على اندفاع.",
+            "travel": "المؤشرات تدعم السفر أو الدراسة أو الانتقال أو فتح باب خارجي، مع ضرورة ترتيب الأوراق والمواعيد.",
+            "study": "الفترة مناسبة للدراسة والاختبارات والتعلم المركز، بشرط تنظيم الوقت وتقليل التشتت.",
+            "health": "هناك تنبيه واضح للصحة والروتين اليومي. يمكن تحسين الوضع إذا تم الالتزام بالنظام والمتابعة وعدم إهمال الأعراض.",
+            "surgery": "الفترة تحتاج إلى تنظيم وحذر. المؤشرات لا تغني عن رأي الطبيب والفحوصات، لكنها تنبه إلى أهمية اختيار توقيت مدروس.",
+            "property": "الفترة قد تدعم ملف السكن أو العقار أو الأوراق المرتبطة بالبيت، خصوصًا مع المتابعة الجادة والتدقيق.",
+            "vehicle": "هناك قابلية لتحريك موضوع شراء أو إصلاح أو قرار يخص المركبة والتنقل، مع ضرورة الفحص قبل القرار.",
+            "legal": "هناك نشاط واضح في العقود أو الأوراق أو القضايا. النتيجة تميل للتحسن إذا كانت المستندات واضحة وتمت مراجعة مختص.",
+            "pregnancy": "هناك مؤشرات داعمة لمحور الخصوبة أو الحمل والإنجاب، لكن يجب ربط ذلك بالمتابعة الطبية والظروف الصحية الواقعية.",
+            "project": "الفترة تدعم مشروعًا أو قرارًا جديدًا إذا وُجدت خطة واضحة وتدرج في التنفيذ.",
+        }.get(topic_key, "الفترة تحمل حركة واضحة في الموضوع المختار ويمكن الاستفادة منها بخطوة عملية منظمة.")
+    elif score >= 50:
+        base = {
+            "love": "هناك حركة عاطفية متوسطة؛ الباب ليس مغلقًا، لكنه يحتاج إلى هدوء وصبر وعدم ضغط.",
+            "relationship_return": "احتمال التواصل أو العودة موجود بدرجة متوسطة، لكن توجد عوامل تردد أو تأخير.",
+            "career": "المجال المهني يتحرك، لكن النتيجة تحتاج إلى ترتيب وخطوة منظمة وربما انتظار توقيت أنسب.",
+            "money": "الوضع المالي قابل للتحسن، لكنه لا يناسب المخاطرة العالية أو القرار السريع.",
+            "travel": "السفر أو الانتقال ممكن، لكنه يحتاج إلى ترتيب أوراق ومراجعة التفاصيل.",
+            "study": "الفترة صالحة للدراسة إذا تم تقليل التشتت وتنظيم الأولويات.",
+            "health": "الصحة والروتين يحتاجان إلى اهتمام منتظم أكثر من توقع حدث مفاجئ. التحسن يأتي من الالتزام اليومي.",
+            "legal": "الملف القانوني يحتاج إلى تدقيق ومراجعة، ولا يفضّل التسرع في التوقيع أو الرد.",
+        }.get(topic_key, "الموضوع المختار متحرك بدرجة متوسطة؛ توجد فرصة لكنها تحتاج إلى صبر وتنظيم.")
+    else:
+        base = {
+            "love": "الفترة لا تعطي دفعًا عاطفيًا قويًا الآن، والأفضل تجنب الضغط أو المطالبة السريعة.",
+            "relationship_return": "العودة ليست مدعومة بقوة في هذه اللحظة، وقد يكون الصمت أو التأخير هو الغالب.",
+            "career": "الفرصة المهنية ليست في ذروتها الآن؛ الأفضل التحضير وتحسين الوضع بدل الاستعجال.",
+            "money": "لا تظهر دلالة مالية قوية الآن، لذلك الأفضل الحذر وتقليل المخاطرة.",
+            "travel": "السفر أو الانتقال يحتاج إلى وقت أو اكتمال شروط قبل أن يصبح واضحًا.",
+            "health": "الفترة تحتاج إلى رعاية هادئة وعدم إهمال الروتين، لكنها لا تعطي اندفاعًا قويًا نحو نتيجة سريعة.",
+            "legal": "الملف القانوني يحتاج إلى حذر شديد وعدم اتخاذ قرار بلا مراجعة مختص.",
+        }.get(topic_key, "المؤشرات الحالية ضعيفة نسبيًا، والأفضل التعامل مع الفترة كمرحلة تحضير لا حسم.")
+    return f"درجة القوة: {level}. {base}"
+
+
+def forecast_extract_axis_scores(technical_report: str):
+    axes = []
+    current = None
+    for raw in str(technical_report or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("المحور:"):
+            if current:
+                axes.append(current)
+            current = {"name": line.replace("المحور:", "").strip(), "score": None, "class": "", "support": 0, "obstacle": 0}
+        elif current and "المجموع الرقمي" in line:
+            import re
+            m = re.search(r"(-?\d+)", line)
+            if m:
+                current["score"] = int(m.group(1))
+        elif current and "التصنيف" in line:
+            current["class"] = line.split(":", 1)[-1].strip()
+        elif current and ("داعم" in line or "فرصة" in line or "يدعم" in line):
+            current["support"] += 1
+        elif current and ("معرقل" in line or "ضغط" in line or "تحذير" in line or "ضعف" in line):
+            current["obstacle"] += 1
+    if current:
+        axes.append(current)
+    axes = [a for a in axes if a.get("score") is not None]
+    axes.sort(key=lambda x: int(x.get("score") or 0), reverse=True)
+    return axes
+
+
+def forecast_reason_sentence(axes, topic_key: str) -> str:
+    context = forecast_topic_plain_context(topic_key)
+    if not axes:
+        return f"ظهر هذا التوقع لأن مؤشرات {context} هي الأكثر ارتباطًا بالسؤال في هذه الفترة، لكن قوتها تحتاج إلى متابعة قبل الحسم."
+    plain_axes = []
+    for axis in axes[:3]:
+        name = forecast_axis_plain_name(str(axis.get("name", "")))
+        if name and name not in plain_axes:
+            plain_axes.append(name)
+    if not plain_axes:
+        return f"ظهر هذا التوقع لأن مؤشرات {context} تحركت بدرجة ملحوظة خلال الفترة المختارة."
+    return "ظهر هذا التوقع لأن أكثر المجالات نشاطًا الآن هي: " + "، ".join(plain_axes) + "."
+
+
+def forecast_build_practical_premium_report(user_report: str, technical_report: str, topic_key: str, period: str) -> str:
+    axes = forecast_extract_axis_scores(technical_report)
+    topic_name = forecast_clean_topic_name(topic_key)
+    period = str(period or "الفترة الحالية")
+    if axes:
+        top_score = int(axes[0].get("score") or 0)
+    else:
+        top_score = 55
+
+    lines = []
+    lines.append("التقرير الاحترافي")
+    lines.append("")
+    lines.append(f"الموضوع: {topic_name}")
+    lines.append(f"الفترة المطلوبة: {period}")
+    lines.append("")
+
+    lines.append("الخلاصة العملية")
+    lines.append(forecast_practical_meaning(str(topic_key), top_score))
+    lines.append("")
+
+    if top_score >= 70:
+        lines.append("النتيجة: توجد فرصة واضحة يمكن التعامل معها بجدية. الأفضل تحويلها إلى خطوة عملية منظمة بدل انتظار أن تحدث وحدها.")
+    elif top_score >= 50:
+        lines.append("النتيجة: الفرصة موجودة لكنها غير مكتملة. الأفضل التهيئة والمتابعة وعدم بناء قرار نهائي على إشارة واحدة.")
+    else:
+        lines.append("النتيجة: لا تظهر دلالة حسم قوية الآن. الأفضل اعتبار الفترة مرحلة مراقبة وتحضير.")
+
+    lines.append("")
+    lines.append("لماذا ظهر هذا التوقع؟")
+    lines.append(forecast_reason_sentence(axes, str(topic_key)))
+
+    if axes:
+        lines.append("")
+        lines.append("أقوى المجالات المؤثرة في هذه الفترة")
+        for idx, axis in enumerate(axes[:5], 1):
+            score = int(axis.get("score") or 0)
+            raw_name = str(axis.get("name") or "مجال")
+            name = forecast_axis_plain_name(raw_name)
+            support = int(axis.get("support") or 0)
+            obstacle = int(axis.get("obstacle") or 0)
+            if score >= 80:
+                phrase = "نشط جدًا وقد يظهر أثره بوضوح في الواقع."
+            elif score >= 65:
+                phrase = "نشط ويدعم الحركة في الموضوع."
+            elif score >= 50:
+                phrase = "متوسط ويحتاج إلى عامل مساعد أو خطوة واعية."
+            else:
+                phrase = "ضعيف نسبيًا أو يعمل في الخلفية أكثر من الظهور المباشر."
+            balance = "الدعم أقوى من العرقلة." if support >= obstacle else "توجد عرقلة تحتاج إلى حذر وتنظيم."
+            lines.append(f"{idx}. {name}: {score}% تقريبًا، {phrase} {balance}")
+
+    lines.append("")
+    lines.append("الفرص المحتملة")
+    if top_score >= 70:
+        lines.append("- إمكانية ظهور باب عملي أو عاطفي أو مالي بحسب الموضوع المختار.")
+        lines.append("- قابلية أوضح لاتخاذ خطوة مفيدة إذا كانت الظروف الواقعية جاهزة.")
+        lines.append("- فرصة لتحويل الضغط إلى نتيجة إذا تم تنظيم الوقت والقرار.")
+    elif top_score >= 50:
+        lines.append("- فرصة جزئية تحتاج إلى صبر ومتابعة.")
+        lines.append("- تحسن تدريجي إذا تم ترتيب التفاصيل وعدم الاستعجال.")
+    else:
+        lines.append("- الفرصة الأهم الآن هي التحضير وتقليل الأخطاء وانتظار توقيت أقوى.")
+
+    lines.append("")
+    lines.append("التحديات المحتملة")
+    if axes and any(int(a.get("obstacle") or 0) > int(a.get("support") or 0) for a in axes[:4]):
+        lines.append("- توجد إشارات تأخير أو ضغط، لذلك لا يفضّل القرار المتسرع.")
+        lines.append("- قد تحتاج إلى مراجعة التفاصيل أو ترتيب الظروف قبل المبادرة.")
+    else:
+        lines.append("- التحدي الأساسي هو عدم المبالغة في التوقعات، وعدم ترك الفرصة بلا فعل.")
+        lines.append("- يحتاج الموضوع إلى خطوة واقعية لا إلى انتظار سلبي.")
+
+    lines.append("")
+    lines.append("النصيحة العملية")
+    if top_score >= 70:
+        lines.append("- بادر بخطوة واضحة ومدروسة، خصوصًا إذا كانت لديك فرصة واقعية جاهزة.")
+        lines.append("- اجعل القرار عمليًا ومحددًا: اتصال، طلب، موعد، ترتيب ورقة، أو خطة تنفيذ.")
+    elif top_score >= 50:
+        lines.append("- رتّب الأوراق والظروف قبل المبادرة الكبيرة.")
+        lines.append("- انتظر علامة واقعية إضافية بدل الاستعجال.")
+    else:
+        lines.append("- لا تضغط على الحدث الآن؛ الأفضل المراقبة والتحضير.")
+        lines.append("- تجنب القرارات المتسرعة، خصوصًا إذا كان الموضوع ماليًا أو عاطفيًا أو قانونيًا.")
+
+    if user_report:
+        clean_user = str(user_report).strip()
+        # تنظيف مختصر للتقرير الأولي من العناوين الفنية الثقيلة إن وجدت
+        for bad in ["التقرير الشخصي", "التقرير الأولي", "تقرير المستخدم"]:
+            clean_user = clean_user.replace(bad, "").strip()
+        if clean_user:
+            lines.append("")
+            lines.append("ملخص إضافي")
+            lines.append(clean_user)
+
+    lines.append("")
+    lines.append("التفاصيل الفلكية للمهتمين فقط")
+    lines.append("تم حساب هذا التقرير من خلال فحص العبور الحالي مع مؤشرات الزمن الشخصي ونقاط التفعيل، ثم ترجمتها إلى مجالات حياتية مفهومة. التفاصيل الفنية الدقيقة مثل الدرجات، الزوايا، الأورب، الحدود، البروفكشن، الفريدار، التقدم الثانوي، والقوس الشمسي لا تُعرض هنا حتى لا يثقل التقرير على المستخدم العادي.")
+
+    return "\n".join(lines)
+
 @app.route("/forecast", methods=["GET", "POST"])
 def forecast():
     if not FORECAST_ENGINE_READY:
@@ -6393,11 +7182,15 @@ def forecast():
             full_report = run_forecast_func(birth=birth, transit=transit, selected_topic=form["selected_topic"], period=form["period"], include_charts=False)
             user_report, _technical_report = split_reports(full_report)
             if str(request.form.get("premium_action", "")).strip() == "unlock_report":
-                ok, clean_code, premium_message = check_premium_code(request.form.get("premium_code", ""), "forecast")
+                premium_code = request.form.get("premium_code", "")
+                ok, clean_code, premium_message = check_premium_code(premium_code, "forecast")
                 if ok:
-                    premium_report = _technical_report
+                    premium_report = forecast_build_practical_premium_report(user_report, _technical_report, form.get("selected_topic", "general"), form.get("period", ""))
                     mark_premium_code_used(clean_code, "forecast")
-                    premium_message = "تم فتح التقرير الاحترافي بنجاح. أصبح هذا الكود مستخدمًا ولا يعمل مرة ثانية."
+                    if is_developer_master_code(clean_code):
+                        premium_message = "تم فتح التقرير الاحترافي بكود المطور."
+                    else:
+                        premium_message = "تم فتح التقرير الاحترافي بنجاح. أصبح هذا الكود مستخدمًا ولا يعمل مرة ثانية."
             order_id = generate_service_order_id("AGP")
             topic_label = forecast_topic_label(form.get("selected_topic", "general"))
             telegram_url_value = telegram_contact_url(forecast_order_message(order_id, form.get("name", ""), topic_label, form.get("period", "")))
@@ -6725,7 +7518,8 @@ def marriage():
             final_candidates, backup_candidates, ranked_with_filter = _MARRIAGE_NS["apply_strict_marriage_filter"](ranked)
             free_report = build_marriage_free_summary(final_candidates, backup_candidates, ranked_with_filter, sa)
             if str(request.form.get("premium_action", "")).strip() == "unlock_report":
-                ok, clean_code, premium_message = check_premium_code(request.form.get("premium_code", ""), "marriage")
+                premium_code = request.form.get("premium_code", "")
+                ok, clean_code, premium_message = check_premium_code(premium_code, "marriage")
                 if ok:
                     premium_report = build_marriage_premium_simple_report(chart, ranked, all_results, profile_name, gender, birth_info, city_name, sa, ea)
                     mark_premium_code_used(clean_code, "marriage")
@@ -7198,9 +7992,405 @@ def relationship_partner_birth(f):
         latitude=float(city_info["lat"]), longitude=float(city_info["lon"]),
     )
 
-@app.route("/midpoints")
+
+# ============================================================
+# محرك نقاط المنتصف حسب المحاور V6 - مدمج داخل المنصة
+# ============================================================
+
+MD_SIGN_RULER_KEY = {"الحمل":"Mars","الثور":"Venus","الجوزاء":"Mercury","السرطان":"Moon","الأسد":"Sun","العذراء":"Mercury","الميزان":"Venus","العقرب":"Mars","القوس":"Jupiter","الجدي":"Saturn","الدلو":"Saturn","الحوت":"Jupiter"}
+MD_POINT_AR = {"Sun":"الشمس","Moon":"القمر","Mercury":"عطارد","Venus":"الزهرة","Mars":"المريخ","Jupiter":"المشتري","Saturn":"زحل","Uranus":"أورانوس","Neptune":"نبتون","Pluto":"بلوتو","Chiron":"كايرون","Ceres":"سيريس","Pallas":"بالاس","Juno":"جونو","Vesta":"فيستا","Pholus":"فولو","NorthNode":"الرأس الشمالي","SouthNode":"الذنب الجنوبي","ASC":"الطالع","DSC":"الهابط","MC":"وسط السماء","IC":"قاع السماء"}
+MD_TRANSIT_WEIGHTS = {"Pluto":10,"Neptune":9,"Uranus":9,"Saturn":8,"NorthNode":8,"SouthNode":7,"Jupiter":7,"Mars":6,"Chiron":6,"Sun":5,"Venus":5,"Juno":5,"Pholus":5,"Mercury":4,"Ceres":4,"Pallas":4,"Vesta":4,"Moon":3}
+MD_ASPECTS = [("اقتران",0.0,12),("تربيع",90.0,9),("مقابلة",180.0,10)]
+
+@dataclass
+class MDMidpointRule:
+    a: str
+    b: str
+    label: str
+    weight: int
+    note: str
+
+@dataclass
+class MDDomainDef:
+    key: str
+    title: str
+    house_label: str
+    summary: str
+    rules: List[MDMidpointRule]
+
+def MD_R(a,b,label,weight,note):
+    return MDMidpointRule(a,b,label,weight,note)
+
+MD_DOMAINS = [
+    MDDomainDef("personality","محور الشخصية والجسد والبداية","البيت الأول","حضور الشخص وجسده وردة فعله وبداية الأحداث حوله.",[MD_R("Sun","ASC","الشمس/الطالع",10,"قوة الظهور والقرار."),MD_R("Moon","ASC","القمر/الطالع",9,"المزاج والجسد."),MD_R("Mars","ASC","المريخ/الطالع",8,"المبادرة والتوتر الجسدي."),MD_R("Sun","Moon","الشمس/القمر",10,"توازن الإرادة والحاجة النفسية."),MD_R("Ruler1","ASC","حاكم الأول/الطالع",10,"مفتاح الخريطة الشخصي.")]),
+    MDDomainDef("money","محور المال والدخل والقيمة","البيت الثاني","المال الشخصي والدخل والقيمة والممتلكات.",[MD_R("Venus","CUSP2","الزهرة/البيت الثاني",10,"نقطة مال وقيمة."),MD_R("Jupiter","CUSP2","المشتري/البيت الثاني",9,"فرصة مالية."),MD_R("Venus","Jupiter","الزهرة/المشتري",10,"اتساع المال والقبول."),MD_R("Ruler2","CUSP2","حاكم الثاني/البيت الثاني",10,"مفتاح المال."),MD_R("Pluto","CUSP2","بلوتو/البيت الثاني",7,"تحول في القيمة أو المال.")]),
+    MDDomainDef("thinking","محور التفكير والتنقلات والدراسة القريبة","البيت الثالث","الأخبار والرسائل والدراسة القريبة والتنقلات اليومية.",[MD_R("Mercury","CUSP3","عطارد/البيت الثالث",10,"تفكير ورسائل."),MD_R("Mercury","Jupiter","عطارد/المشتري",10,"دراسة وسفر وأخبار."),MD_R("Moon","Mercury","القمر/عطارد",8,"تفكير شعوري."),MD_R("Ruler3","CUSP3","حاكم الثالث/البيت الثالث",9,"مفتاح التنقلات والأخبار."),MD_R("Uranus","CUSP3","أورانوس/البيت الثالث",7,"خبر مفاجئ.")]),
+    MDDomainDef("home","محور العائلة والعقار والأوراق","البيت الرابع","البيت والعائلة والعقار والجذور والأوراق الثابتة.",[MD_R("Moon","IC","القمر/قاع السماء",10,"العائلة والبيت."),MD_R("Ceres","IC","سيريس/قاع السماء",7,"رعاية واحتواء."),MD_R("Saturn","IC","زحل/قاع السماء",8,"مسؤولية عائلية."),MD_R("Ruler4","IC","حاكم الرابع/قاع السماء",10,"مفتاح البيت والعقار."),MD_R("Venus","CUSP4","الزهرة/البيت الرابع",7,"راحة منزلية.")]),
+    MDDomainDef("love","محور الحب والأطفال والإبداع","البيت الخامس","الحب والرومانسية والأطفال والمتعة والإبداع.",[MD_R("Moon","Venus","القمر/الزهرة",10,"حنان وقبول عاطفي."),MD_R("Venus","Mars","الزهرة/المريخ",10,"انجذاب ورغبة."),MD_R("Sun","Venus","الشمس/الزهرة",9,"إظهار الحب."),MD_R("Venus","CUSP5","الزهرة/البيت الخامس",10,"نقطة رومانسية."),MD_R("Ruler5","CUSP5","حاكم الخامس/البيت الخامس",9,"مفتاح الحب والأطفال.")]),
+    MDDomainDef("health","محور الصحة والعمل اليومي","البيت السادس","الصحة اليومية والتعب والعمل الخدمي والروتين.",[MD_R("Moon","CUSP6","القمر/البيت السادس",9,"تأثر الجسد والمزاج."),MD_R("Saturn","CUSP6","زحل/البيت السادس",10,"ضغط صحي أو عملي."),MD_R("Mars","CUSP6","المريخ/البيت السادس",9,"نشاط مرهق أو التهاب."),MD_R("Chiron","CUSP6","كايرون/البيت السادس",8,"جرح صحي أو شفاء."),MD_R("Ruler6","CUSP6","حاكم السادس/البيت السادس",10,"مفتاح الصحة والعمل.")]),
+    MDDomainDef("marriage","محور الزواج والشراكات","البيت السابع","الزواج والشراكات والعقود والطرف المقابل.",[MD_R("Venus","DSC","الزهرة/الهابط",10,"نقطة زواج وقبول."),MD_R("Juno","DSC","جونو/الهابط",10,"التزام وعقد."),MD_R("Ruler7","DSC","حاكم السابع/الهابط",10,"مفتاح الزواج."),MD_R("Venus","Mars","الزهرة/المريخ",9,"جاذبية بين طرفين."),MD_R("Saturn","DSC","زحل/الهابط",8,"جدية أو اختبار.")]),
+    MDDomainDef("crisis","محور التحولات والأموال المشتركة","البيت الثامن","الأزمات والتحول والمال المشترك والإرث والديون.",[MD_R("Pluto","CUSP8","بلوتو/البيت الثامن",10,"تحول عميق."),MD_R("Saturn","CUSP8","زحل/البيت الثامن",9,"ثقل في المال المشترك."),MD_R("Mars","CUSP8","المريخ/البيت الثامن",8,"مواجهة حساسة."),MD_R("Moon","Pluto","القمر/بلوتو",9,"ضغط نفسي عميق."),MD_R("Ruler8","CUSP8","حاكم الثامن/البيت الثامن",10,"مفتاح التحولات.")]),
+    MDDomainDef("travel","محور السفر البعيد والدراسة العليا","البيت التاسع","السفر الخارجي والتعليم العالي والقانون والقناعات.",[MD_R("Jupiter","CUSP9","المشتري/البيت التاسع",10,"سفر ودراسة عليا."),MD_R("Mercury","Jupiter","عطارد/المشتري",9,"معلومة أو سفر."),MD_R("Ruler9","CUSP9","حاكم التاسع/البيت التاسع",10,"مفتاح السفر البعيد."),MD_R("Uranus","CUSP9","أورانوس/البيت التاسع",8,"سفر مفاجئ."),MD_R("NorthNode","CUSP9","الرأس الشمالي/البيت التاسع",8,"اتجاه قدري للتوسع.")]),
+    MDDomainDef("career","محور المهنة والمنصب والسمعة","البيت العاشر","العمل والمنصب والظهور العام والنتيجة المهنية.",[MD_R("Sun","MC","الشمس/وسط السماء",10,"ظهور مهني."),MD_R("Saturn","MC","زحل/وسط السماء",10,"مسؤولية مهنية."),MD_R("Jupiter","MC","المشتري/وسط السماء",10,"ترقية أو دعم."),MD_R("Ruler10","MC","حاكم العاشر/وسط السماء",10,"مفتاح المهنة."),MD_R("Uranus","MC","أورانوس/وسط السماء",8,"تغيير مهني مفاجئ.")]),
+    MDDomainDef("friends","محور الأصدقاء والدعم والطموحات","البيت الحادي عشر","الدعم الاجتماعي والأصدقاء والمكاسب المستقبلية.",[MD_R("Jupiter","CUSP11","المشتري/البيت الحادي عشر",9,"دعم وحظ."),MD_R("Venus","CUSP11","الزهرة/البيت الحادي عشر",8,"قبول اجتماعي."),MD_R("Ruler11","CUSP11","حاكم الحادي عشر/البيت الحادي عشر",9,"مفتاح الدعم."),MD_R("Sun","CUSP11","الشمس/البيت الحادي عشر",7,"ظهور داخل مجموعة.")]),
+    MDDomainDef("hidden","محور العزلة واللاوعي والخفايا","البيت الثاني عشر","الخفاء والعزلة واللاوعي والتعب النفسي والأعداء الخفيين.",[MD_R("Neptune","CUSP12","نبتون/البيت الثاني عشر",10,"غموض ولاوعي."),MD_R("Moon","CUSP12","القمر/البيت الثاني عشر",9,"مزاج خفي."),MD_R("Chiron","CUSP12","كايرون/البيت الثاني عشر",8,"جرح خفي."),MD_R("Saturn","CUSP12","زحل/البيت الثاني عشر",8,"ثقل داخلي."),MD_R("Ruler12","CUSP12","حاكم الثاني عشر/البيت الثاني عشر",10,"مفتاح الخفاء."),MD_R("SouthNode","CUSP12","الذنب الجنوبي/البيت الثاني عشر",8,"تفريغ ماضٍ.")]),
+]
+
+def md_point_name(key: str) -> str:
+    if key in MD_POINT_AR: return MD_POINT_AR[key]
+    if key.startswith("CUSP"): return "رأس البيت " + key.replace("CUSP", "")
+    if key.startswith("Ruler"): return "حاكم البيت " + key.replace("Ruler", "")
+    return key
+
+def md_calc_extra_points(jd_ut: float) -> Dict[str, float]:
+    extras = {}
+    if not SWISSEPH_AVAILABLE: return extras
+    try:
+        ensure_asteroid_ephemeris_ready(); setup_swiss_ephemeris_path()
+    except Exception: pass
+    for key, attr in [("Chiron","CHIRON"),("Ceres","CERES"),("Pallas","PALLAS"),("Juno","JUNO"),("Vesta","VESTA"),("Pholus","PHOLUS"),("NorthNode","MEAN_NODE")]:
+        obj = getattr(swe, attr, None)
+        if obj is None: continue
+        try:
+            res, _ = swe.calc_ut(jd_ut, obj, swe.FLG_SWIEPH | swe.FLG_SPEED)
+            extras[key] = normalize_deg(float(res[0]))
+        except Exception: continue
+    if "NorthNode" in extras: extras["SouthNode"] = normalize_deg(extras["NorthNode"] + 180)
+    return extras
+
+def md_build_points(positions, cusps, angles, jd_ut):
+    points = {k: float(p.lon) for k, p in positions.items()}
+    points.update(md_calc_extra_points(jd_ut))
+    points["ASC"] = float(angles["ASC"]); points["DSC"] = normalize_deg(float(angles["ASC"]) + 180)
+    points["MC"] = float(angles["MC"]); points["IC"] = normalize_deg(float(angles["MC"]) + 180)
+    for i in range(1, 13): points[f"CUSP{i}"] = normalize_deg(float(cusps[i-1]))
+    for i in range(1, 13):
+        sign, _ = sign_from_lon(points[f"CUSP{i}"])
+        ruler = MD_SIGN_RULER_KEY.get(sign, "")
+        if ruler in points: points[f"Ruler{i}"] = points[ruler]
+    return points
+
+def md_build_domain_midpoints(points):
+    data = {}
+    for domain in MD_DOMAINS:
+        mids = []
+        for rule in domain.rules:
+            if rule.a not in points or rule.b not in points: continue
+            lon = midpoint_short_arc(points[rule.a], points[rule.b])
+            sign, deg = sign_from_lon(lon)
+            mids.append({"degree": lon, "degree_text": f"{sign} {format_degree(deg)}", "term": get_ptolemy_term(sign, deg), "label": rule.label, "weight": rule.weight, "note": rule.note, "domain_key": domain.key})
+        data[domain.key] = mids
+    return data
+
+def md_calc_transits(dt_local: datetime, timezone: float):
+    from datetime import timedelta
+    ut_decimal = dt_local.hour + dt_local.minute/60 - timezone
+    base = datetime(dt_local.year, dt_local.month, dt_local.day); shift = 0
+    while ut_decimal < 0: ut_decimal += 24; shift -= 1
+    while ut_decimal >= 24: ut_decimal -= 24; shift += 1
+    ut_date = base + timedelta(days=shift)
+    jd_ut = swe.julday(ut_date.year, ut_date.month, ut_date.day, ut_decimal)
+    transits = {}
+    for key, meta in PLANETS.items():
+        try:
+            res, _ = swe.calc_ut(jd_ut, meta["id"], swe.FLG_SWIEPH | swe.FLG_SPEED)
+            transits[key] = normalize_deg(float(res[0]))
+        except Exception: pass
+    transits.update(md_calc_extra_points(jd_ut))
+    return transits
+
+def md_orb_weight(orb):
+    m = orb * 60
+    return 12 if m <= 5 else 10 if m <= 10 else 8 if m <= 30 else 5 if m <= 60 else 3 if m <= 90 else 1
+
+def md_strength_label(orb):
+    m = orb * 60
+    return "ذروة دقيقة جدًا" if m <= 5 else "قوي جدًا وقريب من الذروة" if m <= 10 else "قوي وواضح" if m <= 30 else "متوسط إلى قوي" if m <= 60 else "تمهيدي" if m <= 90 else "ضعيف"
+
+def md_find_activations(domain_midpoints, transits, max_orb=2.0):
+    out = {d.key: [] for d in MD_DOMAINS}
+    for key, mids in domain_midpoints.items():
+        for mp in mids:
+            for t_key, t_lon in transits.items():
+                dist = angular_distance(t_lon, float(mp["degree"]))
+                for asp, asp_deg, asp_w in MD_ASPECTS:
+                    orb = abs(dist - asp_deg)
+                    if orb <= max_orb:
+                        t_w = MD_TRANSIT_WEIGHTS.get(t_key, 4)
+                        sign, deg = sign_from_lon(t_lon)
+                        out[key].append({"midpoint": mp, "transit_key": t_key, "transit_name": md_point_name(t_key), "transit_degree_text": f"{sign} {format_degree(deg)}", "aspect": asp, "orb": orb, "orb_text": format_degree(orb), "transit_weight": t_w, "raw_score": int(mp["weight"]) + t_w + asp_w + md_orb_weight(orb), "strength": md_strength_label(orb)})
+    for key in out: out[key].sort(key=lambda a: (-int(a["raw_score"]), float(a["orb"])))
+    return out
+
+def md_score_domain(acts):
+    if not acts: return 0
+    total = sum(int(a["raw_score"]) for a in acts[:5])
+    return max(0, min(100, round((total + min(len(acts)*2,14)) / 234 * 100)))
+
+def md_level(score):
+    return "قوي جدًا" if score >= 80 else "قوي" if score >= 60 else "متوسط" if score >= 40 else "ضعيف" if score >= 20 else "هادئ"
+
+def md_domain_results(by_domain):
+    dmap = {d.key: d for d in MD_DOMAINS}; rows = []
+    for key, acts in by_domain.items():
+        d = dmap[key]; score = md_score_domain(acts)
+        rows.append({"key": key, "title": d.title, "house_label": d.house_label, "summary": d.summary, "score": score, "level": md_level(score), "activation_count": len(acts), "top_activation": acts[0] if acts else None, "activations": acts})
+    rows.sort(key=lambda r: (-int(r["score"]), -int(r["activation_count"]), str(r["title"])))
+    return rows
+
+def md_prediction(res):
+    title = str(res["title"])
+    if not res.get("top_activation"): return "لا يظهر هذا المحور كحدث بارز الآن ضمن هامش نقاط المنتصف المعتمد."
+    if "المال" in title: base = "التوقع الأقرب: تنشيط مالي أو قرار يتعلق بالدخل أو القيمة أو الممتلكات."
+    elif "المهنة" in title: base = "التوقع الأقرب: حركة مهنية أو وضوح في المنصب أو السمعة أو اتجاه العمل."
+    elif "الزواج" in title: base = "التوقع الأقرب: تحريك ملف شراكة أو علاقة أو موقف يظهر عبر الطرف الآخر."
+    elif "الحب" in title: base = "التوقع الأقرب: تحريك وجداني أو رومانسية أو رغبة أو ملف متعلق بالأطفال والإبداع."
+    elif "الصحة" in title: base = "التوقع الأقرب: انتباه صحي أو ضغط في الروتين والعمل اليومي يحتاج تنظيمًا."
+    elif "السفر" in title: base = "التوقع الأقرب: خبر أو تفكير أو فرصة تتعلق بالسفر البعيد أو الدراسة العليا."
+    elif "العائلة" in title: base = "التوقع الأقرب: تحريك ملف البيت أو العائلة أو العقار أو الأوراق الثابتة."
+    elif "التفكير" in title: base = "التوقع الأقرب: خبر أو رسالة أو دراسة أو تنقل أو مراجعة ذهنية."
+    elif "الأصدقاء" in title: base = "التوقع الأقرب: دعم اجتماعي أو تواصل مع جماعة أو تحريك أمنية مستقبلية."
+    elif "العزلة" in title: base = "التوقع الأقرب: ضغط داخلي أو حنين أو ملف خفي يحتاج هدوءًا وفهمًا."
+    elif "التحولات" in title: base = "التوقع الأقرب: تحول عميق أو ضغط في ملف مالي مشترك أو نفسي حساس."
+    else: base = "التوقع الأقرب: هذا المجال يتحرك حاليًا بدرجة تستحق الانتباه."
+    s = int(res["score"])
+    return base + (" قوة المحور عالية جدًا، لذلك يمكن اعتباره من عناوين المرحلة الحالية." if s >= 80 else " قوة المحور واضحة، وقد يظهر أثرها إذا وجد سياق واقعي مناسب." if s >= 60 else " القوة متوسطة، وغالبًا يعمل كتأثير مساعد لا كعنوان وحيد." if s >= 40 else " التأثير موجود لكنه خفيف أو تمهيدي.")
+
+def md_transit_meaning(key):
+    return {"Sun":"الشمس تكشف الموضوع وتجعله أوضح في القرار والوعي.","Moon":"القمر يحرّك الشعور بسرعة ويظهر غالبًا خلال ساعات.","Mercury":"عطارد يفتح باب الكلام والرسائل والأخبار.","Venus":"الزهرة تفعّل القبول والمال والراحة والمشاعر.","Mars":"المريخ يدفع إلى فعل سريع أو توتر أو مبادرة.","Jupiter":"المشتري يوسع المعنى ويجلب فرصة أو انفراجًا.","Saturn":"زحل يجعل الموضوع جادًا ويختبره بالتأخير أو المسؤولية.","Uranus":"أورانوس يفتح مفاجأة أو تغييرًا سريعًا.","Neptune":"نبتون يزيد الغموض والحنين والمثالية.","Pluto":"بلوتو يضغط بعمق ويفتح تحولًا أو كشفًا.","Chiron":"كايرون يلمس الجرح القديم أو يفتح باب الشفاء.","Juno":"جونو يربط التفعيل بعقد أو التزام."}.get(key,"هذا الجرم يفعّل النقطة بحسب طبيعته الفلكية.")
+
+def md_timing_window(key):
+    if key == "Moon": return "نافذة التأثير قصيرة: من ساعات قليلة إلى نصف يوم حول الدقة."
+    if key in ["Sun","Mercury","Venus","Mars"]: return "نافذة التأثير سريعة نسبيًا: من يوم إلى عدة أيام حول الدقة."
+    if key in ["Jupiter","Saturn"]: return "نافذة التأثير مرحلية: من أيام إلى أسابيع."
+    if key in ["Uranus","Neptune","Pluto"]: return "نافذة التأثير عميقة وبطيئة: قد تمتد لأسابيع أو أشهر."
+    return "نافذة التأثير تعتمد على سرعة الجرم العابر وقربه من الدقة."
+
+def md_activation_lines(act, detailed=False):
+    mp = act["midpoint"]
+    lines = [f"- {act['transit_name']} العابر {act['aspect']} نقطة {mp['label']} بفارق {act['orb_text']}.", f"  موقع العابر: {act['transit_degree_text']} | موقع النقطة: {mp['degree_text']} | حد بطليموس للنقطة: {mp['term']}.", f"  القوة: {act['strength']} | وزن النقطة: {mp['weight']} | وزن العابر: {act['transit_weight']} | الوزن الكلي: {act['raw_score']}."]
+    if detailed:
+        lines += [f"  معنى النقطة: {mp['note']}", "  " + md_transit_meaning(str(act["transit_key"])), "  " + md_timing_window(str(act["transit_key"]))]
+    return lines
+
+def md_generate_report(name, report_level, points, results, transit_dt, pro_unlocked):
+    is_pro = report_level == "professional" and pro_unlocked
+    max_domains = 12 if is_pro else 3
+    lines = [f"أهلًا {name or 'صاحب الخريطة'}", "", "تقرير نقاط المنتصف حسب المحاور - V6", f"وقت فحص العبور: {transit_dt.strftime('%Y-%m-%d %H:%M')}", f"نوع التقرير: {'احترافي' if is_pro else 'مجاني'}"]
+    if "Sun" in points and "Moon" in points and "ASC" in points:
+        ss, sd = sign_from_lon(points["Sun"]); ms, md = sign_from_lon(points["Moon"]); acs, acd = sign_from_lon(points["ASC"])
+        lines.append(f"الشمس: {ss} {format_degree(sd)} | القمر: {ms} {format_degree(md)} | الطالع: {acs} {format_degree(acd)}")
+    lines += ["", "منهج التقرير:", "يعتمد هذا المحرك على تقسيم نقاط المنتصف إلى 12 محورًا مطابقًا لمعاني البيوت. تم إدخال رؤوس البيوت والطالع والهابط ووسط السماء وقاع السماء ضمن الحساب، ثم فحص تفعيل هذه النقاط بواسطة كواكب وأجرام العبور من خلال الاقتران والتربيع والمقابلة. لا يعتمد الحكم على عدد التفعيلات فقط، بل على وزن نقطة المنتصف، ووزن الجرم العابر، ونوع الزاوية، ودقة الفارق.", ""]
+    if report_level == "professional" and not pro_unlocked: lines += ["تنبيه: تم اختيار التقرير الاحترافي، لكن كود التفعيل غير صحيح أو غير مُدخل؛ لذلك تم عرض النسخة المجانية فقط.", ""]
+    lines.append("ترتيب المحاور حسب القوة الحالية:")
+    for i, r in enumerate(results, 1):
+        marker = "" if is_pro or i <= 3 else " — تفاصيله تظهر في التقرير الاحترافي"
+        lines.append(f"{i}. {r['title']}: {r['score']}% - {r['level']} - عدد التفعيلات: {r['activation_count']}{marker}")
+    lines.append("")
+    if results:
+        lines += ["عنوان المرحلة الحالي:", f"المحور الأبرز الآن هو: {results[0]['title']} بدرجة {results[0]['score']}%."]
+        if len(results)>1: lines.append(f"المحور الثاني: {results[1]['title']} بدرجة {results[1]['score']}%.")
+        if len(results)>2: lines.append(f"المحور الثالث: {results[2]['title']} بدرجة {results[2]['score']}%.")
+        lines.append("")
+    lines += ["تفاصيل المحاور المعروضة", ""]
+    for idx, r in enumerate(results[:max_domains], 1):
+        lines += [f"{idx}. {r['title']}", f"المجال: {r['house_label']}", f"الدرجة: {r['score']}% - {r['level']}", f"عدد التفعيلات: {r['activation_count']}", str(r["summary"]), md_prediction(r), ""]
+        if r.get("top_activation"):
+            lines.append("أقوى تفعيل داخل هذا المحور:"); lines += md_activation_lines(r["top_activation"], detailed=is_pro); lines.append("")
+        if is_pro:
+            more = list(r.get("activations", []))[1:]
+            if more:
+                lines.append("بقية التفعيلات داخل المحور:")
+                for act in more: lines += md_activation_lines(act, detailed=True) + [""]
+        lines += ["-"*42, ""]
+    if not is_pro: lines += ["ملاحظة التقرير المجاني:", "يعرض التقرير المجاني أقوى 3 محاور فقط مع التفعيل الأقوى في كل محور. التقرير الاحترافي يعرض جميع المحاور الاثني عشر، وجميع نقاط المنتصف المفعلة، وتفاصيل الأوزان والتوقيت والقراءة الزاوية."]
+    return "\n".join(lines)
+
+
+def md_saved_profile_context():
+    saved = session.get("astro_profile", {})
+    if not isinstance(saved, dict) or not profile_is_complete():
+        raise RuntimeError("يرجى إدخال بياناتك الفلكية أولًا من صفحة بياناتي الفلكية.")
+    year=int(saved["year"]); month=int(saved["month"]); day=int(saved["day"]); hour=int(saved["hour"]); minute=int(saved["minute"])
+    city_info = find_city(str(saved.get("country_code","")), str(saved.get("city","") or saved.get("city_select","")))
+    if not city_info:
+        raise RuntimeError("لم أجد المدينة داخل الدولة المختارة. راجع بياناتي الفلكية أولًا.")
+    timezone = get_selected_timezone_offset(saved, city_info, year, month, day, hour, minute)
+    positions, cusps, angles = calculate_chart(year, month, day, hour, minute, timezone, float(city_info["lat"]), float(city_info["lon"]), saved.get("house_system","P") or "P")
+    points = md_build_points(positions, cusps, angles, float(angles["JD_UT"]))
+    return str(saved.get("name","صاحب الخريطة")), points, timezone
+
+def md_results_for_transit(points, timezone, transit_dt):
+    transits = md_calc_transits(transit_dt, timezone)
+    return md_domain_results(md_find_activations(md_build_domain_midpoints(points), transits, 2.0))
+
+def md_scope_days(scope: str) -> int:
+    return 0 if scope == "current" else 30 if scope == "30" else 90 if scope == "90" else 365 if scope == "365" else 0
+
+def md_scope_title(scope: str) -> str:
+    return "اللحظة الحالية" if scope == "current" else "30 يومًا قادمة" if scope == "30" else "90 يومًا قادمة" if scope == "90" else "سنة كاملة" if scope == "365" else "اللحظة الحالية"
+
+def md_phase_title(results):
+    active = [r for r in results if int(r.get("score", 0)) >= 40]
+    if not active:
+        return "المرحلة الحالية هادئة نسبيًا ولا يظهر محور واحد مسيطر بوضوح."
+    top = active[:3]
+    names = [str(r["title"]).replace("محور ", "") for r in top]
+    if len(names) == 1:
+        return "المرحلة الحالية تميل إلى: " + names[0] + "."
+    if len(names) == 2:
+        return "المرحلة الحالية تجمع بين: " + names[0] + " و" + names[1] + "."
+    return "المرحلة الحالية تجمع بين: " + names[0] + "، " + names[1] + "، و" + names[2] + "."
+
+def md_collect_windows(day_rows, threshold=70):
+    windows = []
+    if not day_rows:
+        return windows
+    domain_titles = {d.key: d.title for d in MD_DOMAINS}
+    domain_keys = [d.key for d in MD_DOMAINS]
+    for key in domain_keys:
+        start = None; end = None; peak_score = -1; peak_date = None
+        for row in day_rows:
+            score = int(row["scores"].get(key, 0))
+            if score >= threshold:
+                if start is None:
+                    start = row["date"]; peak_score = score; peak_date = row["date"]
+                end = row["date"]
+                if score > peak_score:
+                    peak_score = score; peak_date = row["date"]
+            else:
+                if start is not None:
+                    windows.append({"key": key, "title": domain_titles.get(key, key), "start": start, "end": end, "peak_date": peak_date, "peak_score": peak_score})
+                    start = end = peak_date = None; peak_score = -1
+        if start is not None:
+            windows.append({"key": key, "title": domain_titles.get(key, key), "start": start, "end": end, "peak_date": peak_date, "peak_score": peak_score})
+    windows.sort(key=lambda w: (-int(w["peak_score"]), w["start"]))
+    return windows
+
+def md_generate_timeline_report(name, points, timezone, start_dt, days, current_results):
+    # فحص يومي بنفس ساعة السؤال. هذا يعطي خريطة زمنية عملية دون أن يثقل الهاتف.
+    day_rows = []
+    peaks = {}
+    for offset in range(days + 1):
+        dt = start_dt + timedelta(days=offset)
+        results = md_results_for_transit(points, timezone, dt)
+        score_map = {r["key"]: int(r["score"]) for r in results}
+        day_rows.append({"date": dt.date(), "dt": dt, "results": results, "scores": score_map})
+        for r in results:
+            key = r["key"]
+            cur = peaks.get(key)
+            if cur is None or int(r["score"]) > int(cur["score"]):
+                peaks[key] = {"key": key, "title": r["title"], "score": int(r["score"]), "level": r["level"], "date": dt.date(), "activation_count": int(r.get("activation_count", 0)), "top_activation": r.get("top_activation")}
+    peak_rows = sorted(peaks.values(), key=lambda r: (-int(r["score"]), str(r["date"])))
+    windows = md_collect_windows(day_rows, threshold=70)
+    lines = [f"أهلًا {name or 'صاحب الخريطة'}", "", "تقرير نقاط المنتصف الزمني - V7", f"نطاق الفحص: من {start_dt.strftime('%Y-%m-%d %H:%M')} لمدة {days} يومًا", "نوع التقرير: احترافي متقدم", ""]
+    if "Sun" in points and "Moon" in points and "ASC" in points:
+        ss, sd = sign_from_lon(points["Sun"]); ms, md = sign_from_lon(points["Moon"]); acs, acd = sign_from_lon(points["ASC"])
+        lines.append(f"الشمس: {ss} {format_degree(sd)} | القمر: {ms} {format_degree(md)} | الطالع: {acs} {format_degree(acd)}")
+        lines.append("")
+    lines += ["منهج التقرير:", "يفحص هذا التقرير نقاط المنتصف المصنفة إلى 12 محورًا خلال الفترة القادمة. يتم حساب عبور كل يوم بنفس ساعة الطلب، ثم ترتيب المحاور حسب أعلى ذروة تصل إليها. العبور يعطي التوقيت، ونقطة المنتصف تعطي زر التفعيل، وحد بطليموس يوضح نوعية التفعيل.", ""]
+    lines += ["عنوان المرحلة الحالية:", md_phase_title(current_results), ""]
+    lines.append("أقوى المحاور الآن:")
+    for i, r in enumerate(current_results[:3], 1):
+        lines.append(f"{i}. {r['title']}: {r['score']}% - {r['level']}.")
+    lines.append("")
+    lines.append("أقوى الذروات القادمة حسب المحاور:")
+    for i, p in enumerate(peak_rows[:12], 1):
+        lines.append(f"{i}. {p['title']}: أعلى قوة {p['score']}% - {p['level']}، تاريخ الذروة: {p['date']}، عدد التفعيلات في الذروة: {p['activation_count']}.")
+        if p.get("top_activation"):
+            act = p["top_activation"]
+            mp = act["midpoint"]
+            lines.append(f"   أقوى تفعيل في الذروة: {act['transit_name']} {act['aspect']} نقطة {mp['label']} بفارق {act['orb_text']}.")
+    lines.append("")
+    lines.append("نوافذ التنبيه القوية:")
+    if windows:
+        for w in windows[:18]:
+            if w["start"] == w["end"]:
+                lines.append(f"- {w['title']}: يوم قوي في {w['start']}، الذروة {w['peak_date']} بقوة {w['peak_score']}%.")
+            else:
+                lines.append(f"- {w['title']}: من {w['start']} إلى {w['end']}، الذروة {w['peak_date']} بقوة {w['peak_score']}%.")
+    else:
+        lines.append("- لا توجد نافذة تتجاوز 70% ضمن هذا النطاق، ما يعني أن الفترة أقل ضغطًا أو أقل وضوحًا في محاور نقاط المنتصف.")
+    lines.append("")
+    lines.append("قراءة عملية حسب المجال:")
+    for p in peak_rows[:6]:
+        title = str(p["title"])
+        if "المال" in title:
+            meaning = "راقب فرص الدخل أو قرارًا ماليًا أو تغييرًا في القيمة والممتلكات حول تاريخ الذروة."
+        elif "المهنة" in title:
+            meaning = "توقيت مناسب لظهور مهني أو ضغط مسؤولية أو خبر يتعلق بالمنصب والسمعة."
+        elif "الزواج" in title:
+            meaning = "قد يظهر موقف عبر طرف آخر أو شراكة أو عقد، ويحتاج إلى قراءة واقعية لا اندفاعية."
+        elif "الحب" in title:
+            meaning = "يزداد التحريك العاطفي أو الرومانسي أو ملف الأطفال والإبداع حول الذروة."
+        elif "السفر" in title:
+            meaning = "قد تنشط أخبار السفر أو الدراسة العليا أو القناعات أو ملف قانوني."
+        elif "الصحة" in title:
+            meaning = "الفترة تحتاج تنظيمًا صحيًا وروتينيًا وتجنب الإرهاق حول الذروة."
+        elif "العائلة" in title:
+            meaning = "قد يتحرك ملف البيت أو العائلة أو العقار أو الأوراق الثابتة."
+        else:
+            meaning = "هذا المجال يظهر كعنوان مهم ضمن الفترة ويستحق المتابعة حول تاريخ الذروة."
+        lines.append(f"- {title}: الذروة في {p['date']} بقوة {p['score']}%. {meaning}")
+    lines.append("")
+    lines.append("ملاحظة فنية:")
+    lines.append("هذا التقرير الزمني لا يعني حتمية وقوع الحدث، بل يحدد الفترات التي تصبح فيها محاور الخريطة أكثر قابلية للتفعيل. كل نتيجة تحتاج ربطها بالسياق الواقعي لصاحب الخريطة.")
+    return "\n".join(lines)
+
+def md_build_from_saved_profile(transit_dt):
+    name, points, timezone = md_saved_profile_context()
+    results = md_results_for_transit(points, timezone, transit_dt)
+    return name, points, results
+
+MIDPOINTS_HTML = """
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>نقاط المنتصف | ASTROGATE</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:Tahoma,Arial,sans-serif;background:#f4f1ea;margin:0;color:#2d2926;line-height:1.9}.container{max-width:1000px;margin:0 auto;padding:18px}.card{background:#fffdf8;border:1px solid #ded4c4;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}h1,h2{margin-top:0;color:#3b2f2f}h1{text-align:center}.nav{text-align:center;margin:12px 0}.nav a{display:inline-block;background:#fffdf8;border:1px solid #ded4c4;color:#5a3f2a;text-decoration:none;padding:8px 14px;border-radius:999px;font-weight:bold;margin:4px}input,select{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #c8bda9;background:#fff;font-size:16px}label{font-weight:bold;display:block;margin-top:10px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}button{border:none;border-radius:12px;padding:12px 18px;background:#6f4e37;color:#fff;font-size:16px;cursor:pointer}.btn{display:inline-block;border-radius:12px;padding:10px 14px;text-decoration:none}.secondary{background:#d8c7ad;color:#2d2926}.notice{background:#fff8e8;border:1px solid #dec99d;border-radius:14px;padding:12px}.report{white-space:pre-wrap;background:#fff;border:1px solid #eadfce;border-radius:14px;padding:14px;line-height:1.9}.error{background:#fff0f0;border:1px solid #ddb0b0;border-radius:14px;padding:12px;color:#7a1d1d}.small{font-size:13px;color:#6d6259}@media(max-width:750px){.grid2{grid-template-columns:1fr}.container{padding:12px}}</style></head><body><div class="container"><div class="card"><h1>تحفيز نقاط المنتصف حسب المحاور</h1><p>يعتمد هذا التقرير على بيانات الميلاد المحفوظة في صفحة بياناتي الفلكية، ولا يحتاج إدخال بيانات ولادة جديدة.</p><div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/forecast">التوقعات الشخصية</a></div></div>{% if error %}<div class="card error">{{ error }}<br><a class="btn secondary" href="/profile">إدخال بياناتي الفلكية</a></div>{% endif %}{% if profile_name %}<div class="card notice">البيانات المستخدمة: <strong>{{ profile_name }}</strong>. لتغييرها استخدم صفحة <a href="/profile">بياناتي الفلكية</a>.</div>{% endif %}<form method="post"><div class="card"><h2>وقت العبور ونوع التقرير</h2><div class="grid2"><div><label>تاريخ العبور</label><input type="date" name="transit_date" value="{{ transit_date }}"></div><div><label>وقت العبور</label><input type="time" name="transit_time" value="{{ transit_time }}"></div></div><label>نطاق الفحص الزمني</label><select name="report_scope" id="report_scope"><option value="current" {% if report_scope == 'current' %}selected{% endif %}>اللحظة الحالية فقط</option><option value="30" {% if report_scope == '30' %}selected{% endif %}>30 يومًا قادمة</option><option value="90" {% if report_scope == '90' %}selected{% endif %}>90 يومًا قادمة</option><option value="365" {% if report_scope == '365' %}selected{% endif %}>سنة كاملة</option></select><p class="small">النطاقات الزمنية 30/90/سنة تظهر في التقرير الاحترافي فقط.</p><label>نوع التقرير</label><select name="report_level" id="report_level" onchange="togglePro()"><option value="free" {% if report_level != 'professional' %}selected{% endif %}>تقرير مجاني</option><option value="professional" {% if report_level == 'professional' %}selected{% endif %}>تقرير احترافي</option></select><div id="pro_box" style="display:none;margin-top:14px;background:#fff7ed;border:1px solid #d6b98b;border-radius:14px;padding:14px;">
+<label style="font-size:17px;color:#4a3020;">ضع كود فتح التقرير الاحترافي هنا</label>
+<input type="text" name="premium_code" value="{{ premium_code }}" placeholder="أدخل كود التفعيل" autocomplete="off" autocapitalize="characters" style="font-size:18px;font-weight:bold;letter-spacing:1px;text-align:left;direction:ltr;">
+<p class="small">اكتب كود MID كما وصلك تمامًا، ثم اضغط استخراج التقرير. الكود مخصص لنقاط المنتصف فقط ويعمل مرة واحدة. لا توجد أسعار داخل التطبيق.</p>
+{% if midpoints_order_url %}<a class="btn secondary" href="{{ midpoints_order_url }}" target="_blank" style="margin-top:8px;display:inline-block;">طلب كود تفعيل</a>{% endif %}
+</div><br><button type="submit">استخراج التقرير</button></div></form>{% if code_message %}<div class="card {% if code_success %}notice{% else %}error{% endif %}">{{ code_message }}</div>{% endif %}{% if report %}<div class="card"><h2>التقرير</h2><div class="report">{{ report }}</div></div>{% endif %}</div><script>function togglePro(){var v=document.getElementById('report_level').value;document.getElementById('pro_box').style.display=(v==='professional')?'block':'none';}window.onload=togglePro;</script></body></html>
+"""
+
+@app.route("/midpoints", methods=["GET", "POST"])
 def midpoints():
-    return render_template_string(COMING_SOON_HTML, title="نقاط المنتصف")
+    now = datetime.now()
+    transit_date = request.form.get("transit_date", now.strftime("%Y-%m-%d")) if request.method == "POST" else now.strftime("%Y-%m-%d")
+    transit_time = request.form.get("transit_time", now.strftime("%H:%M")) if request.method == "POST" else now.strftime("%H:%M")
+    report_level = request.form.get("report_level", "free") if request.method == "POST" else "free"
+    report_scope = request.form.get("report_scope", "current") if request.method == "POST" else "current"
+    if report_scope not in ["current", "30", "90", "365"]:
+        report_scope = "current"
+    report = ""; error = ""; code_message = ""; code_success = False
+    premium_code = request.form.get("premium_code", "").strip() if request.method == "POST" else ""
+    midpoints_order_id = generate_service_order_id("MID")
+    midpoints_order_url = telegram_contact_url("السلام عليكم، أرغب بطلب كود فتح التقرير الاحترافي لنقاط المنتصف في ASTROGATE.\nرقم الطلب: " + midpoints_order_id)
+    saved = session.get("astro_profile", {}) if isinstance(session.get("astro_profile", {}), dict) else {}
+    profile_name = str(saved.get("name", "")) if saved else ""
+    try:
+        y,m,d = [int(x) for x in transit_date.split("-")]; hh,mm = [int(x) for x in transit_time.split(":")]
+        transit_dt = datetime(y,m,d,hh,mm)
+        name, points, timezone = md_saved_profile_context()
+        current_results = md_results_for_transit(points, timezone, transit_dt)
+        pro_unlocked = False
+        if request.method == "POST" and report_level == "professional":
+            ok, clean_code, msg = check_premium_code(premium_code, "midpoints")
+            if ok:
+                mark_premium_code_used(clean_code, "midpoints"); pro_unlocked = True; code_success = True
+                code_message = "تم فتح التقرير الاحترافي بكود المطور." if is_developer_master_code(clean_code) else "تم فتح التقرير الاحترافي بنجاح."
+            else:
+                code_message = msg
+        days = md_scope_days(report_scope)
+        if days > 0 and report_level == "professional" and pro_unlocked:
+            report = md_generate_timeline_report(name, points, timezone, transit_dt, days, current_results)
+        else:
+            if days > 0 and report_level != "professional":
+                code_message = "النطاقات الزمنية 30/90/سنة متاحة داخل التقرير الاحترافي فقط؛ تم عرض تقرير اللحظة الحالية المجاني."
+            elif days > 0 and report_level == "professional" and not pro_unlocked and request.method == "POST":
+                code_message = code_message or "يرجى إدخال كود فتح التقرير الاحترافي لعرض التوقع الزمني."
+            report = md_generate_report(name, report_level, points, current_results, transit_dt, pro_unlocked)
+    except Exception as exc:
+        error = f"حدث خطأ أثناء الحساب: {exc}"
+    return render_template_string(MIDPOINTS_HTML, report=report, error=error, profile_name=profile_name, transit_date=transit_date, transit_time=transit_time, report_level=report_level, report_scope=report_scope, code_message=code_message, code_success=code_success, premium_code=premium_code, midpoints_order_url=midpoints_order_url)
 
 
 @app.route("/compatibility", methods=["GET", "POST"])
@@ -7231,7 +8421,8 @@ def compatibility():
             free_report = _REL_NS["build_free_report"](c1, c2, analysis)
             locked = _REL_NS["build_professional_teaser"]()
             if str(request.form.get("action", "")).strip() == "premium":
-                ok, normalized_code, msg = check_premium_code(request.form.get("premium_code", ""), "relationship")
+                premium_code = request.form.get("premium_code", "")
+                ok, normalized_code, msg = check_premium_code(premium_code, "relationship")
                 if not ok:
                     error = msg
                 else:
