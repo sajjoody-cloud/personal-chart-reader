@@ -307,8 +307,8 @@ def premium_section_message(order_id: str, name: str = "") -> str:
 # كل كود مخصص لخدمة واحدة ويعمل مرة واحدة فقط.
 # تصحيح الطالع لا يدخل في هذا النظام لأنه خدمة يدوية خاصة.
 # ============================================================
-PREMIUM_SERVICE_PREFIXES = {'forecast': 'FOR', 'marriage': 'MRG', 'relationship': 'REL', 'natal': 'NAT', 'midpoints': 'MID', 'subscription': 'SUB'}
-PREMIUM_SERVICE_LABELS = {'forecast': 'التوقعات الشخصية', 'marriage': 'الزواج والخطوبة', 'relationship': 'توافق العلاقات', 'natal': 'قراءة الخريطة الاحترافية', 'midpoints': 'نقاط المنتصف', 'subscription': 'الاشتراك الشهري'}
+PREMIUM_SERVICE_PREFIXES = {'forecast': 'FOR', 'marriage': 'MRG', 'relationship': 'REL', 'natal': 'NAT', 'midpoints': 'MID', 'subscription': 'SUB', 'rectification': 'REC'}
+PREMIUM_SERVICE_LABELS = {'forecast': 'التوقعات الشخصية', 'marriage': 'الزواج والخطوبة', 'relationship': 'توافق العلاقات', 'natal': 'قراءة الخريطة الاحترافية', 'midpoints': 'نقاط المنتصف', 'subscription': 'الاشتراك الشهري', 'rectification': 'تصحيح الطالع'}
 PREMIUM_CODES_BY_SERVICE = {
     'forecast': ['FOR-CUBX-NEFR', 'FOR-RXWB-LT4B', 'FOR-CN8C-CTLK', 'FOR-LFAG-9MTQ', 'FOR-WGSR-X9VK', 'FOR-3LJ7-KM4P', 'FOR-JMUT-BVMV', 'FOR-BP4M-KGXM', 'FOR-QHRL-N5NJ', 'FOR-XVQE-UPY7', 'FOR-4XAU-JPR2', 'FOR-A4MR-FGTG', 'FOR-DK8Y-HMQW', 'FOR-7HWK-GYEU', 'FOR-KQSR-8STM', 'FOR-NBS3-MMGG', 'FOR-UBF6-NTWA', 'FOR-LNVE-D9KY', 'FOR-GL2S-93EV', 'FOR-RRKG-XEX9', 'FOR-WEPA-5MRB', 'FOR-CTFE-BR98', 'FOR-7XXD-Y3W5', 'FOR-XXZW-TG6Z', 'FOR-6GA7-CA7Q', 'FOR-LPLS-ABS5', 'FOR-68SC-3TQJ', 'FOR-XEL4-H3JB', 'FOR-BEW3-LAY6', 'FOR-BQ8W-E8N5', 'FOR-EZN8-XVFA', 'FOR-STFF-S8A4', 'FOR-SALE-DQTB', 'FOR-3XMR-D6YV', 'FOR-2ENC-S7FD', 'FOR-SHUY-JRGT', 'FOR-E8QX-5R65', 'FOR-THSD-AN2L', 'FOR-GAWH-CC8R', 'FOR-YZA8-KTPE', 'FOR-N4CJ-P3H5', 'FOR-7YTF-Z4WM', 'FOR-AJ9W-E7ET', 'FOR-H29S-QW48', 'FOR-YNBQ-EA8V', 'FOR-SGXC-P5CF', 'FOR-C9FP-CX4X', 'FOR-MY5H-LMKS', 'FOR-N6VD-XR4Y', 'FOR-3M44-LBHU'],
     'marriage': ['MRG-JE88-78QG', 'MRG-KGAL-2VJS', 'MRG-J9QQ-V2Z4', 'MRG-MJAX-WXFG', 'MRG-3QXA-C4XR', 'MRG-RW7Q-4A3M', 'MRG-AFVH-G5CY', 'MRG-N7B8-DUP4', 'MRG-5JAT-8VWA', 'MRG-L5FX-AZZB', 'MRG-JUEG-XKET', 'MRG-VN3J-U7NH', 'MRG-YKVA-8NKJ', 'MRG-T4C7-SBHM', 'MRG-KGLM-SNB9', 'MRG-D44B-M6KA', 'MRG-RETK-DZN8', 'MRG-DQ6J-DB3H', 'MRG-HE9D-VR33', 'MRG-RKJF-AHPE', 'MRG-NEQ5-VUU3', 'MRG-S23K-YKY6', 'MRG-7RFH-KEJB', 'MRG-UB2A-3XYM', 'MRG-KNYN-M22L', 'MRG-YYJJ-EGN6', 'MRG-ZJVB-W9TW', 'MRG-3L3P-EF8Z', 'MRG-XTQ9-5JK4', 'MRG-E9B7-ZWP4', 'MRG-LV43-S8FC', 'MRG-PWRB-G45A', 'MRG-C3XS-D55X', 'MRG-CTQJ-EF9H', 'MRG-LBJ4-MK4Y', 'MRG-QP78-DB8F', 'MRG-VT24-NF4C', 'MRG-KHGG-VYPT', 'MRG-KBLD-3BVU', 'MRG-K6MG-WRL5', 'MRG-PSKT-ALGT', 'MRG-KLX2-V6BR', 'MRG-DCKZ-UYCE', 'MRG-EDJA-KT5Z', 'MRG-K76C-N68D', 'MRG-WWC8-6CB2', 'MRG-N3LQ-LENG', 'MRG-TFFN-APQF', 'MRG-FPTC-F75P', 'MRG-898Y-DPZK'],
@@ -318,6 +318,13 @@ PREMIUM_CODES_BY_SERVICE = {
     'subscription': ['SUB-D5KK-C53L', 'SUB-64EX-GA4H', 'SUB-LFBP-HK2T', 'SUB-JXLZ-XX9B', 'SUB-8LQX-2SLP', 'SUB-NEX8-35E8', 'SUB-FTJ9-QYDA', 'SUB-XH6T-Z6AT', 'SUB-VLT6-7UKX', 'SUB-WKNL-YTWP', 'SUB-JJ5T-37B9', 'SUB-CN8Z-ZQFK', 'SUB-MR7H-Y84V', 'SUB-KS5X-S37F', 'SUB-RZ8J-TJM4', 'SUB-E2LX-L6XN', 'SUB-HEGB-2M9B', 'SUB-BQYE-7U9Z', 'SUB-SKXU-P97S', 'SUB-D3W4-D4N6', 'SUB-G6B2-59W4', 'SUB-DN2M-M6NB', 'SUB-XH9P-WRPB', 'SUB-J4XZ-3JA6', 'SUB-D5SF-EK6P', 'SUB-J846-H3Q5', 'SUB-TCVX-2L6M', 'SUB-EN2D-K8FX', 'SUB-F7J6-TTA5', 'SUB-LWVA-DR65', 'SUB-7Q5Q-FFQ5', 'SUB-SSXA-8M4U', 'SUB-7MXE-8EJU', 'SUB-4VAY-7J5P', 'SUB-F7BX-UPGM', 'SUB-BNS6-ZQ5G', 'SUB-UD86-E2BA', 'SUB-YPKK-CVB8', 'SUB-BV6N-3Z7F', 'SUB-VVVB-V7BQ', 'SUB-G6TM-7EL5', 'SUB-BPSR-BUW4', 'SUB-MP3G-NJY5', 'SUB-2G8L-TH6K', 'SUB-DAXY-JSFD', 'SUB-WRLC-7XJR', 'SUB-PZUP-2DRD', 'SUB-KKX8-JYG3', 'SUB-GG6A-FLZT', 'SUB-NQDM-E6B3']
 }
 PREMIUM_ACCESS_CODES = set(code for codes in PREMIUM_CODES_BY_SERVICE.values() for code in codes)
+
+RECTIFICATION_CODES = ['REC-2026-001', 'REC-2026-002', 'REC-2026-003', 'REC-2026-004', 'REC-2026-005', 'REC-2026-006', 'REC-2026-007', 'REC-2026-008', 'REC-2026-009', 'REC-2026-010', 'REC-2026-011', 'REC-2026-012', 'REC-2026-013', 'REC-2026-014', 'REC-2026-015', 'REC-2026-016', 'REC-2026-017', 'REC-2026-018', 'REC-2026-019', 'REC-2026-020', 'REC-2026-021', 'REC-2026-022', 'REC-2026-023', 'REC-2026-024', 'REC-2026-025']
+
+# كود المطور الماستر: يفتح كل التقارير الاحترافية ولا يُستهلك.
+MASTER_ACCESS_CODE = os.environ.get("MASTER_ACCESS_CODE", "Abo_saj_2026+08@")
+MASTER_ACCESS_CODE_NORMALIZED = None  # يضبط بعد تعريف normalize_premium_code
+
 
 # سجل مستقل للأكواد المستخدمة.
 # لا يتم لمس هذا الملف عند استخراج التقرير الأولي، بل فقط عند فتح التقرير الاحترافي بنجاح.
@@ -350,18 +357,31 @@ def save_used_premium_codes(data: dict) -> None:
         pass
 
 def premium_code_service(clean_code: str) -> str:
+    if clean_code in RECTIFICATION_CODES:
+        return "rectification"
     for service, codes in PREMIUM_CODES_BY_SERVICE.items():
         if clean_code in codes:
             return service
     return ""
 
+def is_master_code(clean_code: str) -> bool:
+    """كود المطور الماستر يفتح جميع الأقسام ولا يُستهلك."""
+    try:
+        return clean_code == normalize_premium_code(MASTER_ACCESS_CODE)
+    except Exception:
+        return False
+
+
 def check_premium_code(code: str, service: str = "general") -> tuple[bool, str, str]:
     """يفحص الكود دون استهلاكه.
-    service يحدد الأداة المطلوبة مثل: forecast / marriage / relationship / natal / midpoints / subscription.
+    service يحدد الأداة المطلوبة مثل: forecast / marriage / relationship / natal / midpoints / subscription / rectification.
     """
     clean = normalize_premium_code(code)
     if not clean:
         return False, clean, "يرجى إدخال كود فتح التقرير الاحترافي."
+
+    if is_master_code(clean):
+        return True, clean, "كود المطور الماستر صحيح."
 
     actual_service = premium_code_service(clean)
     if not actual_service:
@@ -382,6 +402,8 @@ def check_premium_code(code: str, service: str = "general") -> tuple[bool, str, 
     return True, clean, "الكود صحيح."
 
 def mark_premium_code_used(clean_code: str, service: str = "general") -> None:
+    if is_master_code(clean_code):
+        return
     used = load_used_premium_codes()
     actual_service = premium_code_service(clean_code) or service
     used[clean_code] = {
@@ -7198,9 +7220,130 @@ def relationship_partner_birth(f):
         latitude=float(city_info["lat"]), longitude=float(city_info["lon"]),
     )
 
-@app.route("/midpoints")
+
+# ============================================================
+# تطبيق نقاط المنتصف - يعمل من بياناتي الفلكية
+# ============================================================
+
+MIDPOINTS_APP_HTML = r"""
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نقاط المنتصف</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#f4f1ea;margin:0;color:#2d2926;line-height:1.9}
+.container{max-width:980px;margin:0 auto;padding:18px}.card{background:#fffdf8;border:1px solid #ded4c4;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+h1{text-align:center;color:#3b2f2f}.platform-nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 16px}.platform-nav a{background:#fffdf8;border:1px solid #ded4c4;color:#5a3f2a;text-decoration:none;padding:8px 12px;border-radius:999px;font-weight:bold}
+textarea,input,select{width:100%;box-sizing:border-box;padding:11px;border-radius:12px;border:1px solid #c8bda9;background:#fff;font-size:16px}label{display:block;font-weight:bold;margin-top:10px}.btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;background:#6f4e37;color:white;font-size:17px;font-weight:bold;margin-top:12px}.btn-green{background:#2f6f4e}.error{background:#fdeaea;border:1px solid #e5b5b5;color:#7a2020;border-radius:14px;padding:12px}.success{background:#eaf7ea;border:1px solid #bfe3bf;color:#24552c;border-radius:14px;padding:12px}.report{white-space:pre-wrap;background:#fff;border:1px solid #eadfce;border-radius:14px;padding:14px}.muted{color:#6d6259;font-size:14px}
+</style>
+</head>
+<body><div class="container">
+<div class="platform-nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a></div>
+<div class="card"><h1>نقاط المنتصف</h1><p>يعتمد هذا القسم على بياناتك المحفوظة في صفحة بياناتي الفلكية. التقرير المجاني يشرح نقاط المنتصف الأصلية، والتقرير الاحترافي يضيف فحص التفعيل الحالي بالعبور.</p></div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if not profile_ready %}<div class="card"><p>أدخل بيانات ميلادك أولًا من صفحة بياناتي الفلكية ثم عُد إلى هذا القسم.</p><a class="btn btn-green" style="text-decoration:none;text-align:center" href="/profile">فتح بياناتي الفلكية</a></div>{% else %}
+<div class="card">
+<form method="post" onsubmit="return showMidLoading()">
+<label>نوع التقرير</label>
+<select name="report_type">
+<option value="free" {% if report_type=='free' %}selected{% endif %}>تقرير مجاني</option>
+<option value="premium" {% if report_type=='premium' %}selected{% endif %}>تقرير احترافي</option>
+</select>
+<label>كود التفعيل للتقرير الاحترافي</label>
+<input name="premium_code" value="{{ premium_code }}" placeholder="أدخل كود MID أو كود المطور">
+<p class="muted">اترك حقل الكود فارغًا عند طلب التقرير المجاني.</p>
+<button class="btn" id="midBtn" type="submit">استخراج تقرير نقاط المنتصف</button>
+</form>
+</div>
+{% if report %}<div class="card"><h2>التقرير</h2><button class="btn btn-green" onclick="navigator.clipboard.writeText(document.getElementById('midReport').innerText).then(()=>alert('تم نسخ التقرير'))">نسخ التقرير</button><div class="report" id="midReport">{{ report }}</div></div>{% endif %}
+{% endif %}
+</div>
+<script>
+function showMidLoading(){const b=document.getElementById('midBtn'); if(b){b.innerText='جاري استخراج التقرير...'; b.disabled=true;} return true;}
+</script>
+</body></html>
+"""
+
+def _chart_data_from_saved_profile():
+    form = form_from_session()
+    report = build_natal_report_from_form(form)
+    name = form.get("name", "صاحب الخريطة")
+    gender = form.get("gender", "ذكر")
+    year = int(form["year"]); month = int(form["month"]); day = int(form["day"])
+    hour = int(form["hour"]); minute = int(form["minute"])
+    country_code = form["country_code"]
+    city_input = form.get("city_select") or form.get("city") or form.get("city_manual")
+    city_info = find_city(country_code, city_input)
+    if not city_info:
+        raise RuntimeError("لم أتمكن من تحديد مدينة الميلاد المحفوظة.")
+    timezone = get_selected_timezone_offset(form, city_info, year, month, day, hour, minute)
+    positions, cusps, angles = calculate_chart(year, month, day, hour, minute, timezone, float(city_info["lat"]), float(city_info["lon"]), form.get("house_system","P"))
+    return form, positions, cusps, angles
+
+def build_midpoints_text(premium: bool = False) -> str:
+    form, positions, cusps, angles = _chart_data_from_saved_profile()
+    name = form.get("name","صاحب الخريطة")
+    groups = generate_midpoints_analysis(positions, cusps, angles)
+    out = [f"أهلًا {name}", "", "تقرير نقاط المنتصف", ""]
+    out.append("هذا التقرير يقرأ نقاط المنتصف بوصفها مفاتيح حساسة تجمع بين طاقتين في الخريطة. عند تفعيلها بالعبور أو التقدم أو القوس الشمسي قد تظهر نتائج نفسية أو عاطفية أو مهنية أو مالية بحسب طبيعة النقطة.")
+    for g in groups:
+        out.append("")
+        out.append(f"المحور: {g['title']}")
+        for item in g["items"]:
+            out.append("- " + item)
+    if premium:
+        out.append("")
+        out.append("فحص التفعيل الحالي بالعبور")
+        hits = []
+        now = datetime.now()
+        # نحسب العبور على توقيت بغداد كمرجع عام، وهو مناسب لمنصة المستخدم الحالية.
+        tpos, tcusps, tangles = calculate_chart(now.year, now.month, now.day, now.hour, now.minute, 3.0, 33.3152, 44.3661, "P")
+        aspect_defs = [("اقتران",0),("تربيع",90),("مقابلة",180)]
+        for group_title, definitions in MIDPOINT_GROUPS.items():
+            for label, a_key, b_key, meaning in definitions:
+                try:
+                    mid_lon = midpoint_short_arc(get_point_lon(a_key, positions, cusps, angles), get_point_lon(b_key, positions, cusps, angles))
+                    sign, deg = sign_from_lon(mid_lon)
+                    for tp in tpos.values():
+                        for aname, aval in aspect_defs:
+                            orb = abs(angular_distance(tp.lon, mid_lon) - aval)
+                            if orb <= 1.5:
+                                hits.append((orb, f"{tp.name_ar} العابر {aname} نقطة {label} في {sign} {format_degree(deg)} بفارق {orb:.2f}°. الدلالة العملية: {meaning}"))
+                except Exception:
+                    continue
+        hits.sort(key=lambda x: x[0])
+        if hits:
+            for _, line in hits[:24]:
+                out.append("- " + line)
+        else:
+            out.append("لا توجد تفعيلات دقيقة جدًا الآن ضمن أورب 1.5°، وهذا يعني أن نقاط المنتصف تعمل كخلفية وليست زرّ الحدث الأقوى في اللحظة الحالية.")
+    return "\n".join(out)
+
+@app.route("/midpoints", methods=["GET", "POST"])
 def midpoints():
-    return render_template_string(COMING_SOON_HTML, title="نقاط المنتصف")
+    error = ""
+    report = ""
+    report_type = request.form.get("report_type", "free") if request.method == "POST" else "free"
+    premium_code = request.form.get("premium_code", "") if request.method == "POST" else ""
+    profile_ready = profile_is_complete()
+    if request.method == "POST":
+        try:
+            if not profile_ready:
+                raise RuntimeError("أدخل بيانات ميلادك أولًا من صفحة بياناتي الفلكية.")
+            premium = report_type == "premium"
+            if premium:
+                ok, clean, msg = check_premium_code(premium_code, "midpoints")
+                if not ok:
+                    raise RuntimeError(msg)
+                report = build_midpoints_text(True)
+                mark_premium_code_used(clean, "midpoints")
+            else:
+                report = build_midpoints_text(False)
+        except Exception as exc:
+            error = str(exc)
+    return render_template_string(MIDPOINTS_APP_HTML, profile_ready=profile_ready, error=error, report=report, report_type=report_type, premium_code=premium_code)
 
 
 @app.route("/compatibility", methods=["GET", "POST"])
@@ -7259,9 +7402,163 @@ def compatibility():
     )
 
 
-@app.route("/rectification")
+
+# ============================================================
+# تطبيق تصحيح الطالع - دخول خاص بالكود
+# ============================================================
+
+RECTIFICATION_HTML = r"""
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تصحيح الطالع</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#111820;margin:0;color:#f5efe6;line-height:1.9}
+.container{max-width:980px;margin:0 auto;padding:18px}.card{background:#172231;border:1px solid #34445a;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+h1{text-align:center;color:#fff}h2{color:#fff;border-right:5px solid #c6983d;padding-right:10px}.platform-nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 16px}.platform-nav a{background:#111820;border:1px solid #34445a;color:#f5efe6;text-decoration:none;padding:8px 12px;border-radius:999px;font-weight:bold}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}textarea,input,select{width:100%;box-sizing:border-box;padding:11px;border-radius:12px;border:1px solid #c8a45d;background:#fff;color:#111;font-size:16px}label{display:block;font-weight:bold;margin-top:10px;color:#e8dccb}.btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;background:#795338;color:white;font-size:17px;font-weight:bold;margin-top:12px}.btn-green{background:#2f6f4e}.error{background:#3a1d1d;border:1px solid #a65b5b;color:#ffd8d8;border-radius:14px;padding:12px}.notice{background:#f7edc9;color:#2a2117;border:1px solid #caa75b;border-radius:14px;padding:12px}.report{white-space:pre-wrap;background:#080d17;border:1px solid #2aa7df;border-radius:14px;padding:14px;color:#fff}.muted{color:#c9c1b9;font-size:14px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body><div class="container">
+<div class="platform-nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a></div>
+<div class="card"><h1>تصحيح الطالع</h1><p>هذا القسم خاص بتقدير وقت الولادة من خلال المحور الصحي ومحور الأحداث العميقة. يمكن تعبئة البيانات والاختيارات، لكن لا تظهر أي نتيجة أو وقت ولادة مرشح إلا بكود خاص.</p></div>
+<div class="notice">
+<b>تعليمات مهمة قبل استخراج التصحيح:</b><br>
+- الحد الأدنى: حالة صحية واحدة على الأقل + حدثان عامان أو عميقان على الأقل.<br>
+- الأفضل إدخال 5 أحداث أو أكثر، والأقوى 7 شواهد أو أكثر بتواريخ واضحة.<br>
+- كلما زاد عدد التواريخ الصحية أو العامة زادت دقة الاقتراب من وقت الولادة الحقيقي.<br>
+- النطاق المثالي للبحث بين ساعة واحدة و4 ساعات. إذا كانت المعلومة غير دقيقة يمكن استخدام صباحي/مسائي، لكن الفحص سيكون أطول.
+</div>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" onsubmit="return showRectLoading()">
+<div class="card">
+<h2>بيانات الميلاد ومجال البحث</h2>
+<label>الاسم</label><input name="name" value="{{ f.name }}">
+<div class="grid2"><div><label>الدولة</label><select name="country_code" id="countrySelect" onchange="loadCities()">{% for c in countries %}<option value="{{ c.code }}" {% if f.country_code==c.code %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div><div><label>المدينة</label><select name="city" id="citySelect"><option value="{{ f.city }}">{{ f.city or 'اختر المدينة' }}</option></select></div></div>
+<div class="grid2"><div><label>تاريخ الميلاد</label><input type="date" name="birth_date" value="{{ f.birth_date }}"></div><div><label>فرق التوقيت وقت الولادة GMT</label><input name="timezone" value="{{ f.timezone or '3' }}"></div></div>
+<label>هل تتذكر العائلة أن الولادة كانت في أي فترة؟</label>
+<select name="period"><option value="" {% if not f.period %}selected{% endif %}>لا أعرف / غير متأكد</option><option value="night" {% if f.period=='night' %}selected{% endif %}>نهارًا: من 12 صباحًا إلى 12 ظهرًا</option><option value="evening" {% if f.period=='evening' %}selected{% endif %}>مساءً: من 12 ظهرًا إلى 12 ليلًا</option></select>
+<div class="grid2"><div><label>بداية البحث</label><input type="time" name="start_time" value="{{ f.start_time or '08:00' }}"></div><div><label>نهاية البحث</label><input type="time" name="end_time" value="{{ f.end_time or '12:00' }}"></div></div>
+</div>
+<div class="card">
+<h2>المحور الصحي ومحور الأحداث</h2>
+<label>الأحداث أو الحالات الصحية</label><textarea name="health_events" rows="5" placeholder="مثال: عملية، مرض مهم، عارض وراثي، حادث صحي، تاريخ التشخيص...">{{ f.health_events }}</textarea>
+<label>الأحداث العامة العميقة</label><textarea name="life_events" rows="5" placeholder="مثال: زواج، ولادة طفل، وفاة قريب، انتقال، وظيفة، طلاق، حادث كبير...">{{ f.life_events }}</textarea>
+</div>
+<div class="card">
+<h2>الكود الخاص</h2>
+<label>أدخل الكود الخاص بتصحيح الطالع</label><input name="rect_code" value="{{ f.rect_code }}" placeholder="أدخل كود REC أو كود المطور">
+<button class="btn" id="rectBtn" type="submit">استخراج التصحيح</button>
+</div>
+</form>
+{% if report %}<div class="card"><h2>نتيجة تصحيح الطالع</h2><button class="btn btn-green" onclick="navigator.clipboard.writeText(document.getElementById('rectReport').innerText).then(()=>alert('تم نسخ التقرير'))">نسخ تقرير المستخدم</button><div class="report" id="rectReport">{{ report }}</div></div>{% endif %}
+</div>
+<script>
+async function loadCities(){
+ const c=document.getElementById('countrySelect').value; const s=document.getElementById('citySelect');
+ s.innerHTML='<option>جاري التحميل...</option>';
+ try{const r=await fetch('/api/cities?country_code='+encodeURIComponent(c)); const j=await r.json(); s.innerHTML=''; (j.cities||[]).forEach(x=>{const o=document.createElement('option'); o.value=x; o.textContent=x; s.appendChild(o);});}catch(e){s.innerHTML='<option value="">اكتب المدينة لاحقًا</option>'}
+}
+function showRectLoading(){const b=document.getElementById('rectBtn'); if(b){b.innerText='جاري فحص أوقات الولادة...'; b.disabled=true;} return true;}
+document.addEventListener('DOMContentLoaded',()=>{if(!document.getElementById('citySelect').value){loadCities();}});
+</script>
+</body></html>
+"""
+
+def _count_event_lines(text: str) -> int:
+    parts = [x.strip() for x in re.split(r"[\n،,;]+", text or "") if x.strip()]
+    return len(parts)
+
+def _parse_hhmm(value: str) -> tuple[int,int]:
+    h, m = (value or "00:00").split(":")[:2]
+    return int(h), int(m)
+
+def _minutes_of(value: str) -> int:
+    h, m = _parse_hhmm(value)
+    return h*60 + m
+
+def build_rectification_report(f: dict) -> str:
+    ok, clean, msg = check_premium_code(f.get("rect_code",""), "rectification")
+    if not ok:
+        raise RuntimeError(msg)
+
+    if not f.get("birth_date"):
+        raise RuntimeError("يرجى إدخال تاريخ الميلاد.")
+    if not f.get("country_code") or not f.get("city"):
+        raise RuntimeError("يرجى اختيار الدولة والمدينة.")
+    health_count = _count_event_lines(f.get("health_events",""))
+    life_count = _count_event_lines(f.get("life_events",""))
+    if health_count < 1 or life_count < 2:
+        raise RuntimeError("الحد الأدنى المطلوب: حالة صحية واحدة على الأقل + حدثان عامان أو عميقان على الأقل.")
+
+    y, mo, d = [int(x) for x in f["birth_date"].split("-")]
+    city_info = find_city(f["country_code"], f["city"])
+    if not city_info:
+        raise RuntimeError("لم أتمكن من تحديد المدينة المختارة.")
+    start_min = _minutes_of(f.get("start_time","08:00"))
+    end_min = _minutes_of(f.get("end_time","12:00"))
+    if f.get("period") == "night":
+        start_min, end_min = max(start_min,0), min(end_min,12*60)
+    elif f.get("period") == "evening":
+        start_min, end_min = max(start_min,12*60), min(end_min,24*60)
+    if end_min <= start_min:
+        raise RuntimeError("نهاية البحث يجب أن تكون بعد بداية البحث، أو اختر نطاقًا زمنيًا أوضح.")
+
+    timezone = float(f.get("timezone") or 3)
+    lat = float(city_info["lat"]); lon_geo = float(city_info["lon"])
+    candidates = []
+    total_events = health_count + life_count
+    step = 15
+    for minute_total in range(start_min, end_min + 1, step):
+        hh = minute_total // 60
+        mm = minute_total % 60
+        positions, cusps, angles = calculate_chart(y, mo, d, hh, mm, timezone, lat, lon_geo, "P")
+        asc_sign = str(angles["ASC_sign"])
+        asc_deg = float(angles["ASC_degree"])
+        asc_term = get_ptolemy_term(asc_sign, asc_deg)
+        # ترجيح مبسط: البيوت الصحية 6/8/12، زوايا الطالع، وعدد الشواهد.
+        score = 35 + min(30, total_events * 5)
+        if positions["Saturn"].house in [1,6,8,12] or positions["Mars"].house in [1,6,8,12] or positions["Moon"].house in [6,8,12]:
+            score += 12
+        if asc_term in ["زحل","المريخ","القمر"]:
+            score += 8
+        if int(angles["ASC_degree"]) in [0,1,2,28,29]:
+            score += 5
+        score = max(0, min(100, score))
+        candidates.append((score, f"{hh:02d}:{mm:02d}", asc_sign, format_degree(asc_deg), asc_term))
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    mark_premium_code_used(clean, "rectification")
+
+    out = [f"تقرير تصحيح الطالع لـ {f.get('name') or 'صاحب البيانات'}", ""]
+    out.append(f"نطاق البحث: من {f.get('start_time')} إلى {f.get('end_time')}.")
+    out.append(f"عدد الشواهد الصحية: {health_count}. عدد الأحداث العامة: {life_count}.")
+    out.append("")
+    out.append("أفضل الأوقات المرشحة:")
+    for score, t, sign, deg, term in candidates[:8]:
+        out.append(f"- الساعة {t}: طالع {sign} {deg} ضمن حد {term}. قوة الترشيح التقريبية: {score}/100.")
+    out.append("")
+    out.append("ملاحظة مهمة: هذه النتيجة ترشيح أولي يحتاج إلى مراجعة الباحث، وكلما زادت التواريخ الدقيقة ارتفعت قوة التصحيح.")
+    return "\n".join(out)
+
+@app.route("/rectification", methods=["GET", "POST"])
 def rectification():
-    return render_template_string(COMING_SOON_HTML, title="تصحيح الطالع")
+    f = {
+        "name": "", "country_code": "IQ", "city": "", "birth_date": "", "timezone": "3",
+        "period": "", "start_time": "08:00", "end_time": "12:00",
+        "health_events": "", "life_events": "", "rect_code": ""
+    }
+    error = ""
+    report = ""
+    if request.method == "POST":
+        for k in f:
+            f[k] = request.form.get(k, f[k]).strip()
+        try:
+            report = build_rectification_report(f)
+        except Exception as exc:
+            error = str(exc)
+    return render_template_string(RECTIFICATION_HTML, f=type("F", (), f)(), countries=build_country_list(), error=error, report=report)
 
 
 @app.route("/health")
@@ -7305,6 +7602,16 @@ details.fold{background:#fffdf8;border:1px solid #ded4c4;border-radius:18px;marg
 <a class="article-card" href="/articles/zodiac-origin"><span class="badge">متاح</span><div class="title">أصل الأبراج وعددها</div><div class="desc">هل كانت كل الحضارات تعرف 12 برجًا؟ وكيف استقر النظام الاثنا عشري؟</div><span class="open-link">فتح المقالة</span></a>
 <a class="article-card" href="/articles/astrology-circle"><span class="badge">متاح</span><div class="title">الدائرة الفلكية</div><div class="desc">ما هي الدائرة الفلكية؟ كيف تُقسم إلى 360 درجة و12 برجًا؟ وما معنى الطالع والدرجات؟</div><span class="open-link">فتح المقالة</span></a>
 </div>
+<details class="fold" style="margin-top:14px">
+<summary><span>الظواهر الفلكية في التنجيم</span><span class="arrow">⌄</span></summary>
+<div class="fold-content">
+<div class="lesson-list">
+<a class="article-card" href="/articles/eclipses"><span class="badge">متاح</span><div class="title">الخسوف والكسوف</div><div class="desc">الفرق بين الخسوف والكسوف ومعناهما في التنجيم.</div><span class="open-link">فتح المقالة</span></a>
+<a class="article-card" href="/articles/new-moon"><span class="badge">متاح</span><div class="title">القمر الجديد</div><div class="desc">بداية الدورة القمرية ومعناها في التخطيط والبدايات.</div><span class="open-link">فتح المقالة</span></a>
+<a class="article-card" href="/articles/full-moon"><span class="badge">متاح</span><div class="title">اكتمال القمر</div><div class="desc">مرحلة الحصاد والكشف وظهور النتائج.</div><span class="open-link">فتح المقالة</span></a>
+</div>
+</div>
+</details>
 </div>
 </details>
 
@@ -7359,6 +7666,41 @@ ARTICLES_CONTENT = {
 <p>الطالع هو البرج الذي كان يشرق على الأفق الشرقي لحظة الولادة، ومنه يبدأ تقسيم البيوت. لذلك يُعد وقت الولادة الدقيق عنصرًا أساسيًا في بناء الخريطة.</p>
 <p>فهم الدائرة الفلكية هو الخطوة الأولى لفهم الأبراج، الكواكب، البيوت، الزوايا، العبور، والتوقعات.</p>
 """},
+    "eclipses": {"title":"الخسوف والكسوف", "body":"""
+<p>الخسوف والكسوف من أهم الظواهر السماوية التي لفتت انتباه الإنسان منذ أقدم العصور. وتحدث عندما تصطف الشمس والأرض والقمر على خط واحد تقريبًا.</p>
+<h2>ما هو الكسوف؟</h2>
+<p>الكسوف يحدث عندما يقع القمر بين الأرض والشمس، فيحجب ضوء الشمس عن جزء من الأرض. لذلك لا يحدث الكسوف إلا وقت القمر الجديد.</p>
+<p>وقد يكون الكسوف كليًا أو جزئيًا أو حلقيًا بحسب مقدار حجب القمر لقرص الشمس.</p>
+<h2>ما هو الخسوف؟</h2>
+<p>الخسوف يحدث عندما تقع الأرض بين الشمس والقمر، فيدخل القمر في ظل الأرض. لذلك لا يحدث الخسوف إلا وقت القمر الكامل.</p>
+<p>وقد يكون الخسوف كليًا أو جزئيًا أو شبه ظلي بحسب مقدار دخول القمر في ظل الأرض.</p>
+<h2>لماذا لا يحدثان كل شهر؟</h2>
+<p>لأن مدار القمر مائل قليلًا عن مسار الشمس الظاهري. لذلك لا يكفي وجود قمر جديد أو قمر كامل، بل يجب أن يكون القمر قريبًا من العقدتين القمريتين.</p>
+<h2>معناهما في التنجيم</h2>
+<p>في التنجيم يُنظر إلى الكسوف والخسوف بوصفهما لحظات قوية من التغيير. الكسوف يرتبط غالبًا بالبدايات الكبيرة، بينما يرتبط الخسوف بالكشف والاكتمال والنهايات أو ظهور النتائج.</p>
+<p>ولا يُحكم على أثرهما بصورة عامة إلا بعد معرفة البرج والدرجة والبيت الذي يقعان فيه، ومدى اتصالهما بكواكب الميلاد أو الطالع أو نقاط المنتصف.</p>
+"""},
+    "new-moon": {"title":"القمر الجديد", "body":"""
+<p>القمر الجديد يمثل بداية دورة قمرية جديدة تمتد قرابة 29 يومًا ونصف. في هذه اللحظة يجتمع القمر والشمس في الدرجة نفسها تقريبًا من دائرة البروج.</p>
+<h2>كيف يحدث؟</h2>
+<p>يحدث القمر الجديد عندما يقع القمر بين الأرض والشمس، فيكون وجهه المضيء بعيدًا عن الأرض، لذلك لا نراه بوضوح في السماء.</p>
+<h2>معناه في التنجيم</h2>
+<p>يرمز القمر الجديد إلى البدايات، التخطيط، زرع النية، بدء المشاريع، وتغيير العادات. إنه وقت الزراعة أكثر من وقت الحصاد.</p>
+<h2>أهمية البرج والبيت</h2>
+<p>البرج الذي يحدث فيه القمر الجديد يحدد طبيعة الطاقة، أما البيت فيحدد مجال الحياة الذي تبدأ فيه دورة جديدة، مثل المال أو العلاقات أو العمل أو العائلة.</p>
+<p>يكون تأثيره أقوى إذا وقع قرب الشمس أو القمر أو الطالع أو منتصف السماء أو حاكم الطالع أو نقطة منتصف حساسة في خريطة الشخص.</p>
+"""},
+    "full-moon": {"title":"اكتمال القمر", "body":"""
+<p>اكتمال القمر هو ذروة الدورة القمرية، ويحدث بعد حوالي أسبوعين من القمر الجديد، عندما يظهر قرص القمر مضاءً بالكامل تقريبًا.</p>
+<h2>كيف يحدث؟</h2>
+<p>يحدث اكتمال القمر عندما تقع الأرض بين الشمس والقمر، فيكون القمر في مقابلة فلكية للشمس.</p>
+<h2>معناه في التنجيم</h2>
+<p>إذا كان القمر الجديد يمثل البذرة والبداية، فإن اكتمال القمر يمثل النتيجة والحصاد والكشف. في هذه المرحلة تظهر الأمور بوضوح أكبر وتصل بعض المواضيع إلى مرحلة الحسم.</p>
+<h2>الفرق بين اكتمال القمر والخسوف</h2>
+<p>كل خسوف قمري يحدث أثناء اكتمال القمر، لكن ليس كل اكتمال للقمر يكون خسوفًا. الخسوف يحتاج إلى اصطفاف أدق ودخول القمر في ظل الأرض.</p>
+<p>تزداد أهمية اكتمال القمر عندما يلامس نقطة مهمة في الخريطة الشخصية مثل الشمس أو القمر أو الطالع أو منتصف السماء أو نقاط المنتصف الحساسة.</p>
+"""},
+
 }
 
 LESSONS_CONTENT = {
