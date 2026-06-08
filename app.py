@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V6.1.8 Railway Final
+قراءة الخريطة الشخصية - V6.1.12 Timing Free Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -30,7 +30,7 @@ import urllib.request
 import urllib.parse
 import ssl
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 
 from flask import Flask, request, render_template_string, jsonify, session, redirect, url_for
@@ -4691,6 +4691,11 @@ HOME_HTML = r"""
                 <span class="tool-text">التوقعات الشخصية</span>
                 <span class="tool-badge open">متاح</span>
             </a>
+            <a class="tool-item" href="/timing">
+                <span class="tool-icon">◴</span>
+                <span class="tool-text">اختيار الوقت المناسب</span>
+                <span class="tool-badge open">مجاني</span>
+            </a>
 
             <a class="tool-item" href="/compatibility">
                 <span class="tool-icon">♡</span>
@@ -5970,6 +5975,28 @@ window.addEventListener("pageshow", function(){
     }
 });
 
+// V6.1.10: ضمان ظهور حقل كود التوقعات حتى لو أخفته بعض أنماط الهاتف أو نسخة الكاش.
+document.addEventListener("DOMContentLoaded", function(){
+    const premiumBox = document.getElementById("forecastPremiumBox");
+    if (!premiumBox) return;
+    const existing = document.getElementById("forecastPremiumCodeTop") || document.getElementById("forecastPremiumCode");
+    if (existing) {
+        existing.style.setProperty("display", "block", "important");
+        existing.style.setProperty("visibility", "visible", "important");
+        existing.style.setProperty("opacity", "1", "important");
+        existing.style.setProperty("min-height", "52px", "important");
+        return;
+    }
+    const topic = document.querySelector('input[name="selected_topic"]') ? document.querySelector('input[name="selected_topic"]').value : "general";
+    const period = document.querySelector('input[name="period"]') ? document.querySelector('input[name="period"]').value : "هذا الشهر";
+    const fallback = document.createElement("form");
+    fallback.method = "post";
+    fallback.action = "/forecast";
+    fallback.style.cssText = "display:block!important;visibility:visible!important;margin-top:16px;background:#fff7d7;border:2px solid #b99a55;border-radius:16px;padding:16px;";
+    fallback.innerHTML = '<input type="hidden" name="selected_topic" value="'+topic+'"><input type="hidden" name="period" value="'+period+'"><input type="hidden" name="premium_action" value="unlock_report"><label style="display:block;font-weight:900;margin-bottom:8px;font-size:18px;">كود فتح التقرير الاحترافي</label><input name="premium_code" type="text" placeholder="أدخل كود الفتح هنا" dir="ltr" autocomplete="off" style="display:block!important;width:100%!important;min-height:52px!important;box-sizing:border-box!important;padding:14px!important;border-radius:12px!important;border:2px solid #8b6f47!important;text-align:center!important;font-weight:900!important;font-size:19px!important;background:#fff!important;color:#1f1a16!important;"><button type="submit" style="display:block;width:100%;margin-top:12px;background:#6f4e37;color:#fff;border:0;border-radius:12px;padding:14px;font-size:17px;font-weight:900;">فتح التقرير الاحترافي</button>';
+    premiumBox.appendChild(fallback);
+});
+
 </script>
 </head>
 <body>
@@ -6039,7 +6066,54 @@ window.addEventListener("pageshow", function(){
 </div>
 </form>
 <div class="note">ملاحظة: التقرير قراءة فلكية رمزية. في الصحة والقانون والمال القرار العملي يبقى للمختص.</div>
-{% if user_report %}<div class="card"><h2>التقرير الأولي المجاني</h2><div class="result-box">{{ user_report }}</div><div class="locked-reason">لماذا ظهرت هذه النتيجة؟ التقرير الاحترافي يشرح أثرها العملي عليك: أين توجد الفرصة، أين يظهر الضغط، ومتى يكون القرار أفضل.</div></div><div class="pro-box"><div class="pro-title">🔒 التقرير الاحترافي الكامل</div><p>هذا التقرير يعطيك القراءة العميقة للحالة المختارة، وليس مجرد نتيجة مختصرة.</p><div class="pro-grid"><div class="pro-item">خلاصة تأثير الفترة على حياتك</div><div class="pro-item">أفضل فرص الحركة والقرار</div><div class="pro-item">فترات الحذر والضغط النفسي</div><div class="pro-item">الأثر العاطفي والمهني والمالي</div><div class="pro-item">ما الذي ينبغي فعله الآن</div><div class="pro-item">توصية عملية واضحة</div></div><p>رقم الطلب: <span class="order-code">{{ forecast_order_id }}</span></p><p class="muted">بعد التواصل عبر @Astrol25 ستحصل على كود فتح مخصص لهذه الخدمة ويعمل مرة واحدة فقط.</p><a class="telegram-btn" href="{{ forecast_telegram_url }}" target="_blank" rel="noopener">طلب كود فتح التقرير الاحترافي</a><form method="post" style="margin-top:14px"><input type="hidden" name="selected_topic" value="{{ form.selected_topic }}"><input type="hidden" name="period" value="{{ form.period }}"><input type="hidden" name="premium_action" value="unlock_report"><input name="premium_code" placeholder="أدخل كود الفتح هنا" style="width:100%;padding:12px;border-radius:12px;border:1px solid #c9b58d;text-align:center;font-weight:bold;margin:8px 0"><button class="telegram-btn" type="submit" style="border:0;width:100%">فتح التقرير الاحترافي</button></form>{% if premium_message %}<p class="muted">{{ premium_message }}</p>{% endif %}</div>{% endif %}{% if premium_report %}<div class="card"><h2>التقرير الاحترافي الكامل</h2><div class="result-box">{{ premium_report }}</div></div>{% endif %}
+{% if user_report %}
+<div class="card">
+  <h2>التقرير الأولي المجاني</h2>
+  <div class="result-box">{{ user_report }}</div>
+  <div class="locked-reason">لماذا ظهرت هذه النتيجة؟ التقرير الاحترافي يشرح أثرها العملي عليك: أين توجد الفرصة، أين يظهر الضغط، ومتى يكون القرار أفضل.</div>
+</div>
+
+<div class="pro-box" id="forecastPremiumBox">
+  <div class="pro-title">🔒 التقرير الاحترافي الكامل</div>
+  <p>هذا التقرير يعطيك القراءة العميقة للحالة المختارة، وليس مجرد نتيجة مختصرة.</p>
+  <div class="pro-grid">
+    <div class="pro-item">خلاصة تأثير الفترة على حياتك</div>
+    <div class="pro-item">أفضل فرص الحركة والقرار</div>
+    <div class="pro-item">فترات الحذر والضغط النفسي</div>
+    <div class="pro-item">الأثر العاطفي والمهني والمالي</div>
+    <div class="pro-item">ما الذي ينبغي فعله الآن</div>
+    <div class="pro-item">توصية عملية واضحة</div>
+  </div>
+  <p>رقم الطلب: <span class="order-code">{{ forecast_order_id }}</span></p>
+  <p class="muted">بعد التواصل عبر @Astrol25 ستحصل على كود فتح مخصص لهذه الخدمة ويعمل مرة واحدة فقط.</p>
+  <a class="telegram-btn" href="{{ forecast_telegram_url }}" target="_blank" rel="noopener">طلب كود فتح التقرير الاحترافي</a>
+
+  <!-- V6.1.10: حقل فتح التقرير الاحترافي ظاهر دائمًا وبقوة على الهاتف -->
+  <form method="post" action="/forecast" id="forecastPremiumUnlockFormTop" style="display:block !important;visibility:visible !important;opacity:1 !important;margin-top:16px;background:#fff7d7;border:2px solid #b99a55;border-radius:16px;padding:16px;">
+    <input type="hidden" name="selected_topic" value="{{ form.selected_topic }}">
+    <input type="hidden" name="period" value="{{ form.period }}">
+    <input type="hidden" name="premium_action" value="unlock_report">
+    <label for="forecastPremiumCodeTop" style="display:block !important;font-weight:900;margin-bottom:8px;color:#3b2f2f;font-size:18px;">كود فتح التقرير الاحترافي</label>
+    <input id="forecastPremiumCodeTop" name="premium_code" type="text" placeholder="أدخل كود الفتح هنا" autocomplete="off" dir="ltr" style="display:block !important;visibility:visible !important;opacity:1 !important;width:100% !important;min-height:52px !important;box-sizing:border-box !important;padding:14px !important;border-radius:12px !important;border:2px solid #8b6f47 !important;text-align:center !important;font-weight:900 !important;font-size:19px !important;background:#ffffff !important;color:#1f1a16 !important;">
+    <button type="submit" style="display:block !important;width:100% !important;margin-top:12px;background:#6f4e37;color:#fff;border:0;border-radius:12px;padding:14px;font-size:17px;font-weight:900;">فتح التقرير الاحترافي</button>
+  </form>
+
+  <div class="premium-code-panel" style="margin-top:14px;background:#fff8dd;border:1px solid #e7d59a;border-radius:14px;padding:14px;">
+    <h3 style="margin:0 0 8px 0;color:#4b3828;">خانة كود التقرير الاحترافي</h3>
+    <p class="muted" style="margin:0 0 10px 0;">بعد استلام الكود، ضعه في الحقل أدناه ثم اضغط فتح التقرير الاحترافي.</p>
+    <form method="post" action="/forecast" id="forecastPremiumUnlockForm" style="margin-top:10px;">
+      <input type="hidden" name="selected_topic" value="{{ form.selected_topic }}">
+      <input type="hidden" name="period" value="{{ form.period }}">
+      <input type="hidden" name="premium_action" value="unlock_report">
+      <label for="forecastPremiumCode" style="font-weight:bold;display:block;margin-bottom:6px;">كود فتح التقرير الاحترافي</label>
+      <input id="forecastPremiumCode" name="premium_code" placeholder="أدخل كود الفتح هنا" autocomplete="off" dir="ltr" style="display:block;width:100%;box-sizing:border-box;padding:14px;border-radius:12px;border:1px solid #c9b58d;text-align:center;font-weight:900;font-size:18px;background:#fff;">
+      <button class="telegram-btn" type="submit" style="border:0;width:100%;margin-top:10px;">فتح التقرير الاحترافي</button>
+    </form>
+  </div>
+  {% if premium_message %}<p class="muted">{{ premium_message }}</p>{% endif %}
+</div>
+{% endif %}
+{% if premium_report %}<div class="card"><h2>التقرير الاحترافي الكامل</h2><div class="result-box">{{ premium_report }}</div></div>{% endif %}
 </div></body></html>
 """
 
@@ -6210,7 +6284,2734 @@ def forecast():
 # ============================================================
 # محرك الزواج والخطوبة V21.1 مدمج داخل AstroGate
 # ============================================================
-_MARRIAGE_ENGINE_CODE = '# -*- coding: utf-8 -*-\n"""\nمحلل الزواج من الخريطة الفلكية - نسخة Web Expert V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner\nتعمل بدون Kivy داخل Pydroid\n\nالإضافات الفلكية:\n- تحليل البيت السابع والخامس والرابع والعاشر والتاسع\n- الزهرة، القمر، المشتري، زحل، المريخ\n- جونو والعقد القمرية إن توفرت في Swiss Ephemeris\n- حدود بطليموس\n- الكرامة الأساسية\n- نقاط المنتصف العاطفية\n- البروفكشن السنوي\n- الفريدار\n- القوس الشمسي\n- التقدم الثانوي\n- عبور شهري خلال سنة الفحص\n- أفضل الأشهر داخل سنة الفحص\n- تقرير عربي موسع وبسيط\n"""\n\nimport swisseph as swe\nfrom datetime import datetime, timedelta\n\nSIGNS = [\n    "الحمل", "الثور", "الجوزاء", "السرطان",\n    "الأسد", "العذراء", "الميزان", "العقرب",\n    "القوس", "الجدي", "الدلو", "الحوت"\n]\n\nPLANETS = {\n    "الشمس": swe.SUN,\n    "القمر": swe.MOON,\n    "عطارد": swe.MERCURY,\n    "الزهرة": swe.VENUS,\n    "المريخ": swe.MARS,\n    "المشتري": swe.JUPITER,\n    "زحل": swe.SATURN,\n    "أورانوس": swe.URANUS,\n    "نبتون": swe.NEPTUNE,\n    "بلوتو": swe.PLUTO\n}\n\nOPTIONAL_BODIES = {\n    "جونو": getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3),\n    "العقدة الشمالية": getattr(swe, "TRUE_NODE", swe.MEAN_NODE)\n}\n\nSIGN_RULERS = {\n    "الحمل": "المريخ",\n    "الثور": "الزهرة",\n    "الجوزاء": "عطارد",\n    "السرطان": "القمر",\n    "الأسد": "الشمس",\n    "العذراء": "عطارد",\n    "الميزان": "الزهرة",\n    "العقرب": "المريخ",\n    "القوس": "المشتري",\n    "الجدي": "زحل",\n    "الدلو": "زحل",\n    "الحوت": "المشتري"\n}\n\nDOMICILES = {\n    "الشمس": ["الأسد"],\n    "القمر": ["السرطان"],\n    "عطارد": ["الجوزاء", "العذراء"],\n    "الزهرة": ["الثور", "الميزان"],\n    "المريخ": ["الحمل", "العقرب"],\n    "المشتري": ["القوس", "الحوت"],\n    "زحل": ["الجدي", "الدلو"]\n}\n\nEXALTATIONS = {\n    "الشمس": "الحمل",\n    "القمر": "الثور",\n    "عطارد": "العذراء",\n    "الزهرة": "الحوت",\n    "المريخ": "الجدي",\n    "المشتري": "السرطان",\n    "زحل": "الميزان"\n}\n\nDETRIMENTS = {\n    "الشمس": ["الدلو"],\n    "القمر": ["الجدي"],\n    "عطارد": ["القوس", "الحوت"],\n    "الزهرة": ["الحمل", "العقرب"],\n    "المريخ": ["الثور", "الميزان"],\n    "المشتري": ["الجوزاء", "العذراء"],\n    "زحل": ["السرطان", "الأسد"]\n}\n\nFALLS = {\n    "الشمس": "الميزان",\n    "القمر": "العقرب",\n    "عطارد": "الحوت",\n    "الزهرة": "العذراء",\n    "المريخ": "السرطان",\n    "المشتري": "الجدي",\n    "زحل": "الحمل"\n}\n\nASPECTS = [\n    ("اقتران", 0, 8),\n    ("تسديس", 60, 5),\n    ("تربيع", 90, 6),\n    ("تثليث", 120, 6),\n    ("مقابلة", 180, 8)\n]\n\nTIGHT_ASPECTS = [\n    ("اقتران", 0, 1.2),\n    ("تربيع", 90, 1.2),\n    ("مقابلة", 180, 1.2),\n    ("تثليث", 120, 1.0),\n    ("تسديس", 60, 1.0)\n]\n\nCITIES = {\n    "بغداد": (33.3152, 44.3661),\n    "النجف": (32.0003, 44.3354),\n    "الديوانية": (31.9861, 44.9256),\n    "كربلاء": (32.6160, 44.0249),\n    "البصرة": (30.5085, 47.7804),\n    "كركوك": (35.4681, 44.3922),\n    "الموصل": (36.3450, 43.1189),\n    "أربيل": (36.1911, 44.0092),\n    "الناصرية": (31.0579, 46.2573),\n    "السماوة": (31.3094, 45.2803),\n    "الكوت": (32.5128, 45.8182),\n    "الحلة": (32.4794, 44.4328),\n    "الرمادي": (33.4206, 43.3078),\n    "بعقوبة": (33.7485, 44.6555),\n    "تكريت": (34.6071, 43.6782),\n    "العمارة": (31.8356, 47.1448),\n    "إدخال يدوي": None\n}\n\nPTOLEMY_TERMS = {\n    "الحمل": [(6, "المشتري"), (14, "الزهرة"), (21, "عطارد"), (26, "المريخ"), (30, "زحل")],\n    "الثور": [(8, "الزهرة"), (15, "عطارد"), (22, "المشتري"), (26, "زحل"), (30, "المريخ")],\n    "الجوزاء": [(6, "عطارد"), (12, "المشتري"), (17, "الزهرة"), (24, "المريخ"), (30, "زحل")],\n    "السرطان": [(7, "المريخ"), (13, "الزهرة"), (19, "عطارد"), (26, "المشتري"), (30, "زحل")],\n    "الأسد": [(6, "المشتري"), (11, "الزهرة"), (18, "زحل"), (24, "عطارد"), (30, "المريخ")],\n    "العذراء": [(7, "عطارد"), (13, "الزهرة"), (18, "المشتري"), (24, "المريخ"), (30, "زحل")],\n    "الميزان": [(6, "زحل"), (14, "عطارد"), (21, "المشتري"), (28, "الزهرة"), (30, "المريخ")],\n    "العقرب": [(7, "المريخ"), (11, "الزهرة"), (19, "عطارد"), (24, "المشتري"), (30, "زحل")],\n    "القوس": [(12, "المشتري"), (17, "الزهرة"), (21, "عطارد"), (26, "زحل"), (30, "المريخ")],\n    "الجدي": [(7, "عطارد"), (14, "المشتري"), (22, "الزهرة"), (26, "زحل"), (30, "المريخ")],\n    "الدلو": [(7, "عطارد"), (13, "الزهرة"), (20, "المشتري"), (25, "المريخ"), (30, "زحل")],\n    "الحوت": [(12, "الزهرة"), (16, "المشتري"), (19, "عطارد"), (28, "المريخ"), (30, "زحل")]\n}\n\nFIRDARIA_DAY = [\n    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13), ("القمر", 9),\n    ("زحل", 11), ("المشتري", 12), ("المريخ", 7),\n    ("العقدة الشمالية", 3), ("العقدة الجنوبية", 2)\n]\n\nFIRDARIA_NIGHT = [\n    ("القمر", 9), ("زحل", 11), ("المشتري", 12), ("المريخ", 7),\n    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13),\n    ("العقدة الشمالية", 3), ("العقدة الجنوبية", 2)\n]\n\nSUB_SEQUENCE = ["الشمس", "الزهرة", "عطارد", "القمر", "زحل", "المشتري", "المريخ"]\n\n\ndef choose_from_list(title, options):\n    print("\\n" + title)\n    print("-" * 40)\n    for i, item in enumerate(options, start=1):\n        print(f"{i}. {item}")\n    while True:\n        raw = input("اختر الرقم: ").strip()\n        try:\n            idx = int(raw)\n            if 1 <= idx <= len(options):\n                return options[idx - 1]\n        except ValueError:\n            pass\n        print("اختيار غير صحيح.")\n\n\ndef choose_number(title, start, end):\n    print("\\n" + title)\n    print("-" * 40)\n    while True:\n        raw = input(f"اكتب رقمًا بين {start} و {end}: ").strip()\n        try:\n            val = int(raw)\n            if start <= val <= end:\n                return val\n        except ValueError:\n            pass\n        print("قيمة غير صحيحة.")\n\n\ndef choose_utc():\n    value = choose_from_list("اختر فرق التوقيت عن UTC", [\n        "3 - العراق والسعودية والكويت",\n        "2 - مصر/الأردن شتاءً",\n        "4 - الإمارات",\n        "0 - غرينتش",\n        "إدخال يدوي"\n    ])\n    if value.startswith("3"):\n        return 3.0\n    if value.startswith("2"):\n        return 2.0\n    if value.startswith("4"):\n        return 4.0\n    if value.startswith("0"):\n        return 0.0\n    while True:\n        try:\n            return float(input("اكتب فرق التوقيت مثل 3 أو 3.5: ").strip())\n        except ValueError:\n            print("قيمة غير صحيحة.")\n\n\ndef norm(x):\n    return x % 360.0\n\n\ndef sign_name(deg):\n    return SIGNS[int(norm(deg) // 30)]\n\n\ndef deg_in_sign(deg):\n    d = norm(deg) % 30\n    degree = int(d)\n    minute = int(round((d - degree) * 60))\n    if minute == 60:\n        degree += 1\n        minute = 0\n    return degree, minute\n\n\ndef format_pos(deg):\n    d, m = deg_in_sign(deg)\n    return f"{d}°{m:02d}′ {sign_name(deg)}"\n\n\ndef distance(a, b):\n    diff = abs(norm(a) - norm(b))\n    return min(diff, 360 - diff)\n\n\ndef find_aspect(a, b, tight=False):\n    aspects = TIGHT_ASPECTS if tight else ASPECTS\n    diff = distance(a, b)\n    for name, angle, orb in aspects:\n        off = abs(diff - angle)\n        if off <= orb:\n            return name, round(off, 2)\n    return None\n\n\ndef is_hard(asp):\n    return asp and asp[0] in ["تربيع", "مقابلة"]\n\n\ndef is_easy(asp):\n    return asp and asp[0] in ["اقتران", "تسديس", "تثليث"]\n\n\ndef in_arc(x, start, end):\n    x = norm(x)\n    start = norm(start)\n    end = norm(end)\n    if start <= end:\n        return start <= x < end\n    return x >= start or x < end\n\n\ndef house_of(deg, cusps):\n    for i in range(12):\n        if in_arc(deg, cusps[i], cusps[(i + 1) % 12]):\n            return i + 1\n    return 1\n\n\ndef house_ruler(cusps, house_num):\n    cusp = cusps[house_num - 1]\n    sign = sign_name(cusp)\n    return sign, SIGN_RULERS[sign]\n\n\ndef midpoint(a, b):\n    a = norm(a)\n    b = norm(b)\n    diff = (b - a) % 360\n    if diff > 180:\n        diff -= 360\n    return norm(a + diff / 2)\n\n\ndef ptolemy_term(deg):\n    sign = sign_name(deg)\n    d = norm(deg) % 30\n    for end_degree, ruler in PTOLEMY_TERMS[sign]:\n        if d < end_degree:\n            return ruler\n    return PTOLEMY_TERMS[sign][-1][1]\n\n\ndef dignity_score(planet, sign):\n    score = 0\n    notes = []\n    if planet in DOMICILES and sign in DOMICILES[planet]:\n        score += 10\n        notes.append("في بيته")\n    if planet in EXALTATIONS and sign == EXALTATIONS[planet]:\n        score += 8\n        notes.append("في شرفه")\n    if planet in DETRIMENTS and sign in DETRIMENTS[planet]:\n        score -= 8\n        notes.append("في وباله")\n    if planet in FALLS and sign == FALLS[planet]:\n        score -= 7\n        notes.append("في سقوطه")\n    if not notes:\n        notes.append("كرامة متوسطة")\n    return score, "، ".join(notes)\n\n\ndef planet_strength(planet, data):\n    sign = data["sign"]\n    house = data["house"]\n    retro = data["retro"]\n    score, note = dignity_score(planet, sign)\n    if house in [1, 4, 7, 10]:\n        score += 8\n        note += "، في بيت زاوي"\n    elif house in [2, 5, 8, 11]:\n        score += 3\n        note += "، في بيت لاحق"\n    else:\n        score -= 2\n        note += "، في بيت ساقط"\n    if retro:\n        score -= 4\n        note += "، متراجع"\n    return score, note\n\n\ndef calculate_chart(year, month, day, hour, minute, utc_offset, lat, lon):\n    chart_geo_lon = lon\n    # الوقت المدخل محلي ويحوّل فعليًا إلى UT\n    local_dt = datetime(year, month, day, hour, minute)\n    utc_dt = local_dt - timedelta(hours=utc_offset)\n    ut_hour = utc_dt.hour + utc_dt.minute / 60.0 + utc_dt.second / 3600.0\n\n    jd = swe.julday(\n        utc_dt.year,\n        utc_dt.month,\n        utc_dt.day,\n        ut_hour\n    )\n\n    houses = swe.houses(jd, lat, lon, b\'P\')\n    cusps = list(houses[0])\n    ascmc = houses[1]\n\n    positions = {}\n    for pname, pcode in PLANETS.items():\n        result = swe.calc_ut(jd, pcode)\n        lon = norm(result[0][0])\n        speed = result[0][3]\n        positions[pname] = {\n            "lon": lon,\n            "pos": format_pos(lon),\n            "sign": sign_name(lon),\n            "speed": speed,\n            "retro": speed < 0,\n            "house": None\n        }\n\n    for name, code in OPTIONAL_BODIES.items():\n        try:\n            result = swe.calc_ut(jd, code)\n            lon = norm(result[0][0])\n            speed = result[0][3]\n            positions[name] = {\n                "lon": lon,\n                "pos": format_pos(lon),\n                "sign": sign_name(lon),\n                "speed": speed,\n                "retro": speed < 0,\n                "house": None\n            }\n            if name == "العقدة الشمالية":\n                sn = norm(lon + 180)\n                positions["العقدة الجنوبية"] = {\n                    "lon": sn,\n                    "pos": format_pos(sn),\n                    "sign": sign_name(sn),\n                    "speed": speed,\n                    "retro": speed < 0,\n                    "house": None\n                }\n        except Exception:\n            pass\n\n    for pname in positions:\n        positions[pname]["house"] = house_of(positions[pname]["lon"], cusps)\n\n    return {\n        "jd": jd,\n        "positions": positions,\n        "cusps": cusps,\n        "ascmc": ascmc,\n        "year": year,\n        "month": month,\n        "day": day,\n        "hour": hour,\n        "minute": minute,\n        "utc_offset": utc_offset,\n        "local_dt": local_dt,\n        "utc_dt": utc_dt,\n        "lat": lat,\n        "lon": chart_geo_lon\n    }\n\n\ndef is_day_chart(positions):\n    return positions["الشمس"]["house"] in [7, 8, 9, 10, 11, 12]\n\n\ndef firdaria_for_age(age, day_chart=True):\n    sequence = FIRDARIA_DAY if day_chart else FIRDARIA_NIGHT\n    remaining = age\n    for ruler, years in sequence:\n        if remaining < years:\n            main = ruler\n            inside = remaining\n            if ruler in ["العقدة الشمالية", "العقدة الجنوبية"]:\n                sub = ruler\n            else:\n                sub_len = years / 7.0\n                idx = int(inside // sub_len)\n                if idx > 6:\n                    idx = 6\n                start = SUB_SEQUENCE.index(ruler) if ruler in SUB_SEQUENCE else 0\n                sub = SUB_SEQUENCE[(start + idx) % 7]\n            return main, sub, round(inside, 2)\n        remaining -= years\n    cycle = sum(y for _, y in sequence)\n    return firdaria_for_age(age % cycle, day_chart)\n\n\ndef classify(score):\n    if score <= 25:\n        return "ضعيف"\n    if score <= 50:\n        return "متوسط"\n    if score <= 75:\n        return "قوي"\n    return "قوي جدًا"\n\n\ndef add_score(current, amount):\n    return max(0, min(100, current + amount))\n\n\ndef scan_year_transits(chart, target_year, keys):\n    utc_offset = chart["utc_offset"]\n    scores = []\n    for month in range(1, 13):\n        month_score = 0\n        notes = []\n        dt = datetime(target_year, month, 15, 12, 0) - timedelta(hours=utc_offset)\n        jd = swe.julday(dt.year, dt.month, dt.day, dt.hour)\n        transit_codes = {\n            "المشتري": swe.JUPITER,\n            "زحل": swe.SATURN,\n            "الزهرة": swe.VENUS,\n            "المريخ": swe.MARS,\n            "القمر": swe.MOON\n        }\n        for tname, code in transit_codes.items():\n            try:\n                lon = norm(swe.calc_ut(jd, code)[0][0])\n            except Exception:\n                continue\n            for kname, klon in keys.items():\n                asp = find_aspect(lon, klon, tight=True)\n                if asp:\n                    if tname == "المشتري":\n                        month_score += 14\n                    elif tname == "زحل":\n                        month_score += 8\n                    elif tname == "الزهرة":\n                        month_score += 8\n                    elif tname == "المريخ":\n                        month_score += 5\n                    elif tname == "القمر":\n                        month_score += 3\n                    notes.append(f"{tname} يفعّل {kname} عبر {asp[0]}")\n                    break\n        scores.append((month, min(100, month_score), notes))\n    scores.sort(key=lambda x: x[1], reverse=True)\n    return scores\n\n\ndef analyze(chart, target_year):\n    p = chart["positions"]\n    cusps = chart["cusps"]\n    ascmc = chart["ascmc"]\n\n    seventh_sign, ruler7 = house_ruler(cusps, 7)\n    fifth_sign, ruler5 = house_ruler(cusps, 5)\n    fourth_sign, ruler4 = house_ruler(cusps, 4)\n    tenth_sign, ruler10 = house_ruler(cusps, 10)\n    ninth_sign, ruler9 = house_ruler(cusps, 9)\n    eighth_sign, ruler8 = house_ruler(cusps, 8)\n    second_from_7_sign, ruler_2_from_7 = house_ruler(cusps, 8)   # الثاني من السابع\n    sixth_from_7_sign, ruler_6_from_7 = house_ruler(cusps, 12)  # السادس من السابع\n    eighth_from_7_sign, ruler_8_from_7 = house_ruler(cusps, 2)  # الثامن من السابع\n    eleventh_sign, ruler11 = house_ruler(cusps, 11)             # الخامس من السابع\n\n    keys = {\n        "الهابط": cusps[6],\n        "الزهرة": p["الزهرة"]["lon"],\n        "حاكم السابع": p[ruler7]["lon"],\n        "القمر": p["القمر"]["lon"],\n        "الشمس/القمر": midpoint(p["الشمس"]["lon"], p["القمر"]["lon"]),\n        "الزهرة/المريخ": midpoint(p["الزهرة"]["lon"], p["المريخ"]["lon"]),\n        "القمر/الزهرة": midpoint(p["القمر"]["lon"], p["الزهرة"]["lon"]),\n        "الطالع/الزهرة": midpoint(ascmc[0], p["الزهرة"]["lon"])\n    }\n\n    if "جونو" in p:\n        keys["جونو"] = p["جونو"]["lon"]\n\n    natal_score = 0\n    love_score = 0\n    official_score = 0\n    delay_score = 0\n    separation_score = 0\n    second_score = 0\n    return_score = 0\n    karmic_score = 0\n    eighth_love_score = 0\n    crisis_score = 0\n    first_marriage_score = 0\n    second_marriage_power = 0\n\n    strengths = []\n    challenges = []\n    expert = []\n\n    v_strength, v_note = planet_strength("الزهرة", p["الزهرة"])\n    r_strength, r_note = planet_strength(ruler7, p[ruler7])\n\n    natal_score += max(-10, min(18, v_strength + r_strength))\n    expert.append(f"قوة الزهرة: {v_strength} / {v_note}")\n    expert.append(f"قوة حاكم السابع {ruler7}: {r_strength} / {r_note}")\n\n    ruler7_house = p[ruler7]["house"]\n    venus_house = p["الزهرة"]["house"]\n\n    if ruler7_house in [1, 4, 7, 10]:\n        natal_score += 25\n        official_score += 18\n        strengths.append("حاكم السابع في بيت زاوي؛ هذه من أقوى دلالات حضور الزواج.")\n    elif ruler7_house in [5, 11]:\n        natal_score += 16\n        love_score += 10\n        strengths.append("حاكم السابع في بيت اجتماعي أو عاطفي؛ الزواج قد يأتي عبر حب أو أصدقاء.")\n    elif ruler7_house in [9, 3]:\n        natal_score += 12\n        strengths.append("حاكم السابع في بيت حركة أو سفر أو تواصل؛ الزواج قد يأتي عبر انتقال أو بيئة مختلفة.")\n    else:\n        natal_score += 8\n\n    planets_in_7 = [x for x in PLANETS if p[x]["house"] == 7]\n    if planets_in_7:\n        natal_score += min(25, len(planets_in_7) * 8)\n        official_score += min(16, len(planets_in_7) * 5)\n        strengths.append("وجود كواكب في السابع يفتح ملف الزواج بوضوح: " + "، ".join(planets_in_7))\n\n    if venus_house in [1, 4, 7, 10]:\n        natal_score += 20\n        love_score += 18\n        official_score += 10\n        strengths.append("الزهرة في بيت زاوي؛ الحب والقبول يظهران بقوة.")\n    elif venus_house == 5:\n        natal_score += 18\n        love_score += 24\n        strengths.append("الزهرة في الخامس؛ رومانسية واضحة وبدايات حب قوية.")\n    elif venus_house == 8:\n        natal_score += 10\n        love_score += 14\n        eighth_love_score += 25\n        crisis_score += 18\n        return_score += 10\n        challenges.append("الزهرة في البيت الثامن: حب عميق وتعلق قوي، لكنه يحمل قابلية أزمة أو خوف من الفقد إذا غاب الأمان.")\n    elif venus_house in [11, 3]:\n        natal_score += 12\n        love_score += 12\n        strengths.append("الزهرة في بيت اجتماعي أو تواصلي؛ التعارف والحوار مهمان.")\n    elif venus_house in [6, 12]:\n        natal_score += 5\n        delay_score += 8\n        separation_score += 6\n        challenges.append("الزهرة في بيت ضعيف نسبيًا للعاطفة، وهذا يحتاج إلى وضوح وتوازن حتى لا تتحول العلاقة إلى تعب أو تضحية.")\n    else:\n        natal_score += 7\n\n    # الزهرة في الثامن: تتحول من عمق عاطفي إلى مؤشر أزمة إذا تعرضت لضغط\n    if venus_house == 8:\n        stressful_to_venus = []\n        for pressure in ["زحل", "أورانوس", "نبتون", "بلوتو", "المريخ"]:\n            asp8 = find_aspect(p[pressure]["lon"], p["الزهرة"]["lon"])\n            if asp8:\n                if is_hard(asp8) or asp8[0] == "اقتران":\n                    stressful_to_venus.append(f"{pressure} عبر {asp8[0]}")\n        if stressful_to_venus:\n            separation_score += 18\n            crisis_score += 22\n            return_score += 8\n            challenges.append("الزهرة في الثامن مضغوطة بـ " + "، ".join(stressful_to_venus) + "؛ هذا يرفع احتمال أزمة عاطفية أو انفصال مؤقت أو علاقة صعبة النسيان.")\n        else:\n            strengths.append("الزهرة في الثامن غير مضغوطة بقوة؛ تعطي عمقًا وتعلقًا وتحولًا نفسيًا أكثر من كونها مؤشر انفصال مباشر.")\n\n    # حاكم الثامن مع الزهرة أو السابع: يزيد معنى الأزمة/المال المشترك/التحول\n    for target in ["الزهرة", ruler7]:\n        asp8r = find_aspect(p[ruler8]["lon"], p[target]["lon"])\n        if asp8r:\n            if is_hard(asp8r):\n                crisis_score += 16\n                separation_score += 10\n                challenges.append(f"حاكم الثامن {ruler8} متوتر مع {target}: يرفع قابلية أزمة عاطفية أو مالية داخل العلاقة.")\n            else:\n                eighth_love_score += 10\n                return_score += 6\n                strengths.append(f"حاكم الثامن {ruler8} متصل بـ {target}: علاقة عميقة وتحول عاطفي أو مشاركة قوية.")\n\n    # classical + modern synthesis\n    pairings = [\n        ("الزهرة", ruler7, "الزهرة مع حاكم السابع"),\n        ("القمر", ruler7, "القمر مع حاكم السابع"),\n        ("المشتري", ruler7, "المشتري مع حاكم السابع"),\n        ("المشتري", "الزهرة", "المشتري مع الزهرة"),\n        ("الشمس", "القمر", "الشمس مع القمر"),\n        ("الزهرة", "المريخ", "الزهرة مع المريخ")\n    ]\n\n    for a, b, label in pairings:\n        asp = find_aspect(p[a]["lon"], p[b]["lon"])\n        if asp:\n            if is_easy(asp):\n                natal_score += 10\n                if a == "الزهرة" or b == "الزهرة":\n                    love_score += 8\n                if b == ruler7 or a == ruler7:\n                    official_score += 8\n                strengths.append(f"{label}: رابط داعم يرفع قابلية العلاقة.")\n            elif is_hard(asp):\n                natal_score += 5\n                love_score += 5\n                separation_score += 6\n                challenges.append(f"{label}: جذب أو تفعيل قوي لكنه يحتاج إلى نضج.")\n\n    # Saturn delay\n    if p["زحل"]["house"] == 7:\n        delay_score += 25\n        official_score += 8\n        challenges.append("زحل في السابع: زواج بعد نضج أو مسؤولية أو اختبار.")\n\n    for target in ["الزهرة", ruler7, "القمر"]:\n        asp = find_aspect(p["زحل"]["lon"], p[target]["lon"])\n        if asp:\n            if is_hard(asp):\n                delay_score += 18\n                separation_score += 8\n                challenges.append(f"زحل يضغط {target}: تأخير أو ثقل عاطفي.")\n            elif is_easy(asp):\n                official_score += 12\n                strengths.append(f"زحل يدعم {target}: قدرة على الالتزام والثبات.")\n\n    # Uranus/Neptune/Pluto\n    for outer in ["أورانوس", "نبتون", "بلوتو"]:\n        for target in ["الزهرة", ruler7]:\n            asp = find_aspect(p[outer]["lon"], p[target]["lon"])\n            if asp:\n                if outer == "أورانوس":\n                    separation_score += 16 if is_hard(asp) or asp[0] == "اقتران" else 8\n                    challenges.append("أورانوس يلمس دلالة عاطفية: علاقات مفاجئة أو غير تقليدية.")\n                elif outer == "نبتون":\n                    separation_score += 14 if is_hard(asp) or asp[0] == "اقتران" else 7\n                    challenges.append("نبتون يلمس دلالة عاطفية: مثالية أو غموض يحتاج إلى وضوح.")\n                elif outer == "بلوتو":\n                    return_score += 12\n                    separation_score += 8 if is_hard(asp) else 4\n                    challenges.append("بلوتو يلمس دلالة عاطفية: عمق وتعلق وتحول نفسي.")\n\n    if p["أورانوس"]["house"] == 7:\n        separation_score += 18\n        challenges.append("أورانوس في السابع: مفاجآت أو تغيرات في العلاقات.")\n    if p["نبتون"]["house"] == 7:\n        separation_score += 14\n        challenges.append("نبتون في السابع: مثالية عالية أو صورة غير واضحة للشريك.")\n    if p["بلوتو"]["house"] == 7:\n        separation_score += 10\n        return_score += 12\n        challenges.append("بلوتو في السابع: علاقات عميقة وصعبة النسيان.")\n\n    # home/social official\n    if ruler7 == ruler4 or ruler7_house == 4:\n        official_score += 16\n        natal_score += 10\n        strengths.append("ارتباط السابع بالرابع: دلالة بيت وسكن واستقرار.")\n    if ruler7 == ruler10 or ruler7_house == 10:\n        official_score += 16\n        natal_score += 10\n        strengths.append("ارتباط السابع بالعاشر: دلالة إعلان ومكانة اجتماعية.")\n    if ruler7 == ruler5 or ruler7_house == 5:\n        love_score += 16\n        natal_score += 8\n        strengths.append("ارتباط السابع بالخامس: الحب قد يتحول إلى زواج.")\n\n    # Juno\n    if "جونو" in p:\n        if p["جونو"]["house"] in [1, 4, 7, 10]:\n            official_score += 20\n            natal_score += 10\n            strengths.append("جونو في بيت زاوي: دلالة قوية على الالتزام والعقد.")\n        for target in ["الزهرة", ruler7, "القمر", "الشمس"]:\n            asp = find_aspect(p["جونو"]["lon"], p[target]["lon"])\n            if asp:\n                official_score += 12\n                strengths.append("جونو يتصل بمفتاح عاطفي أو زوجي: قابلية أعلى للارتباط الرسمي.")\n                break\n\n    # Nodes\n    for node in ["العقدة الشمالية", "العقدة الجنوبية"]:\n        if node in p:\n            for target in ["الزهرة", ruler7, "القمر", "الشمس", "جونو"]:\n                if target in p:\n                    asp = find_aspect(p[node]["lon"], p[target]["lon"], tight=True)\n                    if asp:\n                        karmic_score += 15\n                        expert.append(f"{node} تفعّل {target}: دلالة قدرية/كارمية.")\n                        break\n\n    # قوة الزواج الأول مقابل الزواج الثاني\n    # السابع = الزواج الأول، التاسع = الزواج الثاني في القراءة التقليدية، مع دعم من الحادي عشر كخامس من السابع\n    first_marriage_score += official_score + natal_score // 3\n    if ruler7_house in [1, 4, 7, 10]:\n        first_marriage_score += 15\n    if p["زحل"]["house"] == 7 and delay_score >= 20:\n        first_marriage_score -= 5\n\n    if p[ruler9]["house"] in [1, 7, 10, 11] or ruler9 in ["الزهرة", "المشتري"]:\n        second_score += 14\n        second_marriage_power += 15\n    if p[ruler9]["house"] in [5, 9]:\n        second_score += 10\n        second_marriage_power += 10\n    if find_aspect(p[ruler9]["lon"], p["الزهرة"]["lon"]):\n        second_score += 12\n        second_marriage_power += 12\n    if find_aspect(p[ruler9]["lon"], p[ruler7]["lon"]):\n        second_score += 12\n        second_marriage_power += 12\n    if find_aspect(p[ruler11]["lon"], p["الزهرة"]["lon"]):\n        second_score += 8\n        second_marriage_power += 8\n    if ruler9 == ruler7:\n        second_score += 8\n        second_marriage_power += 8\n\n    # بيوت مشتقة من السابع: السادس والثاني عشر من السابع مؤشرات تعب/انفصال إن نشطت بقوة\n    for derived_ruler, label in [\n        (ruler_6_from_7, "السادس من السابع"),\n        (ruler_8_from_7, "الثامن من السابع"),\n        (ruler_2_from_7, "الثاني من السابع")\n    ]:\n        for target in [ruler7, "الزهرة"]:\n            asp_d = find_aspect(p[derived_ruler]["lon"], p[target]["lon"])\n            if asp_d:\n                if is_hard(asp_d):\n                    separation_score += 8\n                    crisis_score += 8\n                    challenges.append(f"حاكم {label} متوتر مع {target}: يضيف ضغطًا على استمرار العلاقة أو مواردها.")\n                else:\n                    official_score += 4\n\n    # Timing\n    age = target_year - chart["year"]\n    if age < 0:\n        age = 0\n\n    timing_score = 0\n    timing_notes = []\n\n    prof_house = (age % 12) + 1\n    prof_sign, prof_ruler = house_ruler(cusps, prof_house)\n\n    if prof_house == 7:\n        timing_score += 28\n        timing_notes.append("البروفكشن يفتح البيت السابع مباشرة؛ سنة مهمة جدًا للزواج.")\n    elif prof_house in [5, 4, 10]:\n        timing_score += 18\n        timing_notes.append("البروفكشن يفتح بيتًا مساعدًا: الحب أو البيت أو الإعلان.")\n    elif prof_ruler in ["الزهرة", "القمر", "المشتري", ruler7]:\n        timing_score += 14\n        timing_notes.append("حاكم سنة البروفكشن مرتبط بدلالات الزواج.")\n\n    day_chart = is_day_chart(p)\n    main_f, sub_f, inside_f = firdaria_for_age(age, day_chart)\n    marriage_rulers = ["الزهرة", "القمر", "الشمس", "المشتري", ruler7]\n    if main_f in marriage_rulers:\n        timing_score += 22\n        timing_notes.append(f"الفريدار الرئيسي {main_f} مرتبط بالزواج.")\n    if sub_f in marriage_rulers:\n        timing_score += 15\n        timing_notes.append(f"الفريدار الفرعي {sub_f} مرتبط بالزواج.")\n    if main_f == "زحل":\n        timing_score += 6\n        timing_notes.append("فريدار زحل قد يعطي زواجًا رسميًا أو متأخرًا.")\n    if main_f == "المريخ":\n        timing_score += 4\n        timing_notes.append("فريدار المريخ قد يعطي حسمًا أو قرارًا سريعًا.")\n\n    # Solar arc\n    arc = age\n    sa_points = {\n        "SA الزهرة": norm(p["الزهرة"]["lon"] + arc),\n        "SA القمر": norm(p["القمر"]["lon"] + arc),\n        "SA الشمس": norm(p["الشمس"]["lon"] + arc),\n        "SA الطالع": norm(cusps[0] + arc),\n        "SA الهابط": norm(cusps[6] + arc),\n        "SA حاكم السابع": norm(p[ruler7]["lon"] + arc)\n    }\n    for sa_name, sa_lon in sa_points.items():\n        for kname, klon in keys.items():\n            asp = find_aspect(sa_lon, klon, tight=True)\n            if asp:\n                timing_score += 10\n                timing_notes.append(f"{sa_name} يفعّل {kname}: توقيت مهم.")\n                break\n\n    # Secondary progression\n    prog_jd = chart["jd"] + age\n    prog = {}\n    for n, code in [("القمر التقدمي", swe.MOON), ("الزهرة التقدمية", swe.VENUS), ("الشمس التقدمية", swe.SUN)]:\n        try:\n            prog[n] = norm(swe.calc_ut(prog_jd, code)[0][0])\n        except Exception:\n            pass\n    for n, lon in prog.items():\n        for kname, klon in keys.items():\n            asp = find_aspect(lon, klon, tight=True)\n            if asp:\n                timing_score += 9\n                timing_notes.append(f"{n} يفعّل {kname}: استعداد نفسي أو عاطفي.")\n                break\n\n    monthly = scan_year_transits(chart, target_year, keys)\n    top_month_score = monthly[0][1] if monthly else 0\n    timing_score += min(20, top_month_score)\n\n    natal_score = max(0, min(100, natal_score))\n    love_score = max(0, min(100, love_score))\n    official_score = max(0, min(100, official_score))\n    delay_score = max(0, min(100, delay_score))\n    separation_score = max(0, min(100, separation_score))\n    second_score = max(0, min(100, second_score))\n    return_score = max(0, min(100, return_score))\n    karmic_score = max(0, min(100, karmic_score))\n    eighth_love_score = max(0, min(100, eighth_love_score))\n    crisis_score = max(0, min(100, crisis_score))\n    first_marriage_score = max(0, min(100, first_marriage_score))\n    second_marriage_power = max(0, min(100, second_marriage_power))\n    timing_score = max(0, min(100, timing_score))\n\n    # إذا كان مؤشر الأزمة عالياً يزيد مؤشر الانفصال، لكن لا يلغي وعد الزواج\n    if crisis_score >= 55:\n        separation_score = max(separation_score, min(100, crisis_score + 10))\n\n    combined = round(\n        natal_score * 0.35 +\n        official_score * 0.15 +\n        love_score * 0.10 +\n        timing_score * 0.30 +\n        karmic_score * 0.05 +\n        return_score * 0.05\n    )\n\n    return {\n        "seventh_sign": seventh_sign,\n        "ruler7": ruler7,\n        "ruler7_house": ruler7_house,\n        "fifth_sign": fifth_sign,\n        "ruler5": ruler5,\n        "fourth_sign": fourth_sign,\n        "ruler4": ruler4,\n        "tenth_sign": tenth_sign,\n        "ruler10": ruler10,\n        "ninth_sign": ninth_sign,\n        "ruler9": ruler9,\n        "eighth_sign": eighth_sign,\n        "ruler8": ruler8,\n        "eleventh_sign": eleventh_sign,\n        "ruler11": ruler11,\n        "keys": keys,\n        "natal_score": natal_score,\n        "love_score": love_score,\n        "official_score": official_score,\n        "delay_score": delay_score,\n        "separation_score": separation_score,\n        "second_score": second_score,\n        "return_score": return_score,\n        "karmic_score": karmic_score,\n        "eighth_love_score": eighth_love_score,\n        "crisis_score": crisis_score,\n        "first_marriage_score": first_marriage_score,\n        "second_marriage_power": second_marriage_power,\n        "timing_score": timing_score,\n        "combined": combined,\n        "strengths": strengths,\n        "challenges": challenges,\n        "expert": expert,\n        "age": age,\n        "prof_house": prof_house,\n        "prof_sign": prof_sign,\n        "prof_ruler": prof_ruler,\n        "main_f": main_f,\n        "sub_f": sub_f,\n        "inside_f": inside_f,\n        "prog": prog,\n        "timing_notes": timing_notes,\n        "monthly": monthly\n    }\n\n\ndef partner_text(sign, ruler, house):\n    descriptions = {\n        "الحمل": "شريك مباشر، سريع، مبادر، وقد يكون قوي الحضور.",\n        "الثور": "شريك ثابت، عملي، يبحث عن الأمان والاستقرار.",\n        "الجوزاء": "شريك ذكي، متحدث، كثير الحركة والتواصل.",\n        "السرطان": "شريك عائلي، حنون، حساس، ويبحث عن الأمان.",\n        "الأسد": "شريك كريم، واضح، يحب التقدير والظهور.",\n        "العذراء": "شريك عملي، دقيق، يهتم بالتفاصيل والمسؤولية.",\n        "الميزان": "شريك لبق، اجتماعي، يحب التوازن والرسمية.",\n        "العقرب": "شريك عميق، غامض، عاطفته قوية وصعبة النسيان.",\n        "القوس": "شريك حر، محب للسفر والمعرفة والمساحة.",\n        "الجدي": "شريك جاد، مسؤول، وقد يكون أكبر عمرًا أو خبرة.",\n        "الدلو": "شريك مستقل، مختلف، عقلاني أو غير تقليدي.",\n        "الحوت": "شريك حساس، روحي، خيالي، وقد يكون مضحيًا."\n    }\n    houses = {\n        1: "يظهر الشريك بقوة في شخصية صاحب الخريطة وحياته المباشرة.",\n        2: "الزواج يرتبط بالمال والقيم والأمان.",\n        3: "الزواج قد يأتي عبر تواصل أو دراسة أو محيط قريب.",\n        4: "الزواج يرتبط بالبيت والسكن والعائلة.",\n        5: "الزواج قد يبدأ من حب ورومانسية.",\n        6: "الزواج يحتاج إلى تنظيم ومسؤولية يومية.",\n        7: "موضوع الزواج مباشر وقوي جدًا.",\n        8: "الزواج عميق وتحويلي وقد يرتبط بمال مشترك.",\n        9: "الزواج قد يرتبط بسفر أو اختلاف ثقافي أو ديني.",\n        10: "الزواج ظاهر اجتماعيًا ومؤثر في السمعة.",\n        11: "الزواج قد يأتي عبر الأصدقاء والمجتمع.",\n        12: "الزواج يحتاج إلى وضوح وقد يحمل خصوصية أو تأخيرًا."\n    }\n    return f"السابع في {sign}: {descriptions.get(sign,\'\')}\\nحاكم السابع {ruler} في البيت {house}: {houses.get(house,\'\')}"\n\n\ndef build_report(chart, analysis, name, gender, birth_info, city_name, target_year):\n    p = chart["positions"]\n    cusps = chart["cusps"]\n    ascmc = chart["ascmc"]\n\n    report = ""\n    report += "تقرير الزواج الفلكي المتقدم - Web Expert V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner\\n"\n    report += "===============================================\\n\\n"\n\n    report += "بيانات الخريطة\\n"\n    report += "--------------\\n"\n    report += f"الاسم: {name}\\n"\n    report += f"الجنس: {gender}\\n"\n    report += f"مكان الميلاد: {city_name}\\n"\n    report += f"بيانات الميلاد: {birth_info}\\n"\n    report += f"سنة فحص فرصة الزواج: {target_year}\\n\\n"\n\n    report += "مواقع الخريطة الفلكية\\n"\n    report += "--------------------\\n"\n    report += f"الطالع: {format_pos(ascmc[0])} / حد {ptolemy_term(ascmc[0])}\\n"\n    report += f"الهابط، باب الزواج: {format_pos(cusps[6])} / حد {ptolemy_term(cusps[6])}\\n"\n    report += f"منتصف السماء MC: {format_pos(ascmc[1])}\\n\\n"\n\n    report += "مواقع الكواكب\\n"\n    report += "-------------\\n"\n    for x in PLANETS:\n        retro = "متراجع" if p[x]["retro"] else "مباشر"\n        report += f"{x}: {p[x][\'pos\']}، البيت {p[x][\'house\']}، {retro}"\n        if x in ["الزهرة", "القمر", analysis["ruler7"], "المشتري", "زحل"]:\n            report += f"، حد {ptolemy_term(p[x][\'lon\'])}"\n        report += "\\n"\n    for x in ["جونو", "العقدة الشمالية", "العقدة الجنوبية"]:\n        if x in p:\n            retro = "متراجع" if p[x]["retro"] else "مباشر"\n            report += f"{x}: {p[x][\'pos\']}، البيت {p[x][\'house\']}، {retro}\\n"\n\n    report += "\\nمفاتيح الزواج\\n"\n    report += "-------------\\n"\n    report += f"برج السابع: {analysis[\'seventh_sign\']}\\n"\n    report += f"حاكم السابع: {analysis[\'ruler7\']}\\n"\n    report += f"موقع حاكم السابع: {p[analysis[\'ruler7\']][\'pos\']}، البيت {analysis[\'ruler7_house\']}\\n"\n    report += f"برج الخامس: {analysis[\'fifth_sign\']}، حاكمه {analysis[\'ruler5\']}\\n"\n    report += f"برج الرابع: {analysis[\'fourth_sign\']}، حاكمه {analysis[\'ruler4\']}\\n"\n    report += f"برج العاشر: {analysis[\'tenth_sign\']}، حاكمه {analysis[\'ruler10\']}\\n"\n    report += f"برج التاسع: {analysis[\'ninth_sign\']}، حاكمه {analysis[\'ruler9\']}، وهو مؤشر إضافي للزواج الثاني.\\n\\n"\n\n    report += "صورة الشريك والزواج\\n"\n    report += "------------------\\n"\n    report += partner_text(analysis["seventh_sign"], analysis["ruler7"], analysis["ruler7_house"]) + "\\n\\n"\n\n    report += "النقاط العاطفية الحساسة\\n"\n    report += "----------------------\\n"\n    for k in ["الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة", "الطالع/الزهرة"]:\n        report += f"{k}: {format_pos(analysis[\'keys\'][k])} / حد {ptolemy_term(analysis[\'keys\'][k])}\\n"\n\n    report += "\\nالنتائج الرقمية\\n"\n    report += "---------------\\n"\n    report += f"وعد الزواج الأصلي: {analysis[\'natal_score\']} من 100 / {classify(analysis[\'natal_score\'])}\\n"\n    report += f"مؤشر الحب والجذب: {analysis[\'love_score\']} من 100 / {classify(analysis[\'love_score\'])}\\n"\n    report += f"مؤشر الزواج الرسمي: {analysis[\'official_score\']} من 100 / {classify(analysis[\'official_score\'])}\\n"\n    report += f"مؤشر التأخير أو النضج: {analysis[\'delay_score\']} من 100 / {classify(analysis[\'delay_score\'])}\\n"\n    report += f"مؤشر التوتر أو الانفصال: {analysis[\'separation_score\']} من 100 / {classify(analysis[\'separation_score\'])}\\n"\n    report += f"مؤشر الزواج الثاني: {analysis[\'second_score\']} من 100 / {classify(analysis[\'second_score\'])}\\n"\n    report += f"قوة الزواج الأول: {analysis[\'first_marriage_score\']} من 100 / {classify(analysis[\'first_marriage_score\'])}\\n"\n    report += f"قوة احتمال زواج لاحق/ثانٍ: {analysis[\'second_marriage_power\']} من 100 / {classify(analysis[\'second_marriage_power\'])}\\n"\n    report += f"مؤشر عمق الزهرة/الثامن: {analysis[\'eighth_love_score\']} من 100 / {classify(analysis[\'eighth_love_score\'])}\\n"\n    report += f"مؤشر الأزمة والتحول العاطفي: {analysis[\'crisis_score\']} من 100 / {classify(analysis[\'crisis_score\'])}\\n"\n    report += f"مؤشر العودة بعد الانفصال: {analysis[\'return_score\']} من 100 / {classify(analysis[\'return_score\'])}\\n"\n    report += f"مؤشر العلاقة القدرية/الكارمية: {analysis[\'karmic_score\']} من 100 / {classify(analysis[\'karmic_score\'])}\\n"\n    report += f"مؤشر توقيت سنة {target_year}: {analysis[\'timing_score\']} من 100 / {classify(analysis[\'timing_score\'])}\\n"\n    report += f"المؤشر المركب النهائي: {analysis[\'combined\']} من 100 / {classify(analysis[\'combined\'])}\\n\\n"\n\n    report += "شرح مبسط للنتيجة\\n"\n    report += "----------------\\n"\n    if analysis["combined"] <= 25:\n        report += "النتيجة النهائية ضعيفة. هذا لا يعني استحالة الزواج، لكنه يعني أن الخريطة وسنة الفحص لا تعطيان دفعًا قويًا كافيًا حاليًا.\\n"\n    elif analysis["combined"] <= 50:\n        report += "النتيجة متوسطة. قد تظهر علاقة أو تفكير بالارتباط، لكن يحتاج الأمر إلى تفعيل أقوى أو ظروف واقعية أكثر وضوحًا.\\n"\n    elif analysis["combined"] <= 75:\n        report += "النتيجة قوية. توجد قابلية جدية للحب أو الخطوبة أو الاتفاق، خصوصًا إذا دعمتها الظروف العائلية والاجتماعية.\\n"\n    else:\n        report += "النتيجة قوية جدًا. السنة والخريطة تحملان مؤشرات واضحة للزواج أو القرار الرسمي إذا توفرت الظروف الواقعية.\\n"\n\n    report += "\\nدراسة الزهرة في الثامن والأزمات العاطفية\\n"\n    report += "----------------------------------------\\n"\n    if p[\'الزهرة\'][\'house\'] == 8:\n        report += "الزهرة موجودة في البيت الثامن. هذا يعطي حبًا عميقًا وتعلقًا قويًا، لكنه يجعل العلاقة حساسة تجاه الخوف من الفقد والغيرة والتحولات النفسية.\\n"\n        if analysis[\'crisis_score\'] >= 55:\n            report += "بسبب وجود ضغط إضافي على الزهرة أو حاكم الثامن، يتحول العمق العاطفي إلى مؤشر أزمة أقوى، وقد يظهر انفصال مؤقت أو علاقة صعبة النسيان.\\n"\n        else:\n            report += "لا يظهر ضغط كافٍ لجعلها مؤشر انفصال مباشر؛ هنا تكون أقرب إلى عمق وتعلق ومشاركة نفسية أو مالية.\\n"\n    else:\n        report += "الزهرة ليست في البيت الثامن، لذلك لا يوجد تفعيل مباشر لهذه القاعدة، وننظر إلى الثامن من خلال حاكمه واتصالاته.\\n"\n    report += f"حاكم الثامن هو {analysis[\'ruler8\']}، وبرج الثامن {analysis[\'eighth_sign\']}.\\n"\n\n    report += "\\nدراسة الزواج الأول والزواج الثاني\\n"\n    report += "--------------------------------\\n"\n    report += f"الزواج الأول يُقرأ أساسًا من البيت السابع وحاكمه {analysis[\'ruler7\']}.\\n"\n    report += f"الزواج الثاني يُقرأ كطبقة إضافية من البيت التاسع وحاكمه {analysis[\'ruler9\']}.\\n"\n    if analysis[\'second_marriage_power\'] > analysis[\'first_marriage_score\']:\n        report += "في هذه الخريطة تبدو دلالة الزواج اللاحق أو الثاني أقوى من دلالة الزواج الأول، وهذا قد يعني أن التجربة الثانية أكثر وضوحًا أو نضجًا.\\n"\n    elif analysis[\'second_marriage_power\'] >= 50:\n        report += "توجد دلالة معتبرة على ارتباط لاحق أو زواج ثانٍ، لكنها لا تتجاوز بالضرورة قوة الزواج الأول.\\n"\n    else:\n        report += "دلالة الزواج الثاني ليست غالبة في هذه القراءة، ويبقى التركيز الأكبر على الزواج الأول أو العلاقة الأساسية.\\n"\n\n    report += "\\nنقاط القوة\\n"\n    report += "----------\\n"\n    if analysis["strengths"]:\n        for s in analysis["strengths"]:\n            report += "+ " + s + "\\n"\n    else:\n        report += "لا توجد نقاط قوة كبيرة حسب القواعد الحالية.\\n"\n\n    report += "\\nنقاط التحدي\\n"\n    report += "-----------\\n"\n    if analysis["challenges"]:\n        for c in analysis["challenges"]:\n            report += "- " + c + "\\n"\n    else:\n        report += "لا تظهر تحديات قوية في ملف الزواج.\\n"\n\n    report += "\\nتحليل سنة الفحص\\n"\n    report += "---------------\\n"\n    report += f"العمر التقريبي: {analysis[\'age\']}\\n"\n    report += f"البروفكشن السنوي: البيت {analysis[\'prof_house\']}، برجه {analysis[\'prof_sign\']}، حاكمه {analysis[\'prof_ruler\']}\\n"\n    report += f"الفريدار: الرئيسي {analysis[\'main_f\']}، الفرعي {analysis[\'sub_f\']}، داخل الفترة منذ {analysis[\'inside_f\']} سنة تقريبًا.\\n"\n    if analysis["prog"]:\n        for n, lon in analysis["prog"].items():\n            report += f"{n}: {format_pos(lon)}\\n"\n    if analysis["timing_notes"]:\n        for t in analysis["timing_notes"]:\n            report += "* " + t + "\\n"\n    else:\n        report += "لا توجد تفعيلات زمنية قوية جدًا في هذه السنة.\\n"\n\n    report += "\\nأفضل الأشهر داخل سنة الفحص\\n"\n    report += "-------------------------\\n"\n    for month, score, notes in analysis["monthly"][:5]:\n        report += f"الشهر {month}: قوة {score}/100"\n        if notes:\n            report += " - " + "، ".join(notes[:3])\n        report += "\\n"\n\n    report += "\\nملاحظات فنية فلكية\\n"\n    report += "------------------\\n"\n    if analysis["expert"]:\n        for e in analysis["expert"]:\n            report += "* " + e + "\\n"\n    else:\n        report += "لا توجد ملاحظات فنية إضافية.\\n"\n\n    report += "\\nالخلاصة النهائية\\n"\n    report += "----------------\\n"\n    report += "الزواج لا يُحكم عليه من مؤشر واحد. أقوى الحالات هي التي يتكرر فيها الوعد في الميلاد، ثم يظهر التفعيل في البروفكشن والفريدار والقوس الشمسي والتقدم والعبور. هذه النسخة تجمع هذه الطبقات لتعطي قراءة أقوى من النسخ السابقة.\\n"\n    report += "\\nتنبيه: التقرير قراءة فلكية رمزية للبحث والتحليل، وليس حكمًا قطعيًا أو بديلًا عن القرار الشخصي.\\n"\n\n    return report\n\n\ndef main():\n    print("محلل الزواج الفلكي المتقدم - Web Expert V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner")\n    print("==============================================")\n    print("نسخة Console بدون Kivy، تعمل داخل Pydroid. أضيفت قواعد أعمق للزهرة في الثامن والانفصال والزواج الثاني.\\n")\n\n    name = input("اكتب الاسم: ").strip() or "بدون اسم"\n    gender = choose_from_list("اختر الجنس", ["ذكر", "أنثى"])\n\n    year = choose_number("اكتب سنة الميلاد", 1900, 2035)\n    month = choose_number("اختر الشهر", 1, 12)\n    if month in [1, 3, 5, 7, 8, 10, 12]:\n        max_day = 31\n    elif month in [4, 6, 9, 11]:\n        max_day = 30\n    else:\n        max_day = 29\n    day = choose_number("اختر اليوم", 1, max_day)\n    hour = choose_number("اختر الساعة", 0, 23)\n    minute = choose_number("اختر الدقيقة", 0, 59)\n    utc_offset = choose_utc()\n\n    city_name = choose_from_list("اختر المدينة", list(CITIES.keys()))\n    if city_name == "إدخال يدوي":\n        while True:\n            try:\n                lat = float(input("اكتب خط العرض: ").strip())\n                lon = float(input("اكتب خط الطول: ").strip())\n                city_name = "إحداثيات يدوية"\n                break\n            except ValueError:\n                print("اكتب أرقامًا صحيحة.")\n    else:\n        lat, lon = CITIES[city_name]\n\n    target_year = choose_number("اكتب السنة التي تريد فحص فرصة الزواج فيها", 1900, 2035)\n\n    chart = calculate_chart(year, month, day, hour, minute, utc_offset, lat, lon)\n    birth_info = f"{year}-{month:02d}-{day:02d} الساعة {hour:02d}:{minute:02d} / UTC {utc_offset:+}"\n\n    analysis = analyze(chart, target_year)\n    report = build_report(chart, analysis, name, gender, birth_info, city_name, target_year)\n\n    print("\\n" + report)\n\n    file_name = "marriage_report.txt"\n    with open(file_name, "w", encoding="utf-8") as f:\n        f.write(report)\n\n    print("\\nتم حفظ التقرير باسم:")\n    print(file_name)\n\n\n\n# =====================================================\n# V21.1 - ماسح توقيت الزواج بالسنة الشمسية العمرية\n# =====================================================\n\ndef safe_birth_anniversary(chart, age):\n    y = chart["year"] + age\n    m = chart["month"]\n    d = chart["day"]\n    h = chart["hour"]\n    mi = chart["minute"]\n    try:\n        return datetime(y, m, d, h, mi)\n    except ValueError:\n        # لمواليد 29 شباط\n        return datetime(y, 2, 28, h, mi)\n\n\ndef solar_age_period(chart, age):\n    start = safe_birth_anniversary(chart, age)\n    end = safe_birth_anniversary(chart, age + 1)\n    return start, end\n\n\ndef solar_year_midpoint(chart, age):\n    start, end = solar_age_period(chart, age)\n    return start + (end - start) / 2\n\n\ndef timing_age_analysis(chart, age):\n    """\n    يستخدم العمر الفعلي لا السنة الميلادية فقط.\n    هذا يصحح حالة الزواج قبل عيد الميلاد داخل نفس السنة الميلادية.\n    """\n    # نمرر سنة تقريبية للمحرك الأصلي ثم نعيد ضبط العمر داخليًا عبر year = birth+age\n    target_year = chart["year"] + age\n    return analyze(chart, target_year)\n\n\ndef timing_aspect_weight(body, key, asp):\n    """\n    V21.1:\n    في توقيت الزواج لا تُعامل الزوايا الصعبة دائمًا كسلبية.\n    مقابلة المشتري للزهرة أو حاكم السابع قد تكون تفعيل زواج قوي جدًا.\n    """\n    name = asp[0]\n    weight = 0\n\n    if body == "المشتري":\n        weight = 20\n    elif body == "زحل":\n        weight = 18\n    elif body == "جونو":\n        weight = 20\n    elif body == "العقدة الشمالية":\n        weight = 18\n    elif body == "الزهرة":\n        weight = 5\n    elif body == "المريخ":\n        weight = 4\n    elif body == "أورانوس":\n        weight = 5\n    elif body == "نبتون":\n        weight = 4\n    elif body == "بلوتو":\n        weight = 6\n    else:\n        weight = 2\n\n    # أهم نقاط الزواج\n    if key in ["الهابط", "حاكم السابع", "الزهرة", "جونو"]:\n        weight += 10\n    elif key in ["الشمس/القمر", "الزهرة/المريخ"]:\n        weight += 5\n    elif key in ["القمر/الزهرة", "الطالع/الزهرة"]:\n        weight += 3\n\n    # نوع الزاوية\n    if name == "اقتران":\n        weight += 8\n    elif name == "مقابلة":\n        # المقابلة على محور الزواج/الزهرة تفتح حدثًا خارجيًا واضحًا\n        weight += 7 if key in ["الزهرة", "حاكم السابع", "الهابط", "جونو"] else 3\n    elif name == "تربيع":\n        # التربيع قد يعطي قرارًا تحت ضغط\n        weight += 5 if key in ["الزهرة", "حاكم السابع", "الهابط", "جونو"] else 2\n    elif name in ["تثليث", "تسديس"]:\n        weight += 5\n\n    return weight\n\n\ndef scan_transits_in_solar_period(chart, age, keys):\n    """\n    فحص العبور داخل السنة العمرية من عيد الميلاد إلى عيد الميلاد.\n    يمنع التضخيم: كل كوكب/نقطة/زاوية تُحسب مرة واحدة بأقوى قرب.\n    """\n    start_local, end_local = solar_age_period(chart, age)\n    utc_offset = chart.get("utc_offset", 0)\n\n    transit_codes = {\n        "المشتري": swe.JUPITER,\n        "زحل": swe.SATURN,\n        "جونو": getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3),\n        "العقدة الشمالية": getattr(swe, "TRUE_NODE", swe.MEAN_NODE),\n        "الزهرة": swe.VENUS,\n        "المريخ": swe.MARS,\n        "أورانوس": swe.URANUS,\n        "نبتون": swe.NEPTUNE,\n        "بلوتو": swe.PLUTO,\n    }\n\n    priority_keys = {}\n    for k in ["الهابط", "الزهرة", "حاكم السابع", "جونو",\n              "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة", "الطالع/الزهرة"]:\n        if k in keys:\n            priority_keys[k] = keys[k]\n\n    best_hits = {}\n    month_power = {}\n\n    current = start_local\n    while current < end_local:\n        utc_dt = current - timedelta(hours=utc_offset)\n        jd = swe.julday(\n            utc_dt.year,\n            utc_dt.month,\n            utc_dt.day,\n            utc_dt.hour + utc_dt.minute / 60.0\n        )\n\n        for body, code in transit_codes.items():\n            try:\n                lon = norm(swe.calc_ut(jd, code)[0][0])\n            except Exception:\n                continue\n\n            for key, key_lon in priority_keys.items():\n                asp = find_aspect(lon, key_lon, tight=True)\n                if not asp:\n                    continue\n\n                asp_name, orb = asp\n                # الشمس/الزهرة/المريخ سريعة، لا نسمح لها برفع سنة كاملة إلا كعامل مساعد\n                w = timing_aspect_weight(body, key, asp)\n                if body in ["الزهرة", "المريخ"]:\n                    w = max(2, int(w * 0.45))\n\n                hit_key = (body, key, asp_name)\n                old = best_hits.get(hit_key)\n                if old is None or orb < old["orb"]:\n                    best_hits[hit_key] = {\n                        "date": current,\n                        "month": current.month,\n                        "body": body,\n                        "key": key,\n                        "aspect": asp_name,\n                        "orb": orb,\n                        "allowed_orb": locals().get("allowed_orb", None),\n                        "phase": locals().get("phase", "غير محدد"),\n                        "weight": w\n                    }\n\n        current += timedelta(days=7)\n\n    hits = list(best_hits.values())\n\n    # نرتب حسب الوزن ثم الدقة\n    hits.sort(key=lambda h: (h["weight"], -h["orb"]), reverse=True)\n\n    # سقف حسب النوع حتى لا تسيطر العقد أو المشتري وحدهما\n    body_counts = {}\n    filtered = []\n    for h in hits:\n        b = h["body"]\n        body_counts[b] = body_counts.get(b, 0)\n        max_allowed = 4 if b in ["المشتري", "زحل", "جونو", "العقدة الشمالية"] else 2\n        if body_counts[b] < max_allowed:\n            filtered.append(h)\n            body_counts[b] += 1\n\n    raw = sum(h["weight"] for h in filtered)\n\n    # بونص تنوع: سنة الزواج الحقيقية غالبًا لا تقوم على عامل واحد فقط\n    distinct_bodies = len(set(h["body"] for h in filtered))\n    distinct_keys = len(set(h["key"] for h in filtered))\n    diversity_bonus = min(18, distinct_bodies * 2 + distinct_keys)\n\n    score = min(100, int(raw * 0.68 + diversity_bonus))\n\n    for h in filtered:\n        month_power[h["month"]] = month_power.get(h["month"], 0) + h["weight"]\n    top_months = sorted(month_power.items(), key=lambda x: x[1], reverse=True)[:4]\n\n    return {\n        "score": score,\n        "raw": raw,\n        "hits": filtered[:10],\n        "top_months": top_months\n    }\n\n\ndef solar_arc_hits_for_age(chart, analysis, age):\n    p = chart["positions"]\n    cusps = chart["cusps"]\n    keys = analysis["keys"]\n    ruler7 = analysis["ruler7"]\n    arc = age\n\n    points = {\n        "SA الزهرة": norm(p["الزهرة"]["lon"] + arc),\n        "SA القمر": norm(p["القمر"]["lon"] + arc),\n        "SA الشمس": norm(p["الشمس"]["lon"] + arc),\n        "SA الطالع": norm(cusps[0] + arc),\n        "SA الهابط": norm(cusps[6] + arc),\n        "SA حاكم السابع": norm(p[ruler7]["lon"] + arc)\n    }\n\n    hits = []\n    for name, lon in points.items():\n        for key in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة"]:\n            if key not in keys:\n                continue\n            asp = find_aspect(lon, keys[key], tight=True)\n            if asp:\n                hits.append((name, key, asp[0], asp[1]))\n                break\n    return hits\n\n\ndef progressed_hits_for_age(chart, analysis, age):\n    keys = analysis["keys"]\n    jd = chart["jd"] + age\n    prog_points = {}\n    try:\n        prog_points["القمر التقدمي"] = norm(swe.calc_ut(jd, swe.MOON)[0][0])\n        prog_points["الزهرة التقدمية"] = norm(swe.calc_ut(jd, swe.VENUS)[0][0])\n        prog_points["الشمس التقدمية"] = norm(swe.calc_ut(jd, swe.SUN)[0][0])\n    except Exception:\n        pass\n\n    hits = []\n    for name, lon in prog_points.items():\n        for key in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة"]:\n            if key not in keys:\n                continue\n            asp = find_aspect(lon, keys[key], tight=True)\n            if asp:\n                hits.append((name, key, asp[0], asp[1]))\n                break\n    return hits\n\n\n\n\ndef zodiac_delta(a, b):\n    """فرق دائري موجّه بين درجتين."""\n    return ((a - b + 180) % 360) - 180\n\n\ndef find_solar_return_jd(chart, age):\n    """\n    إيجاد لحظة العودة الشمسية تقريبًا عندما تعود الشمس إلى درجتها الأصلية.\n    نبحث حول عيد الميلاد ثم نستخدم bisection.\n    """\n    natal_sun = chart["positions"]["الشمس"]["lon"]\n    target_year = chart["year"] + age\n    utc_offset = chart.get("utc_offset", 0)\n\n    approx_local = safe_birth_anniversary(chart, age)\n    approx_utc = approx_local - timedelta(hours=utc_offset)\n\n    def jd_from_dt(dt):\n        return swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0 + dt.second / 3600.0)\n\n    center_jd = jd_from_dt(approx_utc)\n\n    # ابحث عن انقلاب الإشارة خلال 10 أيام حول عيد الميلاد\n    prev_jd = center_jd - 5\n    prev_diff = zodiac_delta(norm(swe.calc_ut(prev_jd, swe.SUN)[0][0]), natal_sun)\n\n    bracket = None\n    step = 0.25\n    j = prev_jd + step\n    while j <= center_jd + 5:\n        try:\n            diff = zodiac_delta(norm(swe.calc_ut(j, swe.SUN)[0][0]), natal_sun)\n        except Exception:\n            j += step\n            continue\n        if prev_diff == 0 or diff == 0 or (prev_diff < 0 < diff) or (prev_diff > 0 > diff):\n            bracket = (j - step, j)\n            break\n        prev_diff = diff\n        j += step\n\n    if bracket is None:\n        # احتياط: استخدم أقرب نقطة من البحث\n        best_jd = center_jd\n        best_abs = 999\n        j = center_jd - 5\n        while j <= center_jd + 5:\n            diff = abs(zodiac_delta(norm(swe.calc_ut(j, swe.SUN)[0][0]), natal_sun))\n            if diff < best_abs:\n                best_abs = diff\n                best_jd = j\n            j += 0.1\n        return best_jd\n\n    lo, hi = bracket\n    for _ in range(40):\n        mid = (lo + hi) / 2\n        d_lo = zodiac_delta(norm(swe.calc_ut(lo, swe.SUN)[0][0]), natal_sun)\n        d_mid = zodiac_delta(norm(swe.calc_ut(mid, swe.SUN)[0][0]), natal_sun)\n        if (d_lo < 0 < d_mid) or (d_lo > 0 > d_mid):\n            hi = mid\n        else:\n            lo = mid\n    return (lo + hi) / 2\n\n\ndef calculate_solar_return_chart(chart, age):\n    """\n    حساب خريطة العودة الشمسية لموقع الميلاد نفسه.\n    """\n    sr_jd = find_solar_return_jd(chart, age)\n    local_dt = swe.revjul(sr_jd)\n    # revjul يرجع UT: year, month, day, hour_float\n    y, m, d, hour_float = local_dt\n    h = int(hour_float)\n    mi = int(round((hour_float - h) * 60))\n    if mi == 60:\n        h += 1\n        mi = 0\n\n    # الموقع الأصلي غير مخزن في chart، لذلك سنضيفه لاحقًا عند إنشاء chart\n    lat = chart.get("lat", 33.3152)\n    lon = chart.get("lon", 44.3661)\n\n    houses = swe.houses(sr_jd, lat, lon, b\'P\')\n    cusps = list(houses[0])\n    ascmc = houses[1]\n\n    positions = {}\n    all_codes = dict(PLANETS)\n    try:\n        all_codes["جونو"] = getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3)\n    except Exception:\n        pass\n    all_codes["العقدة الشمالية"] = getattr(swe, "TRUE_NODE", swe.MEAN_NODE)\n\n    for pname, pcode in all_codes.items():\n        try:\n            result = swe.calc_ut(sr_jd, pcode)\n            lon_deg = norm(result[0][0])\n            speed = result[0][3]\n            positions[pname] = {\n                "lon": lon_deg,\n                "pos": format_pos(lon_deg),\n                "sign": sign_name(lon_deg),\n                "speed": speed,\n                "retro": speed < 0,\n                "house": house_of(lon_deg, cusps)\n            }\n        except Exception:\n            pass\n\n    if "العقدة الشمالية" in positions:\n        sn = norm(positions["العقدة الشمالية"]["lon"] + 180)\n        positions["العقدة الجنوبية"] = {\n            "lon": sn,\n            "pos": format_pos(sn),\n            "sign": sign_name(sn),\n            "speed": positions["العقدة الشمالية"]["speed"],\n            "retro": positions["العقدة الشمالية"]["retro"],\n            "house": house_of(sn, cusps)\n        }\n\n    return {\n        "jd": sr_jd,\n        "positions": positions,\n        "cusps": cusps,\n        "ascmc": ascmc,\n        "ut_tuple": (y, m, d, h, mi)\n    }\n\n\ndef solar_return_marriage_score(chart, analysis, age):\n    """\n    تحليل العودة الشمسية لسنة عمرية محددة.\n    أهم دلالات الزواج:\n    - طالع/هابط العودة على نقاط الزواج الأصلية.\n    - الزهرة أو المشتري أو جونو في السابع/الأول/الرابع/العاشر.\n    - حاكم السابع في العودة قوي أو متصل بالزهرة/المشتري.\n    - بيت السابع في العودة مرتبط ببيوت الزوايا أو بخريطة الميلاد.\n    """\n    sr = calculate_solar_return_chart(chart, age)\n    srp = sr["positions"]\n    src = sr["cusps"]\n    sr_asc = sr["ascmc"][0]\n    sr_dsc = src[6]\n    sr_mc = sr["ascmc"][1]\n\n    natal_p = chart["positions"]\n    natal_cusps = chart["cusps"]\n    natal_keys = analysis["keys"]\n\n    score = 0\n    notes = []\n\n    # مفاتيح العودة على نقاط الزواج الأصلية\n    sr_angles = {\n        "طالع العودة": sr_asc,\n        "هابط العودة": sr_dsc,\n        "منتصف سماء العودة": sr_mc,\n        "رابع العودة": src[3]\n    }\n\n    important_keys = {\n        "هابط الميلاد": natal_cusps[6],\n        "زهرة الميلاد": natal_p["الزهرة"]["lon"],\n        "حاكم السابع": natal_p[analysis["ruler7"]]["lon"],\n        "الشمس/القمر": natal_keys.get("الشمس/القمر"),\n        "الزهرة/المريخ": natal_keys.get("الزهرة/المريخ"),\n        "القمر/الزهرة": natal_keys.get("القمر/الزهرة"),\n    }\n    if "جونو" in natal_p:\n        important_keys["جونو الميلاد"] = natal_p["جونو"]["lon"]\n\n    for aname, alon in sr_angles.items():\n        for kname, klon in important_keys.items():\n            if klon is None:\n                continue\n            asp = find_aspect(alon, klon, tight=True)\n            if asp:\n                add = 14 if asp[0] in ["اقتران", "مقابلة"] else 9\n                score += add\n                notes.append(f"{aname} {asp[0]} {kname}: زاوية عودة شمسية تفتح ملف الزواج.")\n                break\n\n    # كواكب الزواج في بيوت العودة\n    for body in ["الزهرة", "المشتري", "جونو", "القمر"]:\n        if body in srp:\n            h = srp[body]["house"]\n            if h == 7:\n                score += 18\n                notes.append(f"{body} في البيت السابع في العودة الشمسية: دلالة مباشرة على علاقة أو زواج.")\n            elif h in [1, 4, 10]:\n                score += 10\n                notes.append(f"{body} في بيت زاوي في العودة الشمسية: دلالة ظهور وتأثير قوي.")\n            elif h == 5:\n                score += 8\n                notes.append(f"{body} في البيت الخامس في العودة الشمسية: دلالة حب ورومانسية.")\n\n    # حاكم السابع في العودة\n    sr7_sign, sr7_ruler = house_ruler(src, 7)\n    if sr7_ruler in srp:\n        h = srp[sr7_ruler]["house"]\n        if h in [1, 4, 7, 10]:\n            score += 16\n            notes.append(f"حاكم السابع في العودة {sr7_ruler} في بيت زاوي: قابلية رسمية قوية.")\n        elif h in [5, 11]:\n            score += 9\n            notes.append(f"حاكم السابع في العودة {sr7_ruler} في بيت حب أو مجتمع: فرصة تعارف أو ارتباط.")\n\n        # اتصال حاكم السابع بالزهرة/المشتري/جونو داخل العودة\n        for body in ["الزهرة", "المشتري", "جونو"]:\n            if body in srp and body != sr7_ruler:\n                asp = find_aspect(srp[sr7_ruler]["lon"], srp[body]["lon"])\n                if asp:\n                    if asp[0] in ["اقتران", "تثليث", "تسديس", "مقابلة"]:\n                        score += 10\n                        notes.append(f"حاكم السابع في العودة يتصل بـ {body} عبر {asp[0]}: تفعيل واضح للارتباط.")\n                        break\n\n    # العودة تربط الزهرة الأصلية بمحور السابع\n    if "الزهرة" in srp:\n        for key_name, key_lon in [("هابط الميلاد", natal_cusps[6]), ("حاكم السابع", natal_p[analysis["ruler7"]]["lon"])]:\n            asp = find_aspect(srp["الزهرة"]["lon"], key_lon, tight=True)\n            if asp:\n                score += 14\n                notes.append(f"زهرة العودة {asp[0]} {key_name}: تفعيل عاطفي مهم.")\n                break\n\n    # زحل في السابع قد يعني رسمية أو تأخير حسب الدعم\n    if "زحل" in srp and srp["زحل"]["house"] == 7:\n        score += 7\n        notes.append("زحل في السابع في العودة: قد يعطي رسمية ومسؤولية، أو تأخيرًا إذا غاب الدعم.")\n\n    score = max(0, min(100, score))\n\n    y, m, d, h, mi = sr["ut_tuple"]\n    return {\n        "score": score,\n        "notes": notes[:10],\n        "sr": sr,\n        "sr_date_ut": f"{y}-{m:02d}-{d:02d} {h:02d}:{mi:02d} UT",\n        "sr7_sign": sr7_sign,\n        "sr7_ruler": sr7_ruler\n    }\n\n\n\ndef first_marriage_age_factor(age):\n    """\n    منحنى واقعي للزواج الأول.\n    لا يمنع الزواج المتأخر، لكنه يمنع عمر 60 من منافسة عمر 29 في زواج أول\n    إلا إذا كانت الدلالات استثنائية.\n    """\n    if age < 18:\n        return -20\n    if 18 <= age <= 21:\n        return -4\n    if 22 <= age <= 35:\n        return 12\n    if 36 <= age <= 42:\n        return 5\n    if 43 <= age <= 50:\n        return -4\n    if 51 <= age <= 60:\n        return -12\n    return -18\n\n\ndef marriage_anchor_hits(chart, analysis, age):\n    """\n    نقاط فاصلة في الزواج:\n    عبور المشتري/زحل/جونو/العقد على الزهرة أو حاكم السابع أو الهابط.\n    هذه الطبقة مصممة كي تلتقط حالات مثل:\n    المشتري مقابل الزهرة في فترة الزواج.\n    """\n    start_local, end_local = solar_age_period(chart, age)\n    utc_offset = chart.get("utc_offset", 0)\n    p = chart["positions"]\n    cusps = chart["cusps"]\n    ruler7 = analysis["ruler7"]\n\n    anchor_keys = {\n        "الزهرة": p["الزهرة"]["lon"],\n        "حاكم السابع": p[ruler7]["lon"],\n        "الهابط": cusps[6],\n    }\n    if "جونو" in p:\n        anchor_keys["جونو"] = p["جونو"]["lon"]\n\n    bodies = {\n        "المشتري": swe.JUPITER,\n        "زحل": swe.SATURN,\n        "العقدة الشمالية": getattr(swe, "TRUE_NODE", swe.MEAN_NODE),\n        "جونو": getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3),\n    }\n\n    best = {}\n    current = start_local\n    while current < end_local:\n        utc_dt = current - timedelta(hours=utc_offset)\n        jd = swe.julday(\n            utc_dt.year,\n            utc_dt.month,\n            utc_dt.day,\n            utc_dt.hour + utc_dt.minute / 60.0\n        )\n\n        for body, code in bodies.items():\n            try:\n                lon = norm(swe.calc_ut(jd, code)[0][0])\n            except Exception:\n                continue\n\n            for key, key_lon in anchor_keys.items():\n                asp = find_aspect_window(lon, key_lon, body)\n                if not asp:\n                    continue\n\n                asp_name, orb, allowed_orb = asp\n                phase = estimate_applying_or_separating(jd, code, key_lon, asp_name)\n                hit_key = (body, key, asp_name)\n                old = best.get(hit_key)\n                if old is None or orb < old["orb"]:\n                    # وزن خاص للمشتري على الزهرة/حاكم السابع\n                    w = timing_aspect_weight(body, key, (asp_name, orb))\n                    if phase == "تطبيقية":\n                        w = int(w * 1.20)\n                    elif phase == "انفصالية":\n                        w = int(w * 0.88)\n                    if body == "المشتري" and key in ["الزهرة", "حاكم السابع"] and asp_name in ["مقابلة", "اقتران", "تثليث", "تسديس", "تربيع"]:\n                        w += 18\n                    if body == "زحل" and key in ["الهابط", "حاكم السابع", "الزهرة"]:\n                        w += 10\n                    if body == "جونو" and key in ["الزهرة", "حاكم السابع", "الهابط"]:\n                        w += 12\n                    if body == "العقدة الشمالية" and key in ["الزهرة", "حاكم السابع", "الهابط"]:\n                        w += 10\n\n                    best[hit_key] = {\n                        "date": current,\n                        "body": body,\n                        "key": key,\n                        "aspect": asp_name,\n                        "orb": orb,\n                        "allowed_orb": locals().get("allowed_orb", None),\n                        "phase": locals().get("phase", "غير محدد"),\n                        "weight": w\n                    }\n\n        current += timedelta(days=3)\n\n    hits = sorted(best.values(), key=lambda h: (h["weight"], -h["orb"]), reverse=True)\n    score = min(45, sum(h["weight"] for h in hits[:4]) // 3)\n    return score, hits[:8]\n\n\n\ndef age_candidate(chart, age):\n    analysis = timing_age_analysis(chart, age)\n    transit = scan_transits_in_solar_period(chart, age, analysis["keys"])\n    anchor_score, anchor_hits = marriage_anchor_hits(chart, analysis, age)\n    solar_return = solar_return_marriage_score(chart, analysis, age)\n    sa_hits = solar_arc_hits_for_age(chart, analysis, age)\n    prog_hits = progressed_hits_for_age(chart, analysis, age)\n\n    # ضبط البروفكشن حسب العمر نفسه\n    prof_house = (age % 12) + 1\n    prof_bonus = 0\n    if prof_house == 7:\n        prof_bonus += 22\n    elif prof_house in [5, 4, 10]:\n        prof_bonus += 14\n    elif prof_house in [1, 11]:\n        prof_bonus += 7\n\n    # حاكم السنة\n    _, prof_ruler = house_ruler(chart["cusps"], prof_house)\n    if prof_ruler in ["الزهرة", "القمر", "المشتري", analysis["ruler7"]]:\n        prof_bonus += 10\n\n    # فريدار\n    day_chart = is_day_chart(chart["positions"])\n    main_f, sub_f, _inside = firdaria_for_age(age, day_chart)\n    firdar_bonus = 0\n    marriage_rulers = ["الزهرة", "القمر", "الشمس", "المشتري", analysis["ruler7"]]\n    if main_f in marriage_rulers:\n        firdar_bonus += 16\n    if sub_f in marriage_rulers:\n        firdar_bonus += 9\n    if main_f == "زحل":\n        firdar_bonus += 5\n\n    # القوس الشمسي والتقدم لا نتركهما يصلان إلى 100 وحدهما\n    sa_score = min(28, len(sa_hits) * 7)\n    prog_score = min(22, len(prog_hits) * 7)\n\n    official_base = analysis["official_score"]\n    natal_base = analysis["natal_score"]\n    love_base = analysis["love_score"]\n\n    internal_score = min(100, int(\n        prof_bonus * 0.85 +\n        firdar_bonus * 0.85 +\n        sa_score +\n        prog_score +\n        official_base * 0.12 +\n        love_base * 0.08\n    ))\n\n    final = int(\n        internal_score * 0.26 +\n        transit["score"] * 0.22 +\n        anchor_score * 0.20 +\n        solar_return["score"] * 0.22 +\n        official_base * 0.05 +\n        natal_base * 0.03 +\n        analysis["karmic_score"] * 0.02\n    )\n\n    # عامل العمر الواقعي للزواج الأول\n    final += first_marriage_age_factor(age)\n\n    # بونص اجتماع أكثر من تقنية\n    systems = 0\n    if prof_bonus >= 14:\n        systems += 1\n    if firdar_bonus >= 14:\n        systems += 1\n    if sa_hits:\n        systems += 1\n    if prog_hits:\n        systems += 1\n    if transit["score"] >= 35:\n        systems += 1\n    if anchor_score >= 20:\n        systems += 1\n    if solar_return["score"] >= 35:\n        systems += 1\n    if systems >= 4:\n        final += 8\n    elif systems == 3:\n        final += 5\n\n    final = max(0, min(100, final))\n\n    start, end = solar_age_period(chart, age)\n\n    kind = "تحريك عاطفي"\n    if final >= 65 and (official_base >= 35 or prof_house in [7, 4, 10]):\n        kind = "زواج أو خطوبة رسمية"\n    if analysis["second_marriage_power"] > analysis["first_marriage_score"] and analysis["second_marriage_power"] >= 50:\n        kind = "زواج لاحق أو تجربة ثانية أقوى"\n    if analysis["return_score"] >= 55:\n        kind = "عودة أو علاقة صعبة النسيان"\n\n    warning = ""\n    if max(analysis["separation_score"], analysis["crisis_score"]) >= 60:\n        warning = "السنة قوية لكنها تحمل ضغطًا أو أزمة عاطفية."\n    elif analysis["delay_score"] >= 60:\n        warning = "السنة تحمل جدية أو تأخيرًا ومسؤولية."\n\n    return {\n        "age": age,\n        "period_start": start,\n        "period_end": end,\n        "calendar_label": f"{start.year}-{end.year}",\n        "score": final,\n        "kind": kind,\n        "warning": warning,\n        "analysis": analysis,\n        "transit": transit,\n        "anchor_score": anchor_score,\n        "anchor_hits": anchor_hits,\n        "event_windows": merge_month_windows(anchor_hits + transit.get("hits", [])),\n        "solar_return": solar_return,\n        "sa_hits": sa_hits,\n        "prog_hits": prog_hits,\n        "prof_house": prof_house,\n        "prof_ruler": prof_ruler,\n        "main_f": main_f,\n        "sub_f": sub_f,\n        "internal_score": internal_score,\n        "systems": systems\n    }\n\n\ndef scan_ages_for_marriage(chart, start_age=18, end_age=60):\n    results = []\n    for age in range(start_age, end_age + 1):\n        results.append(age_candidate(chart, age))\n    ranked = sorted(results, key=lambda x: x["score"], reverse=True)\n    return ranked, results\n\n\ndef hit_text(hits, limit=7):\n    if not hits:\n        return "لا توجد ضربات عبور دقيقة كافية.\\n"\n    text = ""\n    for h in hits[:limit]:\n        if "date" not in h:\n            continue\n        date = h["date"].strftime("%Y-%m-%d")\n        body = h.get("body", h.get("transit", ""))\n        aspect = h.get("aspect", "")\n        key = h.get("key", "")\n        orb = h.get("orb", "")\n        phase = h.get("phase", "غير محدد")\n        try:\n            win_start, win_end = event_window_dates(h["date"], body)\n            text += f"- الذروة حول {date}: {body} {aspect} {key}، قرب {orb}°، الحالة {phase}.\\n"\n            text += f"  نافذة التأثير التقريبية: {win_start.strftime(\'%Y-%m-%d\')} إلى {win_end.strftime(\'%Y-%m-%d\')}.\\n"\n        except Exception:\n            text += f"- الذروة حول {date}: {body} {aspect} {key}، قرب {orb}°.\\n"\n    if not text:\n        return "لا توجد ضربات عبور دقيقة كافية.\\n"\n    return text\n\ndef sa_text(hits, limit=5):\n    if not hits:\n        return "لا توجد تفعيلات قوس شمسي دقيقة.\\n"\n    text = ""\n    for name, key, asp, orb in hits[:limit]:\n        text += f"- {name} {asp} {key}، قرب {orb}°\\n"\n    return text\n\n\ndef prog_text(hits, limit=5):\n    if not hits:\n        return "لا توجد تفعيلات تقدم ثانوي دقيقة.\\n"\n    text = ""\n    for name, key, asp, orb in hits[:limit]:\n        text += f"- {name} {asp} {key}، قرب {orb}°\\n"\n    return text\n\n\n\n\n# =====================================================\n# V21.1 - نوافذ التأثير قبل وبعد الذروة\n# =====================================================\n\nBODY_WINDOWS_DAYS = {\n    "القمر": 1,\n    "الشمس": 7,\n    "عطارد": 7,\n    "الزهرة": 7,\n    "المريخ": 14,\n    "المشتري": 45,\n    "زحل": 45,\n    "جونو": 60,\n    "العقدة الشمالية": 60,\n    "العقدة الجنوبية": 60,\n    "أورانوس": 120,\n    "نبتون": 150,\n    "بلوتو": 180,\n}\n\n\ndef body_window_days(body):\n    return BODY_WINDOWS_DAYS.get(body, 30)\n\n\ndef body_orb_for_window(body):\n    if body == "القمر":\n        return 1.0\n    if body in ["الشمس", "عطارد", "الزهرة"]:\n        return 2.0\n    if body == "المريخ":\n        return 2.5\n    if body in ["المشتري", "زحل", "جونو", "العقدة الشمالية", "العقدة الجنوبية"]:\n        return 4.0\n    if body in ["أورانوس", "نبتون", "بلوتو"]:\n        return 5.0\n    return 2.0\n\n\ndef find_aspect_window(transit_lon, key_lon, body):\n    orb = body_orb_for_window(body)\n    aspects = [\n        ("اقتران", 0, orb),\n        ("تسديس", 60, orb * 0.75),\n        ("تربيع", 90, orb),\n        ("تثليث", 120, orb * 0.85),\n        ("مقابلة", 180, orb),\n    ]\n    diff = distance(transit_lon, key_lon)\n    for name, angle, allowed in aspects:\n        off = abs(diff - angle)\n        if off <= allowed:\n            return name, round(off, 2), round(allowed, 2)\n    return None\n\n\ndef estimate_applying_or_separating(jd, body_code, key_lon, aspect_name):\n    angle_map = {"اقتران": 0, "تسديس": 60, "تربيع": 90, "تثليث": 120, "مقابلة": 180}\n    target_angle = angle_map.get(aspect_name, 0)\n    try:\n        lon_now = norm(swe.calc_ut(jd, body_code)[0][0])\n        lon_next = norm(swe.calc_ut(jd + 1, body_code)[0][0])\n    except Exception:\n        return "غير محدد"\n    diff_now = abs(distance(lon_now, key_lon) - target_angle)\n    diff_next = abs(distance(lon_next, key_lon) - target_angle)\n    if diff_next < diff_now:\n        return "تطبيقية"\n    if diff_next > diff_now:\n        return "انفصالية"\n    return "ثابتة"\n\n\ndef event_window_dates(peak_date, body):\n    days = body_window_days(body)\n    return peak_date - timedelta(days=days), peak_date + timedelta(days=days)\n\n\ndef age_at_date(chart, dt):\n    birth = chart["local_dt"]\n    years = dt.year - birth.year\n    months = dt.month - birth.month\n    if dt.day < birth.day:\n        months -= 1\n    if months < 0:\n        years -= 1\n        months += 12\n    return years, months\n\n\ndef merge_month_windows(hits):\n    windows = []\n    for h in hits:\n        body = h.get("body") or h.get("transit")\n        if not body or "date" not in h:\n            continue\n        start, end = event_window_dates(h["date"], body)\n        windows.append({\n            "start": start,\n            "end": end,\n            "peak": h["date"],\n            "body": body,\n            "key": h.get("key", ""),\n            "aspect": h.get("aspect", ""),\n            "weight": h.get("weight", 0),\n            "phase": h.get("phase", "غير محدد")\n        })\n\n    buckets = {}\n    for w in windows:\n        k = (w["peak"].year, w["peak"].month)\n        if k not in buckets:\n            buckets[k] = {"year": k[0], "month": k[1], "score": 0, "items": [], "start": w["start"], "end": w["end"], "peak": w["peak"]}\n        buckets[k]["score"] += w["weight"]\n        buckets[k]["items"].append(w)\n        if w["start"] < buckets[k]["start"]:\n            buckets[k]["start"] = w["start"]\n        if w["end"] > buckets[k]["end"]:\n            buckets[k]["end"] = w["end"]\n\n    return sorted(buckets.values(), key=lambda x: x["score"], reverse=True)[:5]\n\n\ndef relationship_event_type(item):\n    a = item["analysis"]\n    sr = item.get("solar_return", {}).get("score", 0)\n    anchor = item.get("anchor_score", 0)\n    prof = item.get("prof_house", 0)\n\n    official_markers = 0\n    if sr >= 50:\n        official_markers += 1\n    if anchor >= 24:\n        official_markers += 1\n    if prof in [7, 4, 10]:\n        official_markers += 1\n    if item.get("main_f") in ["الزهرة", "القمر", "المشتري", a.get("ruler7", "")]:\n        official_markers += 1\n    if a.get("official_score", 0) >= 45:\n        official_markers += 1\n\n    if a.get("second_marriage_power", 0) > a.get("first_marriage_score", 0) and a.get("second_marriage_power", 0) >= 55:\n        return "زواج لاحق أو تجربة ثانية"\n    if a.get("return_score", 0) >= 60:\n        return "عودة أو علاقة صعبة النسيان"\n    if official_markers >= 3:\n        return "زواج أو خطوبة رسمية"\n    if a.get("love_score", 0) >= 55 and official_markers < 3:\n        return "حب أو تعارف قوي لا يثبت وحده"\n    return "تحريك عاطفي عام"\n\n\n\ndef strict_marriage_filter(item):\n    """\n    فلتر صارم لاختيار سنوات الزواج الفعلي بدل سنوات التحريك العاطفي.\n    يعيد:\n    - pass_filter: هل تصلح كمرشح زواج فعلي؟\n    - strict_score: درجة الفلترة الصارمة\n    - reasons: أسباب الترشيح\n    """\n    reasons = []\n    strict = 0\n    systems = 0\n\n    a = item["analysis"]\n\n    # 1. العودة الشمسية\n    sr_score = item.get("solar_return", {}).get("score", 0)\n    if sr_score >= 55:\n        strict += 24\n        systems += 1\n        reasons.append("العودة الشمسية قوية ومباشرة.")\n    elif sr_score >= 38:\n        strict += 12\n        systems += 1\n        reasons.append("العودة الشمسية متوسطة لكنها داعمة.")\n\n    # 2. مرساة الزواج\n    anchor = item.get("anchor_score", 0)\n    if anchor >= 28:\n        strict += 24\n        systems += 1\n        reasons.append("مرساة الزواج قوية: تفعيل المشتري/زحل/جونو/العقد للزهرة أو السابع.")\n    elif anchor >= 18:\n        strict += 12\n        systems += 1\n        reasons.append("مرساة الزواج موجودة لكنها ليست قصوى.")\n\n    # 3. البروفكشن\n    prof_house = item.get("prof_house")\n    if prof_house == 7:\n        strict += 22\n        systems += 1\n        reasons.append("البروفكشن يفتح البيت السابع مباشرة.")\n    elif prof_house in [4, 5, 10]:\n        strict += 14\n        systems += 1\n        reasons.append("البروفكشن يفتح بيتًا مساعدًا للزواج: الرابع أو الخامس أو العاشر.")\n    elif prof_house in [1, 11]:\n        strict += 6\n        reasons.append("البروفكشن يفتح بيتًا ثانويًا داعمًا.")\n\n    # 4. الفريدار\n    main_f = item.get("main_f", "")\n    sub_f = item.get("sub_f", "")\n    marriage_rulers = ["الزهرة", "القمر", "المشتري", a.get("ruler7", "")]\n    if main_f in marriage_rulers:\n        strict += 14\n        systems += 1\n        reasons.append(f"الفريدار الرئيسي {main_f} من دلالات الزواج.")\n    if sub_f in marriage_rulers:\n        strict += 8\n        systems += 1\n        reasons.append(f"الفريدار الفرعي {sub_f} يدعم الزواج.")\n\n    # 5. القوس الشمسي\n    sa_hits = item.get("sa_hits", [])\n    strong_sa = []\n    for h in sa_hits:\n        # h = (name, key, aspect, orb)\n        if len(h) >= 4 and h[1] in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ"]:\n            strong_sa.append(h)\n    if strong_sa:\n        strict += min(18, len(strong_sa) * 7)\n        systems += 1\n        reasons.append("القوس الشمسي يفعّل مفاتيح الزواج.")\n\n    # 6. التقدم الثانوي\n    prog_hits = item.get("prog_hits", [])\n    strong_prog = []\n    for h in prog_hits:\n        if len(h) >= 4 and h[1] in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة"]:\n            strong_prog.append(h)\n    if strong_prog:\n        strict += min(14, len(strong_prog) * 6)\n        systems += 1\n        reasons.append("التقدم الثانوي يفعّل مفاتيح الزواج.")\n\n    # 7. العبور الحقيقي\n    transit_score = item.get("transit", {}).get("score", 0)\n    if transit_score >= 55:\n        strict += 15\n        systems += 1\n        reasons.append("العبور الحقيقي داخل الفترة قوي.")\n    elif transit_score >= 35:\n        strict += 8\n        systems += 1\n        reasons.append("العبور الحقيقي داخل الفترة متوسط.")\n\n    # 8. الوعد الأصلي\n    if a.get("official_score", 0) >= 45:\n        strict += 8\n        reasons.append("وعد الزواج الرسمي في الخريطة مقبول.")\n    if a.get("natal_score", 0) >= 45:\n        strict += 5\n        reasons.append("وعد الزواج الأصلي داعم.")\n\n    # تقليل سنوات التحريك فقط\n    if item.get("kind") == "تحريك عاطفي":\n        strict -= 10\n\n    # سنوات الزواج الأول: ترجيح الأعمار الواقعية\n    age = item.get("age", 0)\n    if 22 <= age <= 35:\n        strict += 10\n    elif 18 <= age <= 21:\n        strict += 2\n    elif 36 <= age <= 45:\n        strict -= 2\n    elif age > 45:\n        strict -= 12\n\n    # شرط المرور:\n    # لا يكفي رقم عالٍ؛ يجب اجتماع 4 أنظمة على الأقل أو 3 أنظمة مع عودة شمسية/مرساة قوية.\n    pass_filter = False\n    if systems >= 4 and strict >= 58:\n        pass_filter = True\n    if systems >= 3 and strict >= 64 and (sr_score >= 55 or anchor >= 28):\n        pass_filter = True\n\n    strict = max(0, min(100, int(strict)))\n\n    return pass_filter, strict, reasons[:8], systems\n\n\ndef apply_strict_marriage_filter(ranked):\n    enriched = []\n    for item in ranked:\n        passed, strict_score, reasons, systems = strict_marriage_filter(item)\n        item["event_type_final"] = relationship_event_type(item)\n        item["strict_pass"] = passed\n        item["strict_score"] = strict_score\n        item["strict_reasons"] = reasons\n        item["strict_systems"] = systems\n        enriched.append(item)\n\n    final_candidates = [x for x in enriched if x["strict_pass"]]\n    final_candidates.sort(key=lambda x: (x["strict_score"], x["score"]), reverse=True)\n\n    # إن لم ينجح شيء، نأخذ أعلى 3 كمرشحين ضعفاء لا كحكم نهائي\n    if not final_candidates:\n        fallback = sorted(enriched, key=lambda x: (x["strict_score"], x["score"]), reverse=True)[:3]\n        return [], fallback, enriched\n\n    backup = [x for x in enriched if not x["strict_pass"]]\n    backup.sort(key=lambda x: (x["strict_score"], x["score"]), reverse=True)\n    return final_candidates[:5], backup[:5], enriched\n\n\n\ndef build_v18_report(chart, ranked, all_results, name, gender, birth_info, city_name, start_age, end_age):\n    final_candidates, backup_candidates, ranked_with_filter = apply_strict_marriage_filter(ranked)\n    base = timing_age_analysis(chart, start_age)\n    p = chart["positions"]\n    cusps = chart["cusps"]\n    ascmc = chart["ascmc"]\n\n    report = ""\n    report += "تقرير ماسح توقيت الزواج - V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner\\n"\n    report += "================================================\\n\\n"\n\n    report += "بيانات الخريطة\\n"\n    report += "--------------\\n"\n    report += f"الاسم: {name}\\n"\n    report += f"الجنس: {gender}\\n"\n    report += f"مكان الميلاد: {city_name}\\n"\n    report += f"بيانات الميلاد المحلية: {birth_info}\\n"\n    report += f"فرق التوقيت المستخدم: UTC {chart[\'utc_offset\']:+g}\\n"\n    report += f"الوقت العالمي المستخدم: {chart[\'utc_dt\'].strftime(\'%Y-%m-%d %H:%M\')} UT\\n"\n    report += f"نطاق البحث: من عمر {start_age} إلى عمر {end_age}\\n\\n"\n\n    report += "تصحيح مهم في هذه النسخة\\n"\n    report += "-----------------------\\n"\n    report += "الفحص الآن يتم حسب السنة العمرية الشمسية: من عيد الميلاد إلى عيد الميلاد التالي، وليس حسب السنة الميلادية فقط. لذلك إذا حدث الزواج في شباط 1998 لشخص مولود في آب 1968، فهو يُحسب ضمن عمر 29، أي الفترة من آب 1997 إلى آب 1998.\\n\\n"\n\n    report += "مفاتيح الزواج الأصلية\\n"\n    report += "---------------------\\n"\n    report += f"الطالع: {format_pos(ascmc[0])}\\n"\n    report += f"الهابط: {format_pos(cusps[6])}\\n"\n    report += f"السابع: {base[\'seventh_sign\']}، حاكمه {base[\'ruler7\']}\\n"\n    report += f"حاكم السابع: {p[base[\'ruler7\']][\'pos\']}، البيت {base[\'ruler7_house\']}\\n"\n    report += f"الزهرة: {p[\'الزهرة\'][\'pos\']}، البيت {p[\'الزهرة\'][\'house\']}\\n"\n    if "جونو" in p:\n        report += f"جونو: {p[\'جونو\'][\'pos\']}، البيت {p[\'جونو\'][\'house\']}\\n"\n    report += f"الشمس/القمر: {format_pos(base[\'keys\'][\'الشمس/القمر\'])}\\n"\n    report += f"الزهرة/المريخ: {format_pos(base[\'keys\'][\'الزهرة/المريخ\'])}\\n\\n"\n\n    report += "وعد الزواج الأصلي\\n"\n    report += "-----------------\\n"\n    report += f"وعد الزواج الأصلي: {base[\'natal_score\']} / {classify(base[\'natal_score\'])}\\n"\n    report += f"مؤشر الزواج الرسمي: {base[\'official_score\']} / {classify(base[\'official_score\'])}\\n"\n    report += f"مؤشر الحب والجذب: {base[\'love_score\']} / {classify(base[\'love_score\'])}\\n"\n    report += f"قوة الزواج الأول: {base[\'first_marriage_score\']} / {classify(base[\'first_marriage_score\'])}\\n"\n    report += f"قوة الزواج الثاني أو اللاحق: {base[\'second_marriage_power\']} / {classify(base[\'second_marriage_power\'])}\\n\\n"\n\n    report += "نوافذ الحدث بعد الفلترة الصارمة\\n"\n    report += "--------------------------------------\\n"\n    if final_candidates:\n        report += "هذه الفترات هي الأقوى بعد استبعاد سنوات التحريك العاطفي الضعيفة. الأول هو المرشح الرئيسي، والبقية احتمالات قريبة أو احتياطية.\\n\\n"\n        for i, item in enumerate(final_candidates[:5], start=1):\n            label = "المرشح الرئيسي" if i == 1 else "مرشح احتياطي"\n            report += f"{i}. {label}: عمر العودة الشمسية {item[\'age\']} سنة، من {item[\'period_start\'].strftime(\'%Y-%m-%d\')} إلى {item[\'period_end\'].strftime(\'%Y-%m-%d\')}.\\n"\n            report += f"   قوة الفلترة الصارمة: {item[\'strict_score\']} / 100، القوة العامة: {item[\'score\']} / 100، التصنيف: {item.get(\'event_type_final\', item[\'kind\'])}.\\n"\n            if item.get("event_windows"):\n                w = item["event_windows"][0]\n                yy, mm = age_at_date(chart, w["peak"])\n                report += f"   أقوى نافذة ميلادية: {w[\'start\'].strftime(\'%Y-%m-%d\')} إلى {w[\'end\'].strftime(\'%Y-%m-%d\')}، والعمر الواقعي حول الذروة {yy} سنة و{mm} شهر.\\n"\n            if item["strict_reasons"]:\n                report += "   أهم الأسباب:\\n"\n                for r in item["strict_reasons"][:4]:\n                    report += f"   - {r}\\n"\n    else:\n        report += "لم تنجح أي فترة في المرور من الفلترة الصارمة كزواج فعلي مؤكد نسبيًا.\\n"\n        report += "أقرب خمسة احتمالات، لكنها تحتاج مراجعة وليست حكمًا نهائيًا:\\n"\n        for i, item in enumerate(backup_candidates[:5], start=1):\n            report += f"{i}. عمر العودة الشمسية {item[\'age\']} سنة، من {item[\'period_start\'].strftime(\'%Y-%m-%d\')} إلى {item[\'period_end\'].strftime(\'%Y-%m-%d\')}، فلترة {item[\'strict_score\']} / 100، قوة عامة {item[\'score\']} / 100.\\n"\n    report += "\\n"\n\n    report += "الفترات التي كانت قوية لكنها لم تمر كزواج فعلي\\n"\n    report += "---------------------------------------------\\n"\n    for item in backup_candidates[:8]:\n        report += f"- عمر {item[\'age\']} سنة: {item[\'period_start\'].strftime(\'%Y-%m-%d\')} إلى {item[\'period_end\'].strftime(\'%Y-%m-%d\')}، فلترة {item[\'strict_score\']}، قوة عامة {item[\'score\']} - {item[\'kind\']}\\n"\n    report += "\\n"\n\n    report += "شرح تفصيلي لأقوى ست فترات\\n"\n    report += "--------------------------\\n"\n    detail_list = final_candidates[:5] if final_candidates else backup_candidates[:5]\n    for item in detail_list:\n        start = item["period_start"].strftime("%Y-%m-%d")\n        end = item["period_end"].strftime("%Y-%m-%d")\n        report += f"\\nعمر {item[\'age\']} سنة: {start} إلى {end}\\n"\n        report += "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\\n"\n        report += f"القوة النهائية: {item[\'score\']} / {classify(item[\'score\'])}\\n"\n        report += f"نوع الترشيح: {item[\'kind\']}\\n"\n        report += f"قوة التوقيت الداخلي: {item[\'internal_score\']} / 100\\n"\n        report += f"قوة العبور داخل السنة العمرية: {item[\'transit\'][\'score\']} / 100\\n"\n        report += f"قوة مرساة الزواج، المشتري/زحل/جونو/العقد على الزهرة أو السابع: {item[\'anchor_score\']} / 45\\n"\n        report += f"قوة العودة الشمسية: {item[\'solar_return\'][\'score\']} / 100\\n"\n        report += f"تاريخ العودة الشمسية التقريبي: {item[\'solar_return\'][\'sr_date_ut\']}\\n"\n        report += f"السابع في العودة الشمسية: {item[\'solar_return\'][\'sr7_sign\']}، حاكمه {item[\'solar_return\'][\'sr7_ruler\']}\\n"\n        report += f"البروفكشن: البيت {item[\'prof_house\']}، حاكم السنة {item[\'prof_ruler\']}\\n"\n        report += f"الفريدار: الرئيسي {item[\'main_f\']}، الفرعي {item[\'sub_f\']}\\n"\n        report += f"عدد الأنظمة المتفقة: {item[\'systems\']}\\n"\n        report += f"تصنيف الحدث بعد الفصل بين الحب والزواج: {item.get(\'event_type_final\', item[\'kind\'])}\\n"\n\n        if item.get("event_windows"):\n            report += "أقوى النوافذ الميلادية داخل سنة العودة الشمسية:\\n"\n            for w in item["event_windows"][:3]:\n                report += f"- {w[\'start\'].strftime(\'%Y-%m-%d\')} إلى {w[\'end\'].strftime(\'%Y-%m-%d\')}، الذروة الشهرية {w[\'month\']}/{w[\'year\']}، قوة {w[\'score\']}.\\n"\n\n        report += "مرساة الزواج الأساسية:\\n"\n        report += hit_text(item["anchor_hits"])\n        report += "العودة الشمسية:\\n"\n        if item["solar_return"]["notes"]:\n            for n in item["solar_return"]["notes"][:6]:\n                report += f"- {n}\\n"\n        else:\n            report += "لا توجد دلالات عودة شمسية قوية.\\n"\n        report += "القوس الشمسي:\\n"\n        report += sa_text(item["sa_hits"])\n        report += "التقدم الثانوي:\\n"\n        report += prog_text(item["prog_hits"])\n        report += "العبور الحقيقي:\\n"\n        report += hit_text(item["transit"]["hits"])\n\n    # بحث خاص عن سنة 1997-1998 إن وجدت للفائدة التعليمية\n    report += "\\nقراءة السنة التي تشمل شباط 1998، إن كانت ضمن النطاق\\n"\n    report += "-----------------------------------------------\\n"\n    found_1998 = None\n    for item in all_results:\n        if item["period_start"] <= datetime(1998, 2, 1) < item["period_end"]:\n            found_1998 = item\n            break\n    if found_1998:\n        report += f"شباط 1998 يقع داخل عمر {found_1998[\'age\']} سنة، الفترة {found_1998[\'period_start\'].strftime(\'%Y-%m-%d\')} إلى {found_1998[\'period_end\'].strftime(\'%Y-%m-%d\')}.\\n"\n        report += f"قوة هذه الفترة في V21.1: {found_1998[\'score\']} / {classify(found_1998[\'score\'])}.\\n"\n        report += f"قوة التوقيت الداخلي: {found_1998[\'internal_score\']}، وقوة العبور: {found_1998[\'transit\'][\'score\']}، قوة مرساة الزواج: {found_1998[\'anchor_score\']}، وقوة العودة الشمسية: {found_1998[\'solar_return\'][\'score\']}.\\n"\n        report += f"تاريخ العودة الشمسية لهذه الفترة: {found_1998[\'solar_return\'][\'sr_date_ut\']}\\n"\n        report += "دلالات العودة الشمسية في هذه الفترة:\\n"\n        if found_1998["solar_return"]["notes"]:\n            for n in found_1998["solar_return"]["notes"][:6]:\n                report += f"- {n}\\n"\n        else:\n            report += "لا توجد دلالات عودة شمسية قوية.\\n"\n        report += "مرساة الزواج في هذه الفترة:\\n"\n        report += hit_text(found_1998["anchor_hits"], limit=6)\n        report += "أهم العبور العام فيها:\\n"\n        report += hit_text(found_1998["transit"]["hits"], limit=5)\n    else:\n        report += "هذه الفترة ليست ضمن نطاق البحث المدخل.\\n"\n\n    report += "\\nالخلاصة\\n"\n    report += "-------\\n"\n    best = final_candidates[0] if final_candidates else (backup_candidates[0] if backup_candidates else None)\n    if best:\n        if final_candidates:\n            report += f"بعد فلترة نوافذ الحدث، أقوى فترة مرشحة للزواج الفعلي هي عمر {best[\'age\']} سنة من {best[\'period_start\'].strftime(\'%Y-%m-%d\')} إلى {best[\'period_end\'].strftime(\'%Y-%m-%d\')}.\\n"\n        else:\n            report += f"لا توجد فترة مؤكدة بالفلترة الصارمة، وأقرب فترة تحتاج مراجعة هي عمر {best[\'age\']} سنة من {best[\'period_start\'].strftime(\'%Y-%m-%d\')} إلى {best[\'period_end\'].strftime(\'%Y-%m-%d\')}.\\n"\n    report += "الدقة تعتمد على وقت الميلاد. وكلما تم اختبار النتائج على أحداث معروفة، يمكن تعديل الأوزان حتى يصبح التطبيق أكثر واقعية.\\n"\n\n    return report\n\n\n# ==============================\n# واجهة ويب Pydroid - V21.1\n# ==============================\n\nfrom http.server import BaseHTTPRequestHandler, HTTPServer\nfrom urllib.parse import parse_qs\nimport html\nimport webbrowser\n\n\nHTML_PAGE = """<!DOCTYPE html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>ماسح توقيت الزواج V21.1 - نوافذ الحدث - نوافذ الحدث.1</title>\n<style>\nbody { font-family: Arial, Tahoma, sans-serif; background:#f3f6f8; color:#111; margin:0; padding:12px; direction:rtl; }\n.container { max-width:780px; margin:auto; background:white; border-radius:16px; padding:16px; box-shadow:0 4px 18px rgba(0,0,0,0.12); }\nh1 { text-align:center; color:#12364f; font-size:22px; }\np.note { background:#eef6ff; border-right:5px solid #1d6fa5; padding:10px; border-radius:8px; line-height:1.8; }\nlabel { display:block; margin-top:12px; font-weight:bold; }\ninput, select { width:100%; box-sizing:border-box; padding:11px; margin-top:5px; border:1px solid #ccd6dd; border-radius:10px; font-size:16px; direction:rtl; }\nbutton { width:100%; margin-top:18px; padding:14px; border:none; border-radius:12px; background:#12364f; color:white; font-size:18px; font-weight:bold; }\nbutton.secondary { background:#2f7d32; }\n.report { white-space:pre-wrap; background:#fbfbfb; border:1px solid #ddd; padding:14px; border-radius:12px; line-height:1.9; margin-top:18px; font-size:15px; }\n.small { font-size:13px; color:#555; line-height:1.7; }\n</style>\n</head>\n<body>\n<div class="container">\n<h1>ماسح توقيت الزواج V21.1 - نوافذ الحدث - نوافذ الحدث.1</h1>\n<p class="note">هذه النسخة لا تعرض كل الاحتمالات كزواج. بعد الحساب تطبق نوافذ الحدث لاستخراج المرشح الأقوى والاحتياطي فقط.</p>\n\n<form method="post">\n<label>الاسم</label><input name="name" value="@@name@@">\n\n<label>الجنس</label>\n<select name="gender"><option @@male_selected@@>ذكر</option><option @@female_selected@@>أنثى</option></select>\n\n<label>سنة الميلاد</label><input name="year" type="number" value="@@year@@">\n<label>الشهر</label><input name="month" type="number" value="@@month@@">\n<label>اليوم</label><input name="day" type="number" value="@@day@@">\n<label>الساعة المحلية بصيغة 24 ساعة</label><input name="hour" type="number" value="@@hour@@">\n<label>الدقيقة المحلية</label><input name="minute" type="number" value="@@minute@@">\n\n<label>فرق التوقيت عن UTC</label>\n<select name="utc">\n<option value="3" @@utc_3@@>UTC +3 العراق / السعودية / الكويت / قطر / البحرين / اليمن / تركيا</option>\n<option value="4" @@utc_4@@>UTC +4 الإمارات / عُمان / أذربيجان / جورجيا</option>\n<option value="2" @@utc_2@@>UTC +2 مصر / الأردن / فلسطين / لبنان / سوريا / ليبيا / السودان</option>\n<option value="1" @@utc_1@@>UTC +1 تونس / الجزائر / المغرب شتاءً / وسط أوروبا</option>\n<option value="0" @@utc_0@@>UTC +0 غرينتش / موريتانيا</option>\n<option value="3.5" @@utc_35@@>UTC +3:30 إيران</option>\n<option value="4.5" @@utc_45@@>UTC +4:30 أفغانستان</option>\n<option value="5" @@utc_5@@>UTC +5 باكستان</option>\n<option value="5.5" @@utc_55@@>UTC +5:30 الهند</option>\n<option value="-5" @@utc_m5@@>UTC -5 شرق أمريكا شتاءً</option>\n<option value="manual" @@utc_manual_selected@@>إدخال يدوي</option>\n</select>\n\n<label>فرق التوقيت اليدوي</label><input name="utc_manual" value="@@utc_manual@@">\n\n<label>المدينة</label><select name="city">@@city_options@@</select>\n<label>خط العرض اليدوي</label><input name="lat" value="@@lat@@">\n<label>خط الطول اليدوي</label><input name="lon" value="@@lon@@">\n\n<label>بداية عمر الفحص</label><input name="start_age" type="number" value="@@start_age@@">\n<label>نهاية عمر الفحص</label><input name="end_age" type="number" value="@@end_age@@">\n\n<button type="submit">استخراج الفترات المرشحة</button>\n</form>\n\n@@report_block@@\n\n<p class="small">الرابط المحلي:<br>http://127.0.0.1:5000</p>\n</div>\n\n<script>\nfunction copyReport() {\n    const el = document.getElementById("reportText");\n    if (!el) return;\n    navigator.clipboard.writeText(el.innerText).then(function(){ alert("تم نسخ التقرير"); });\n}\n</script>\n</body>\n</html>\n"""\n\n\ndef esc(v):\n    return html.escape(str(v), quote=True)\n\n\ndef selected(value, current):\n    return "selected" if str(value) == str(current) else ""\n\n\ndef get_form_value(data, key, default):\n    if key in data and data[key]:\n        return data[key][0]\n    return default\n\n\ndef fill_template(template, mapping):\n    page = template\n    for key, value in mapping.items():\n        page = page.replace("@@" + key + "@@", str(value))\n    return page\n\n\nclass MarriageWebHandler(BaseHTTPRequestHandler):\n    def do_GET(self):\n        self.render_page()\n\n    def do_POST(self):\n        length = int(self.headers.get("Content-Length", 0))\n        raw = self.rfile.read(length).decode("utf-8")\n        data = parse_qs(raw)\n        self.render_page(data)\n\n    def render_page(self, data=None):\n        values = {\n            "name": "",\n            "gender": "ذكر",\n            "year": "",\n            "month": "",\n            "day": "",\n            "hour": "",\n            "minute": "",\n            "utc": "3",\n            "utc_manual": "3",\n            "city": "بغداد",\n            "lat": "",\n            "lon": "",\n            "start_age": "18",\n            "end_age": "60",\n        }\n\n        if data:\n            for k in values:\n                values[k] = get_form_value(data, k, values[k])\n\n        report_block = ""\n\n        if data:\n            try:\n                name = values["name"].strip() or "بدون اسم"\n                gender = values["gender"].strip()\n                year = int(values["year"])\n                month = int(values["month"])\n                day = int(values["day"])\n                hour = int(values["hour"])\n                minute = int(values["minute"])\n                utc_offset = float(values["utc_manual"]) if values["utc"] == "manual" else float(values["utc"])\n\n                city_name = values["city"].strip()\n                if city_name == "إدخال يدوي":\n                    lat = float(values["lat"])\n                    lon = float(values["lon"])\n                    city_name_report = "إحداثيات يدوية"\n                else:\n                    lat, lon = CITIES[city_name]\n                    city_name_report = city_name\n\n                start_age = int(values["start_age"])\n                end_age = int(values["end_age"])\n                if start_age < 12:\n                    start_age = 18\n                if end_age < start_age:\n                    end_age = start_age\n                if end_age - start_age > 65:\n                    end_age = start_age + 65\n\n                chart = calculate_chart(year, month, day, hour, minute, utc_offset, lat, lon)\n                birth_info = f"{year}-{month:02d}-{day:02d} الساعة {hour:02d}:{minute:02d} بالتوقيت المحلي"\n\n                ranked, all_results = scan_ages_for_marriage(chart, start_age, end_age)\n                report = build_v18_report(chart, ranked, all_results, name, gender, birth_info, city_name_report, start_age, end_age)\n\n                with open("marriage_timing_v17_report.txt", "w", encoding="utf-8") as f:\n                    f.write(report)\n\n                report_block = \'<button class="secondary" type="button" onclick="copyReport()">نسخ التقرير</button><div class="report" id="reportText">\' + esc(report) + \'</div>\'\n\n                # تنظيف الحقول بعد استخراج التقرير حتى لا تبقى بيانات الشخص محفوظة في الصفحة\n                values["name"] = ""\n                values["gender"] = "ذكر"\n                values["year"] = ""\n                values["month"] = ""\n                values["day"] = ""\n                values["hour"] = ""\n                values["minute"] = ""\n                values["utc"] = "3"\n                values["utc_manual"] = "3"\n                values["city"] = "بغداد"\n                values["lat"] = ""\n                values["lon"] = ""\n                values["start_age"] = "18"\n                values["end_age"] = "60"\n\n            except Exception as e:\n                report_block = \'<div class="report">حدث خطأ أثناء الحساب:\\\\n\' + esc(e) + \'</div>\'\n\n                # تنظيف الحقول بعد استخراج التقرير حتى لا تبقى بيانات الشخص محفوظة في الصفحة\n                values["name"] = ""\n                values["gender"] = "ذكر"\n                values["year"] = ""\n                values["month"] = ""\n                values["day"] = ""\n                values["hour"] = ""\n                values["minute"] = ""\n                values["utc"] = "3"\n                values["utc_manual"] = "3"\n                values["city"] = "بغداد"\n                values["lat"] = ""\n                values["lon"] = ""\n                values["start_age"] = "18"\n                values["end_age"] = "60"\n\n\n        city_options = ""\n        for c in CITIES.keys():\n            city_options += f\'<option value="{esc(c)}" {selected(c, values["city"])}>{esc(c)}</option>\'\n\n        mapping = {\n            "name": esc(values["name"]),\n            "year": esc(values["year"]),\n            "month": esc(values["month"]),\n            "day": esc(values["day"]),\n            "hour": esc(values["hour"]),\n            "minute": esc(values["minute"]),\n            "lat": esc(values["lat"]),\n            "lon": esc(values["lon"]),\n            "start_age": esc(values["start_age"]),\n            "end_age": esc(values["end_age"]),\n            "male_selected": selected("ذكر", values["gender"]),\n            "female_selected": selected("أنثى", values["gender"]),\n            "utc_3": selected("3", values["utc"]),\n            "utc_4": selected("4", values["utc"]),\n            "utc_2": selected("2", values["utc"]),\n            "utc_1": selected("1", values["utc"]),\n            "utc_0": selected("0", values["utc"]),\n            "utc_35": selected("3.5", values["utc"]),\n            "utc_45": selected("4.5", values["utc"]),\n            "utc_5": selected("5", values["utc"]),\n            "utc_55": selected("5.5", values["utc"]),\n            "utc_m5": selected("-5", values["utc"]),\n            "utc_manual_selected": selected("manual", values["utc"]),\n            "utc_manual": esc(values["utc_manual"]),\n            "city_options": city_options,\n            "report_block": report_block\n        }\n\n        page = fill_template(HTML_PAGE, mapping)\n        content = page.encode("utf-8")\n        self.send_response(200)\n        self.send_header("Content-Type", "text/html; charset=utf-8")\n        self.send_header("Content-Length", str(len(content)))\n        self.end_headers()\n        self.wfile.write(content)\n\n    def log_message(self, format, *args):\n        return\n\n\ndef run_web_app():\n    host = "127.0.0.1"\n    port = 5000\n    url = f"http://{host}:{port}"\n    print("تم تشغيل ماسح توقيت الزواج V21.1 - نوافذ الحدث - نوافذ الحدث.1.")\n    print("افتح الرابط:")\n    print(url)\n    print("لا تغلق Pydroid أثناء فتح الصفحة.")\n    try:\n        webbrowser.open(url)\n    except Exception:\n        pass\n    server = HTTPServer((host, port), MarriageWebHandler)\n    server.serve_forever()\n\n\nif __name__ == "__main__":\n    run_web_app()\n'
+_MARRIAGE_ENGINE_CODE = r'''# -*- coding: utf-8 -*-
+"""
+محلل الزواج من الخريطة الفلكية - نسخة Web Expert V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner
+تعمل بدون Kivy داخل Pydroid
+
+الإضافات الفلكية:
+- تحليل البيت السابع والخامس والرابع والعاشر والتاسع
+- الزهرة، القمر، المشتري، زحل، المريخ
+- جونو والعقد القمرية إن توفرت في Swiss Ephemeris
+- حدود بطليموس
+- الكرامة الأساسية
+- نقاط المنتصف العاطفية
+- البروفكشن السنوي
+- الفريدار
+- القوس الشمسي
+- التقدم الثانوي
+- عبور شهري خلال سنة الفحص
+- أفضل الأشهر داخل سنة الفحص
+- تقرير عربي موسع وبسيط
+"""
+
+import swisseph as swe
+from datetime import datetime, timedelta
+
+SIGNS = [
+    "الحمل", "الثور", "الجوزاء", "السرطان",
+    "الأسد", "العذراء", "الميزان", "العقرب",
+    "القوس", "الجدي", "الدلو", "الحوت"
+]
+
+PLANETS = {
+    "الشمس": swe.SUN,
+    "القمر": swe.MOON,
+    "عطارد": swe.MERCURY,
+    "الزهرة": swe.VENUS,
+    "المريخ": swe.MARS,
+    "المشتري": swe.JUPITER,
+    "زحل": swe.SATURN,
+    "أورانوس": swe.URANUS,
+    "نبتون": swe.NEPTUNE,
+    "بلوتو": swe.PLUTO
+}
+
+OPTIONAL_BODIES = {
+    "جونو": getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3),
+    "العقدة الشمالية": getattr(swe, "TRUE_NODE", swe.MEAN_NODE)
+}
+
+SIGN_RULERS = {
+    "الحمل": "المريخ",
+    "الثور": "الزهرة",
+    "الجوزاء": "عطارد",
+    "السرطان": "القمر",
+    "الأسد": "الشمس",
+    "العذراء": "عطارد",
+    "الميزان": "الزهرة",
+    "العقرب": "المريخ",
+    "القوس": "المشتري",
+    "الجدي": "زحل",
+    "الدلو": "زحل",
+    "الحوت": "المشتري"
+}
+
+DOMICILES = {
+    "الشمس": ["الأسد"],
+    "القمر": ["السرطان"],
+    "عطارد": ["الجوزاء", "العذراء"],
+    "الزهرة": ["الثور", "الميزان"],
+    "المريخ": ["الحمل", "العقرب"],
+    "المشتري": ["القوس", "الحوت"],
+    "زحل": ["الجدي", "الدلو"]
+}
+
+EXALTATIONS = {
+    "الشمس": "الحمل",
+    "القمر": "الثور",
+    "عطارد": "العذراء",
+    "الزهرة": "الحوت",
+    "المريخ": "الجدي",
+    "المشتري": "السرطان",
+    "زحل": "الميزان"
+}
+
+DETRIMENTS = {
+    "الشمس": ["الدلو"],
+    "القمر": ["الجدي"],
+    "عطارد": ["القوس", "الحوت"],
+    "الزهرة": ["الحمل", "العقرب"],
+    "المريخ": ["الثور", "الميزان"],
+    "المشتري": ["الجوزاء", "العذراء"],
+    "زحل": ["السرطان", "الأسد"]
+}
+
+FALLS = {
+    "الشمس": "الميزان",
+    "القمر": "العقرب",
+    "عطارد": "الحوت",
+    "الزهرة": "العذراء",
+    "المريخ": "السرطان",
+    "المشتري": "الجدي",
+    "زحل": "الحمل"
+}
+
+ASPECTS = [
+    ("اقتران", 0, 8),
+    ("تسديس", 60, 5),
+    ("تربيع", 90, 6),
+    ("تثليث", 120, 6),
+    ("مقابلة", 180, 8)
+]
+
+TIGHT_ASPECTS = [
+    ("اقتران", 0, 1.2),
+    ("تربيع", 90, 1.2),
+    ("مقابلة", 180, 1.2),
+    ("تثليث", 120, 1.0),
+    ("تسديس", 60, 1.0)
+]
+
+CITIES = {
+    "بغداد": (33.3152, 44.3661),
+    "النجف": (32.0003, 44.3354),
+    "الديوانية": (31.9861, 44.9256),
+    "كربلاء": (32.6160, 44.0249),
+    "البصرة": (30.5085, 47.7804),
+    "كركوك": (35.4681, 44.3922),
+    "الموصل": (36.3450, 43.1189),
+    "أربيل": (36.1911, 44.0092),
+    "الناصرية": (31.0579, 46.2573),
+    "السماوة": (31.3094, 45.2803),
+    "الكوت": (32.5128, 45.8182),
+    "الحلة": (32.4794, 44.4328),
+    "الرمادي": (33.4206, 43.3078),
+    "بعقوبة": (33.7485, 44.6555),
+    "تكريت": (34.6071, 43.6782),
+    "العمارة": (31.8356, 47.1448),
+    "إدخال يدوي": None
+}
+
+PTOLEMY_TERMS = {
+    "الحمل": [(6, "المشتري"), (14, "الزهرة"), (21, "عطارد"), (26, "المريخ"), (30, "زحل")],
+    "الثور": [(8, "الزهرة"), (15, "عطارد"), (22, "المشتري"), (26, "زحل"), (30, "المريخ")],
+    "الجوزاء": [(6, "عطارد"), (12, "المشتري"), (17, "الزهرة"), (24, "المريخ"), (30, "زحل")],
+    "السرطان": [(7, "المريخ"), (13, "الزهرة"), (19, "عطارد"), (26, "المشتري"), (30, "زحل")],
+    "الأسد": [(6, "المشتري"), (11, "الزهرة"), (18, "زحل"), (24, "عطارد"), (30, "المريخ")],
+    "العذراء": [(7, "عطارد"), (13, "الزهرة"), (18, "المشتري"), (24, "المريخ"), (30, "زحل")],
+    "الميزان": [(6, "زحل"), (14, "عطارد"), (21, "المشتري"), (28, "الزهرة"), (30, "المريخ")],
+    "العقرب": [(7, "المريخ"), (11, "الزهرة"), (19, "عطارد"), (24, "المشتري"), (30, "زحل")],
+    "القوس": [(12, "المشتري"), (17, "الزهرة"), (21, "عطارد"), (26, "زحل"), (30, "المريخ")],
+    "الجدي": [(7, "عطارد"), (14, "المشتري"), (22, "الزهرة"), (26, "زحل"), (30, "المريخ")],
+    "الدلو": [(7, "عطارد"), (13, "الزهرة"), (20, "المشتري"), (25, "المريخ"), (30, "زحل")],
+    "الحوت": [(12, "الزهرة"), (16, "المشتري"), (19, "عطارد"), (28, "المريخ"), (30, "زحل")]
+}
+
+FIRDARIA_DAY = [
+    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13), ("القمر", 9),
+    ("زحل", 11), ("المشتري", 12), ("المريخ", 7),
+    ("العقدة الشمالية", 3), ("العقدة الجنوبية", 2)
+]
+
+FIRDARIA_NIGHT = [
+    ("القمر", 9), ("زحل", 11), ("المشتري", 12), ("المريخ", 7),
+    ("الشمس", 10), ("الزهرة", 8), ("عطارد", 13),
+    ("العقدة الشمالية", 3), ("العقدة الجنوبية", 2)
+]
+
+SUB_SEQUENCE = ["الشمس", "الزهرة", "عطارد", "القمر", "زحل", "المشتري", "المريخ"]
+
+
+def choose_from_list(title, options):
+    print("\n" + title)
+    print("-" * 40)
+    for i, item in enumerate(options, start=1):
+        print(f"{i}. {item}")
+    while True:
+        raw = input("اختر الرقم: ").strip()
+        try:
+            idx = int(raw)
+            if 1 <= idx <= len(options):
+                return options[idx - 1]
+        except ValueError:
+            pass
+        print("اختيار غير صحيح.")
+
+
+def choose_number(title, start, end):
+    print("\n" + title)
+    print("-" * 40)
+    while True:
+        raw = input(f"اكتب رقمًا بين {start} و {end}: ").strip()
+        try:
+            val = int(raw)
+            if start <= val <= end:
+                return val
+        except ValueError:
+            pass
+        print("قيمة غير صحيحة.")
+
+
+def choose_utc():
+    value = choose_from_list("اختر فرق التوقيت عن UTC", [
+        "3 - العراق والسعودية والكويت",
+        "2 - مصر/الأردن شتاءً",
+        "4 - الإمارات",
+        "0 - غرينتش",
+        "إدخال يدوي"
+    ])
+    if value.startswith("3"):
+        return 3.0
+    if value.startswith("2"):
+        return 2.0
+    if value.startswith("4"):
+        return 4.0
+    if value.startswith("0"):
+        return 0.0
+    while True:
+        try:
+            return float(input("اكتب فرق التوقيت مثل 3 أو 3.5: ").strip())
+        except ValueError:
+            print("قيمة غير صحيحة.")
+
+
+def norm(x):
+    return x % 360.0
+
+
+def sign_name(deg):
+    return SIGNS[int(norm(deg) // 30)]
+
+
+def deg_in_sign(deg):
+    d = norm(deg) % 30
+    degree = int(d)
+    minute = int(round((d - degree) * 60))
+    if minute == 60:
+        degree += 1
+        minute = 0
+    return degree, minute
+
+
+def format_pos(deg):
+    d, m = deg_in_sign(deg)
+    return f"{d}°{m:02d}′ {sign_name(deg)}"
+
+
+def distance(a, b):
+    diff = abs(norm(a) - norm(b))
+    return min(diff, 360 - diff)
+
+
+def find_aspect(a, b, tight=False):
+    aspects = TIGHT_ASPECTS if tight else ASPECTS
+    diff = distance(a, b)
+    for name, angle, orb in aspects:
+        off = abs(diff - angle)
+        if off <= orb:
+            return name, round(off, 2)
+    return None
+
+
+def is_hard(asp):
+    return asp and asp[0] in ["تربيع", "مقابلة"]
+
+
+def is_easy(asp):
+    return asp and asp[0] in ["اقتران", "تسديس", "تثليث"]
+
+
+def in_arc(x, start, end):
+    x = norm(x)
+    start = norm(start)
+    end = norm(end)
+    if start <= end:
+        return start <= x < end
+    return x >= start or x < end
+
+
+def house_of(deg, cusps):
+    for i in range(12):
+        if in_arc(deg, cusps[i], cusps[(i + 1) % 12]):
+            return i + 1
+    return 1
+
+
+def house_ruler(cusps, house_num):
+    cusp = cusps[house_num - 1]
+    sign = sign_name(cusp)
+    return sign, SIGN_RULERS[sign]
+
+
+def midpoint(a, b):
+    a = norm(a)
+    b = norm(b)
+    diff = (b - a) % 360
+    if diff > 180:
+        diff -= 360
+    return norm(a + diff / 2)
+
+
+def ptolemy_term(deg):
+    sign = sign_name(deg)
+    d = norm(deg) % 30
+    for end_degree, ruler in PTOLEMY_TERMS[sign]:
+        if d < end_degree:
+            return ruler
+    return PTOLEMY_TERMS[sign][-1][1]
+
+
+def dignity_score(planet, sign):
+    score = 0
+    notes = []
+    if planet in DOMICILES and sign in DOMICILES[planet]:
+        score += 10
+        notes.append("في بيته")
+    if planet in EXALTATIONS and sign == EXALTATIONS[planet]:
+        score += 8
+        notes.append("في شرفه")
+    if planet in DETRIMENTS and sign in DETRIMENTS[planet]:
+        score -= 8
+        notes.append("في وباله")
+    if planet in FALLS and sign == FALLS[planet]:
+        score -= 7
+        notes.append("في سقوطه")
+    if not notes:
+        notes.append("كرامة متوسطة")
+    return score, "، ".join(notes)
+
+
+def planet_strength(planet, data):
+    sign = data["sign"]
+    house = data["house"]
+    retro = data["retro"]
+    score, note = dignity_score(planet, sign)
+    if house in [1, 4, 7, 10]:
+        score += 8
+        note += "، في بيت زاوي"
+    elif house in [2, 5, 8, 11]:
+        score += 3
+        note += "، في بيت لاحق"
+    else:
+        score -= 2
+        note += "، في بيت ساقط"
+    if retro:
+        score -= 4
+        note += "، متراجع"
+    return score, note
+
+
+def calculate_chart(year, month, day, hour, minute, utc_offset, lat, lon):
+    chart_geo_lon = lon
+    # الوقت المدخل محلي ويحوّل فعليًا إلى UT
+    local_dt = datetime(year, month, day, hour, minute)
+    utc_dt = local_dt - timedelta(hours=utc_offset)
+    ut_hour = utc_dt.hour + utc_dt.minute / 60.0 + utc_dt.second / 3600.0
+
+    jd = swe.julday(
+        utc_dt.year,
+        utc_dt.month,
+        utc_dt.day,
+        ut_hour
+    )
+
+    houses = swe.houses(jd, lat, lon, b'P')
+    cusps = list(houses[0])
+    ascmc = houses[1]
+
+    positions = {}
+    for pname, pcode in PLANETS.items():
+        result = swe.calc_ut(jd, pcode)
+        lon = norm(result[0][0])
+        speed = result[0][3]
+        positions[pname] = {
+            "lon": lon,
+            "pos": format_pos(lon),
+            "sign": sign_name(lon),
+            "speed": speed,
+            "retro": speed < 0,
+            "house": None
+        }
+
+    for name, code in OPTIONAL_BODIES.items():
+        try:
+            result = swe.calc_ut(jd, code)
+            lon = norm(result[0][0])
+            speed = result[0][3]
+            positions[name] = {
+                "lon": lon,
+                "pos": format_pos(lon),
+                "sign": sign_name(lon),
+                "speed": speed,
+                "retro": speed < 0,
+                "house": None
+            }
+            if name == "العقدة الشمالية":
+                sn = norm(lon + 180)
+                positions["العقدة الجنوبية"] = {
+                    "lon": sn,
+                    "pos": format_pos(sn),
+                    "sign": sign_name(sn),
+                    "speed": speed,
+                    "retro": speed < 0,
+                    "house": None
+                }
+        except Exception:
+            pass
+
+    for pname in positions:
+        positions[pname]["house"] = house_of(positions[pname]["lon"], cusps)
+
+    return {
+        "jd": jd,
+        "positions": positions,
+        "cusps": cusps,
+        "ascmc": ascmc,
+        "year": year,
+        "month": month,
+        "day": day,
+        "hour": hour,
+        "minute": minute,
+        "utc_offset": utc_offset,
+        "local_dt": local_dt,
+        "utc_dt": utc_dt,
+        "lat": lat,
+        "lon": chart_geo_lon
+    }
+
+
+def is_day_chart(positions):
+    return positions["الشمس"]["house"] in [7, 8, 9, 10, 11, 12]
+
+
+def firdaria_for_age(age, day_chart=True):
+    sequence = FIRDARIA_DAY if day_chart else FIRDARIA_NIGHT
+    remaining = age
+    for ruler, years in sequence:
+        if remaining < years:
+            main = ruler
+            inside = remaining
+            if ruler in ["العقدة الشمالية", "العقدة الجنوبية"]:
+                sub = ruler
+            else:
+                sub_len = years / 7.0
+                idx = int(inside // sub_len)
+                if idx > 6:
+                    idx = 6
+                start = SUB_SEQUENCE.index(ruler) if ruler in SUB_SEQUENCE else 0
+                sub = SUB_SEQUENCE[(start + idx) % 7]
+            return main, sub, round(inside, 2)
+        remaining -= years
+    cycle = sum(y for _, y in sequence)
+    return firdaria_for_age(age % cycle, day_chart)
+
+
+def classify(score):
+    if score <= 25:
+        return "ضعيف"
+    if score <= 50:
+        return "متوسط"
+    if score <= 75:
+        return "قوي"
+    return "قوي جدًا"
+
+
+def add_score(current, amount):
+    return max(0, min(100, current + amount))
+
+
+def scan_year_transits(chart, target_year, keys):
+    utc_offset = chart["utc_offset"]
+    scores = []
+    for month in range(1, 13):
+        month_score = 0
+        notes = []
+        dt = datetime(target_year, month, 15, 12, 0) - timedelta(hours=utc_offset)
+        jd = swe.julday(dt.year, dt.month, dt.day, dt.hour)
+        transit_codes = {
+            "المشتري": swe.JUPITER,
+            "زحل": swe.SATURN,
+            "الزهرة": swe.VENUS,
+            "المريخ": swe.MARS,
+            "القمر": swe.MOON
+        }
+        for tname, code in transit_codes.items():
+            try:
+                lon = norm(swe.calc_ut(jd, code)[0][0])
+            except Exception:
+                continue
+            for kname, klon in keys.items():
+                asp = find_aspect(lon, klon, tight=True)
+                if asp:
+                    if tname == "المشتري":
+                        month_score += 14
+                    elif tname == "زحل":
+                        month_score += 8
+                    elif tname == "الزهرة":
+                        month_score += 8
+                    elif tname == "المريخ":
+                        month_score += 5
+                    elif tname == "القمر":
+                        month_score += 3
+                    notes.append(f"{tname} يفعّل {kname} عبر {asp[0]}")
+                    break
+        scores.append((month, min(100, month_score), notes))
+    scores.sort(key=lambda x: x[1], reverse=True)
+    return scores
+
+
+def analyze(chart, target_year):
+    p = chart["positions"]
+    cusps = chart["cusps"]
+    ascmc = chart["ascmc"]
+
+    seventh_sign, ruler7 = house_ruler(cusps, 7)
+    fifth_sign, ruler5 = house_ruler(cusps, 5)
+    fourth_sign, ruler4 = house_ruler(cusps, 4)
+    tenth_sign, ruler10 = house_ruler(cusps, 10)
+    ninth_sign, ruler9 = house_ruler(cusps, 9)
+    eighth_sign, ruler8 = house_ruler(cusps, 8)
+    second_from_7_sign, ruler_2_from_7 = house_ruler(cusps, 8)   # الثاني من السابع
+    sixth_from_7_sign, ruler_6_from_7 = house_ruler(cusps, 12)  # السادس من السابع
+    eighth_from_7_sign, ruler_8_from_7 = house_ruler(cusps, 2)  # الثامن من السابع
+    eleventh_sign, ruler11 = house_ruler(cusps, 11)             # الخامس من السابع
+
+    keys = {
+        "الهابط": cusps[6],
+        "الزهرة": p["الزهرة"]["lon"],
+        "حاكم السابع": p[ruler7]["lon"],
+        "القمر": p["القمر"]["lon"],
+        "الشمس/القمر": midpoint(p["الشمس"]["lon"], p["القمر"]["lon"]),
+        "الزهرة/المريخ": midpoint(p["الزهرة"]["lon"], p["المريخ"]["lon"]),
+        "القمر/الزهرة": midpoint(p["القمر"]["lon"], p["الزهرة"]["lon"]),
+        "الطالع/الزهرة": midpoint(ascmc[0], p["الزهرة"]["lon"])
+    }
+
+    if "جونو" in p:
+        keys["جونو"] = p["جونو"]["lon"]
+
+    natal_score = 0
+    love_score = 0
+    official_score = 0
+    delay_score = 0
+    separation_score = 0
+    second_score = 0
+    return_score = 0
+    karmic_score = 0
+    eighth_love_score = 0
+    crisis_score = 0
+    first_marriage_score = 0
+    second_marriage_power = 0
+
+    strengths = []
+    challenges = []
+    expert = []
+
+    v_strength, v_note = planet_strength("الزهرة", p["الزهرة"])
+    r_strength, r_note = planet_strength(ruler7, p[ruler7])
+
+    natal_score += max(-10, min(18, v_strength + r_strength))
+    expert.append(f"قوة الزهرة: {v_strength} / {v_note}")
+    expert.append(f"قوة حاكم السابع {ruler7}: {r_strength} / {r_note}")
+
+    ruler7_house = p[ruler7]["house"]
+    venus_house = p["الزهرة"]["house"]
+
+    if ruler7_house in [1, 4, 7, 10]:
+        natal_score += 25
+        official_score += 18
+        strengths.append("حاكم السابع في بيت زاوي؛ هذه من أقوى دلالات حضور الزواج.")
+    elif ruler7_house in [5, 11]:
+        natal_score += 16
+        love_score += 10
+        strengths.append("حاكم السابع في بيت اجتماعي أو عاطفي؛ الزواج قد يأتي عبر حب أو أصدقاء.")
+    elif ruler7_house in [9, 3]:
+        natal_score += 12
+        strengths.append("حاكم السابع في بيت حركة أو سفر أو تواصل؛ الزواج قد يأتي عبر انتقال أو بيئة مختلفة.")
+    else:
+        natal_score += 8
+
+    planets_in_7 = [x for x in PLANETS if p[x]["house"] == 7]
+    if planets_in_7:
+        natal_score += min(25, len(planets_in_7) * 8)
+        official_score += min(16, len(planets_in_7) * 5)
+        strengths.append("وجود كواكب في السابع يفتح ملف الزواج بوضوح: " + "، ".join(planets_in_7))
+
+    if venus_house in [1, 4, 7, 10]:
+        natal_score += 20
+        love_score += 18
+        official_score += 10
+        strengths.append("الزهرة في بيت زاوي؛ الحب والقبول يظهران بقوة.")
+    elif venus_house == 5:
+        natal_score += 18
+        love_score += 24
+        strengths.append("الزهرة في الخامس؛ رومانسية واضحة وبدايات حب قوية.")
+    elif venus_house == 8:
+        natal_score += 10
+        love_score += 14
+        eighth_love_score += 25
+        crisis_score += 18
+        return_score += 10
+        challenges.append("الزهرة في البيت الثامن: حب عميق وتعلق قوي، لكنه يحمل قابلية أزمة أو خوف من الفقد إذا غاب الأمان.")
+    elif venus_house in [11, 3]:
+        natal_score += 12
+        love_score += 12
+        strengths.append("الزهرة في بيت اجتماعي أو تواصلي؛ التعارف والحوار مهمان.")
+    elif venus_house in [6, 12]:
+        natal_score += 5
+        delay_score += 8
+        separation_score += 6
+        challenges.append("الزهرة في بيت ضعيف نسبيًا للعاطفة، وهذا يحتاج إلى وضوح وتوازن حتى لا تتحول العلاقة إلى تعب أو تضحية.")
+    else:
+        natal_score += 7
+
+    # الزهرة في الثامن: تتحول من عمق عاطفي إلى مؤشر أزمة إذا تعرضت لضغط
+    if venus_house == 8:
+        stressful_to_venus = []
+        for pressure in ["زحل", "أورانوس", "نبتون", "بلوتو", "المريخ"]:
+            asp8 = find_aspect(p[pressure]["lon"], p["الزهرة"]["lon"])
+            if asp8:
+                if is_hard(asp8) or asp8[0] == "اقتران":
+                    stressful_to_venus.append(f"{pressure} عبر {asp8[0]}")
+        if stressful_to_venus:
+            separation_score += 18
+            crisis_score += 22
+            return_score += 8
+            challenges.append("الزهرة في الثامن مضغوطة بـ " + "، ".join(stressful_to_venus) + "؛ هذا يرفع احتمال أزمة عاطفية أو انفصال مؤقت أو علاقة صعبة النسيان.")
+        else:
+            strengths.append("الزهرة في الثامن غير مضغوطة بقوة؛ تعطي عمقًا وتعلقًا وتحولًا نفسيًا أكثر من كونها مؤشر انفصال مباشر.")
+
+    # حاكم الثامن مع الزهرة أو السابع: يزيد معنى الأزمة/المال المشترك/التحول
+    for target in ["الزهرة", ruler7]:
+        asp8r = find_aspect(p[ruler8]["lon"], p[target]["lon"])
+        if asp8r:
+            if is_hard(asp8r):
+                crisis_score += 16
+                separation_score += 10
+                challenges.append(f"حاكم الثامن {ruler8} متوتر مع {target}: يرفع قابلية أزمة عاطفية أو مالية داخل العلاقة.")
+            else:
+                eighth_love_score += 10
+                return_score += 6
+                strengths.append(f"حاكم الثامن {ruler8} متصل بـ {target}: علاقة عميقة وتحول عاطفي أو مشاركة قوية.")
+
+    # classical + modern synthesis
+    pairings = [
+        ("الزهرة", ruler7, "الزهرة مع حاكم السابع"),
+        ("القمر", ruler7, "القمر مع حاكم السابع"),
+        ("المشتري", ruler7, "المشتري مع حاكم السابع"),
+        ("المشتري", "الزهرة", "المشتري مع الزهرة"),
+        ("الشمس", "القمر", "الشمس مع القمر"),
+        ("الزهرة", "المريخ", "الزهرة مع المريخ")
+    ]
+
+    for a, b, label in pairings:
+        asp = find_aspect(p[a]["lon"], p[b]["lon"])
+        if asp:
+            if is_easy(asp):
+                natal_score += 10
+                if a == "الزهرة" or b == "الزهرة":
+                    love_score += 8
+                if b == ruler7 or a == ruler7:
+                    official_score += 8
+                strengths.append(f"{label}: رابط داعم يرفع قابلية العلاقة.")
+            elif is_hard(asp):
+                natal_score += 5
+                love_score += 5
+                separation_score += 6
+                challenges.append(f"{label}: جذب أو تفعيل قوي لكنه يحتاج إلى نضج.")
+
+    # Saturn delay
+    if p["زحل"]["house"] == 7:
+        delay_score += 25
+        official_score += 8
+        challenges.append("زحل في السابع: زواج بعد نضج أو مسؤولية أو اختبار.")
+
+    for target in ["الزهرة", ruler7, "القمر"]:
+        asp = find_aspect(p["زحل"]["lon"], p[target]["lon"])
+        if asp:
+            if is_hard(asp):
+                delay_score += 18
+                separation_score += 8
+                challenges.append(f"زحل يضغط {target}: تأخير أو ثقل عاطفي.")
+            elif is_easy(asp):
+                official_score += 12
+                strengths.append(f"زحل يدعم {target}: قدرة على الالتزام والثبات.")
+
+    # Uranus/Neptune/Pluto
+    for outer in ["أورانوس", "نبتون", "بلوتو"]:
+        for target in ["الزهرة", ruler7]:
+            asp = find_aspect(p[outer]["lon"], p[target]["lon"])
+            if asp:
+                if outer == "أورانوس":
+                    separation_score += 16 if is_hard(asp) or asp[0] == "اقتران" else 8
+                    challenges.append("أورانوس يلمس دلالة عاطفية: علاقات مفاجئة أو غير تقليدية.")
+                elif outer == "نبتون":
+                    separation_score += 14 if is_hard(asp) or asp[0] == "اقتران" else 7
+                    challenges.append("نبتون يلمس دلالة عاطفية: مثالية أو غموض يحتاج إلى وضوح.")
+                elif outer == "بلوتو":
+                    return_score += 12
+                    separation_score += 8 if is_hard(asp) else 4
+                    challenges.append("بلوتو يلمس دلالة عاطفية: عمق وتعلق وتحول نفسي.")
+
+    if p["أورانوس"]["house"] == 7:
+        separation_score += 18
+        challenges.append("أورانوس في السابع: مفاجآت أو تغيرات في العلاقات.")
+    if p["نبتون"]["house"] == 7:
+        separation_score += 14
+        challenges.append("نبتون في السابع: مثالية عالية أو صورة غير واضحة للشريك.")
+    if p["بلوتو"]["house"] == 7:
+        separation_score += 10
+        return_score += 12
+        challenges.append("بلوتو في السابع: علاقات عميقة وصعبة النسيان.")
+
+    # home/social official
+    if ruler7 == ruler4 or ruler7_house == 4:
+        official_score += 16
+        natal_score += 10
+        strengths.append("ارتباط السابع بالرابع: دلالة بيت وسكن واستقرار.")
+    if ruler7 == ruler10 or ruler7_house == 10:
+        official_score += 16
+        natal_score += 10
+        strengths.append("ارتباط السابع بالعاشر: دلالة إعلان ومكانة اجتماعية.")
+    if ruler7 == ruler5 or ruler7_house == 5:
+        love_score += 16
+        natal_score += 8
+        strengths.append("ارتباط السابع بالخامس: الحب قد يتحول إلى زواج.")
+
+    # Juno
+    if "جونو" in p:
+        if p["جونو"]["house"] in [1, 4, 7, 10]:
+            official_score += 20
+            natal_score += 10
+            strengths.append("جونو في بيت زاوي: دلالة قوية على الالتزام والعقد.")
+        for target in ["الزهرة", ruler7, "القمر", "الشمس"]:
+            asp = find_aspect(p["جونو"]["lon"], p[target]["lon"])
+            if asp:
+                official_score += 12
+                strengths.append("جونو يتصل بمفتاح عاطفي أو زوجي: قابلية أعلى للارتباط الرسمي.")
+                break
+
+    # Nodes
+    for node in ["العقدة الشمالية", "العقدة الجنوبية"]:
+        if node in p:
+            for target in ["الزهرة", ruler7, "القمر", "الشمس", "جونو"]:
+                if target in p:
+                    asp = find_aspect(p[node]["lon"], p[target]["lon"], tight=True)
+                    if asp:
+                        karmic_score += 15
+                        expert.append(f"{node} تفعّل {target}: دلالة قدرية/كارمية.")
+                        break
+
+    # قوة الزواج الأول مقابل الزواج الثاني
+    # السابع = الزواج الأول، التاسع = الزواج الثاني في القراءة التقليدية، مع دعم من الحادي عشر كخامس من السابع
+    first_marriage_score += official_score + natal_score // 3
+    if ruler7_house in [1, 4, 7, 10]:
+        first_marriage_score += 15
+    if p["زحل"]["house"] == 7 and delay_score >= 20:
+        first_marriage_score -= 5
+
+    if p[ruler9]["house"] in [1, 7, 10, 11] or ruler9 in ["الزهرة", "المشتري"]:
+        second_score += 14
+        second_marriage_power += 15
+    if p[ruler9]["house"] in [5, 9]:
+        second_score += 10
+        second_marriage_power += 10
+    if find_aspect(p[ruler9]["lon"], p["الزهرة"]["lon"]):
+        second_score += 12
+        second_marriage_power += 12
+    if find_aspect(p[ruler9]["lon"], p[ruler7]["lon"]):
+        second_score += 12
+        second_marriage_power += 12
+    if find_aspect(p[ruler11]["lon"], p["الزهرة"]["lon"]):
+        second_score += 8
+        second_marriage_power += 8
+    if ruler9 == ruler7:
+        second_score += 8
+        second_marriage_power += 8
+
+    # بيوت مشتقة من السابع: السادس والثاني عشر من السابع مؤشرات تعب/انفصال إن نشطت بقوة
+    for derived_ruler, label in [
+        (ruler_6_from_7, "السادس من السابع"),
+        (ruler_8_from_7, "الثامن من السابع"),
+        (ruler_2_from_7, "الثاني من السابع")
+    ]:
+        for target in [ruler7, "الزهرة"]:
+            asp_d = find_aspect(p[derived_ruler]["lon"], p[target]["lon"])
+            if asp_d:
+                if is_hard(asp_d):
+                    separation_score += 8
+                    crisis_score += 8
+                    challenges.append(f"حاكم {label} متوتر مع {target}: يضيف ضغطًا على استمرار العلاقة أو مواردها.")
+                else:
+                    official_score += 4
+
+    # Timing
+    age = target_year - chart["year"]
+    if age < 0:
+        age = 0
+
+    timing_score = 0
+    timing_notes = []
+
+    prof_house = (age % 12) + 1
+    prof_sign, prof_ruler = house_ruler(cusps, prof_house)
+
+    if prof_house == 7:
+        timing_score += 28
+        timing_notes.append("البروفكشن يفتح البيت السابع مباشرة؛ سنة مهمة جدًا للزواج.")
+    elif prof_house in [5, 4, 10]:
+        timing_score += 18
+        timing_notes.append("البروفكشن يفتح بيتًا مساعدًا: الحب أو البيت أو الإعلان.")
+    elif prof_ruler in ["الزهرة", "القمر", "المشتري", ruler7]:
+        timing_score += 14
+        timing_notes.append("حاكم سنة البروفكشن مرتبط بدلالات الزواج.")
+
+    day_chart = is_day_chart(p)
+    main_f, sub_f, inside_f = firdaria_for_age(age, day_chart)
+    marriage_rulers = ["الزهرة", "القمر", "الشمس", "المشتري", ruler7]
+    if main_f in marriage_rulers:
+        timing_score += 22
+        timing_notes.append(f"الفريدار الرئيسي {main_f} مرتبط بالزواج.")
+    if sub_f in marriage_rulers:
+        timing_score += 15
+        timing_notes.append(f"الفريدار الفرعي {sub_f} مرتبط بالزواج.")
+    if main_f == "زحل":
+        timing_score += 6
+        timing_notes.append("فريدار زحل قد يعطي زواجًا رسميًا أو متأخرًا.")
+    if main_f == "المريخ":
+        timing_score += 4
+        timing_notes.append("فريدار المريخ قد يعطي حسمًا أو قرارًا سريعًا.")
+
+    # Solar arc
+    arc = age
+    sa_points = {
+        "SA الزهرة": norm(p["الزهرة"]["lon"] + arc),
+        "SA القمر": norm(p["القمر"]["lon"] + arc),
+        "SA الشمس": norm(p["الشمس"]["lon"] + arc),
+        "SA الطالع": norm(cusps[0] + arc),
+        "SA الهابط": norm(cusps[6] + arc),
+        "SA حاكم السابع": norm(p[ruler7]["lon"] + arc)
+    }
+    for sa_name, sa_lon in sa_points.items():
+        for kname, klon in keys.items():
+            asp = find_aspect(sa_lon, klon, tight=True)
+            if asp:
+                timing_score += 10
+                timing_notes.append(f"{sa_name} يفعّل {kname}: توقيت مهم.")
+                break
+
+    # Secondary progression
+    prog_jd = chart["jd"] + age
+    prog = {}
+    for n, code in [("القمر التقدمي", swe.MOON), ("الزهرة التقدمية", swe.VENUS), ("الشمس التقدمية", swe.SUN)]:
+        try:
+            prog[n] = norm(swe.calc_ut(prog_jd, code)[0][0])
+        except Exception:
+            pass
+    for n, lon in prog.items():
+        for kname, klon in keys.items():
+            asp = find_aspect(lon, klon, tight=True)
+            if asp:
+                timing_score += 9
+                timing_notes.append(f"{n} يفعّل {kname}: استعداد نفسي أو عاطفي.")
+                break
+
+    monthly = scan_year_transits(chart, target_year, keys)
+    top_month_score = monthly[0][1] if monthly else 0
+    timing_score += min(20, top_month_score)
+
+    natal_score = max(0, min(100, natal_score))
+    love_score = max(0, min(100, love_score))
+    official_score = max(0, min(100, official_score))
+    delay_score = max(0, min(100, delay_score))
+    separation_score = max(0, min(100, separation_score))
+    second_score = max(0, min(100, second_score))
+    return_score = max(0, min(100, return_score))
+    karmic_score = max(0, min(100, karmic_score))
+    eighth_love_score = max(0, min(100, eighth_love_score))
+    crisis_score = max(0, min(100, crisis_score))
+    first_marriage_score = max(0, min(100, first_marriage_score))
+    second_marriage_power = max(0, min(100, second_marriage_power))
+    timing_score = max(0, min(100, timing_score))
+
+    # إذا كان مؤشر الأزمة عالياً يزيد مؤشر الانفصال، لكن لا يلغي وعد الزواج
+    if crisis_score >= 55:
+        separation_score = max(separation_score, min(100, crisis_score + 10))
+
+    combined = round(
+        natal_score * 0.35 +
+        official_score * 0.15 +
+        love_score * 0.10 +
+        timing_score * 0.30 +
+        karmic_score * 0.05 +
+        return_score * 0.05
+    )
+
+    return {
+        "seventh_sign": seventh_sign,
+        "ruler7": ruler7,
+        "ruler7_house": ruler7_house,
+        "fifth_sign": fifth_sign,
+        "ruler5": ruler5,
+        "fourth_sign": fourth_sign,
+        "ruler4": ruler4,
+        "tenth_sign": tenth_sign,
+        "ruler10": ruler10,
+        "ninth_sign": ninth_sign,
+        "ruler9": ruler9,
+        "eighth_sign": eighth_sign,
+        "ruler8": ruler8,
+        "eleventh_sign": eleventh_sign,
+        "ruler11": ruler11,
+        "keys": keys,
+        "natal_score": natal_score,
+        "love_score": love_score,
+        "official_score": official_score,
+        "delay_score": delay_score,
+        "separation_score": separation_score,
+        "second_score": second_score,
+        "return_score": return_score,
+        "karmic_score": karmic_score,
+        "eighth_love_score": eighth_love_score,
+        "crisis_score": crisis_score,
+        "first_marriage_score": first_marriage_score,
+        "second_marriage_power": second_marriage_power,
+        "timing_score": timing_score,
+        "combined": combined,
+        "strengths": strengths,
+        "challenges": challenges,
+        "expert": expert,
+        "age": age,
+        "prof_house": prof_house,
+        "prof_sign": prof_sign,
+        "prof_ruler": prof_ruler,
+        "main_f": main_f,
+        "sub_f": sub_f,
+        "inside_f": inside_f,
+        "prog": prog,
+        "timing_notes": timing_notes,
+        "monthly": monthly
+    }
+
+
+def partner_text(sign, ruler, house):
+    descriptions = {
+        "الحمل": "شريك مباشر، سريع، مبادر، وقد يكون قوي الحضور.",
+        "الثور": "شريك ثابت، عملي، يبحث عن الأمان والاستقرار.",
+        "الجوزاء": "شريك ذكي، متحدث، كثير الحركة والتواصل.",
+        "السرطان": "شريك عائلي، حنون، حساس، ويبحث عن الأمان.",
+        "الأسد": "شريك كريم، واضح، يحب التقدير والظهور.",
+        "العذراء": "شريك عملي، دقيق، يهتم بالتفاصيل والمسؤولية.",
+        "الميزان": "شريك لبق، اجتماعي، يحب التوازن والرسمية.",
+        "العقرب": "شريك عميق، غامض، عاطفته قوية وصعبة النسيان.",
+        "القوس": "شريك حر، محب للسفر والمعرفة والمساحة.",
+        "الجدي": "شريك جاد، مسؤول، وقد يكون أكبر عمرًا أو خبرة.",
+        "الدلو": "شريك مستقل، مختلف، عقلاني أو غير تقليدي.",
+        "الحوت": "شريك حساس، روحي، خيالي، وقد يكون مضحيًا."
+    }
+    houses = {
+        1: "يظهر الشريك بقوة في شخصية صاحب الخريطة وحياته المباشرة.",
+        2: "الزواج يرتبط بالمال والقيم والأمان.",
+        3: "الزواج قد يأتي عبر تواصل أو دراسة أو محيط قريب.",
+        4: "الزواج يرتبط بالبيت والسكن والعائلة.",
+        5: "الزواج قد يبدأ من حب ورومانسية.",
+        6: "الزواج يحتاج إلى تنظيم ومسؤولية يومية.",
+        7: "موضوع الزواج مباشر وقوي جدًا.",
+        8: "الزواج عميق وتحويلي وقد يرتبط بمال مشترك.",
+        9: "الزواج قد يرتبط بسفر أو اختلاف ثقافي أو ديني.",
+        10: "الزواج ظاهر اجتماعيًا ومؤثر في السمعة.",
+        11: "الزواج قد يأتي عبر الأصدقاء والمجتمع.",
+        12: "الزواج يحتاج إلى وضوح وقد يحمل خصوصية أو تأخيرًا."
+    }
+    return f"السابع في {sign}: {descriptions.get(sign,'')}\nحاكم السابع {ruler} في البيت {house}: {houses.get(house,'')}"
+
+
+def build_report(chart, analysis, name, gender, birth_info, city_name, target_year):
+    p = chart["positions"]
+    cusps = chart["cusps"]
+    ascmc = chart["ascmc"]
+
+    report = ""
+    report += "تقرير الزواج الفلكي المتقدم - Web Expert V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner\n"
+    report += "===============================================\n\n"
+
+    report += "بيانات الخريطة\n"
+    report += "--------------\n"
+    report += f"الاسم: {name}\n"
+    report += f"الجنس: {gender}\n"
+    report += f"مكان الميلاد: {city_name}\n"
+    report += f"بيانات الميلاد: {birth_info}\n"
+    report += f"سنة فحص فرصة الزواج: {target_year}\n\n"
+
+    report += "مواقع الخريطة الفلكية\n"
+    report += "--------------------\n"
+    report += f"الطالع: {format_pos(ascmc[0])} / حد {ptolemy_term(ascmc[0])}\n"
+    report += f"الهابط، باب الزواج: {format_pos(cusps[6])} / حد {ptolemy_term(cusps[6])}\n"
+    report += f"منتصف السماء MC: {format_pos(ascmc[1])}\n\n"
+
+    report += "مواقع الكواكب\n"
+    report += "-------------\n"
+    for x in PLANETS:
+        retro = "متراجع" if p[x]["retro"] else "مباشر"
+        report += f"{x}: {p[x]['pos']}، البيت {p[x]['house']}، {retro}"
+        if x in ["الزهرة", "القمر", analysis["ruler7"], "المشتري", "زحل"]:
+            report += f"، حد {ptolemy_term(p[x]['lon'])}"
+        report += "\n"
+    for x in ["جونو", "العقدة الشمالية", "العقدة الجنوبية"]:
+        if x in p:
+            retro = "متراجع" if p[x]["retro"] else "مباشر"
+            report += f"{x}: {p[x]['pos']}، البيت {p[x]['house']}، {retro}\n"
+
+    report += "\nمفاتيح الزواج\n"
+    report += "-------------\n"
+    report += f"برج السابع: {analysis['seventh_sign']}\n"
+    report += f"حاكم السابع: {analysis['ruler7']}\n"
+    report += f"موقع حاكم السابع: {p[analysis['ruler7']]['pos']}، البيت {analysis['ruler7_house']}\n"
+    report += f"برج الخامس: {analysis['fifth_sign']}، حاكمه {analysis['ruler5']}\n"
+    report += f"برج الرابع: {analysis['fourth_sign']}، حاكمه {analysis['ruler4']}\n"
+    report += f"برج العاشر: {analysis['tenth_sign']}، حاكمه {analysis['ruler10']}\n"
+    report += f"برج التاسع: {analysis['ninth_sign']}، حاكمه {analysis['ruler9']}، وهو مؤشر إضافي للزواج الثاني.\n\n"
+
+    report += "صورة الشريك والزواج\n"
+    report += "------------------\n"
+    report += partner_text(analysis["seventh_sign"], analysis["ruler7"], analysis["ruler7_house"]) + "\n\n"
+
+    report += "النقاط العاطفية الحساسة\n"
+    report += "----------------------\n"
+    for k in ["الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة", "الطالع/الزهرة"]:
+        report += f"{k}: {format_pos(analysis['keys'][k])} / حد {ptolemy_term(analysis['keys'][k])}\n"
+
+    report += "\nالنتائج الرقمية\n"
+    report += "---------------\n"
+    report += f"وعد الزواج الأصلي: {analysis['natal_score']} من 100 / {classify(analysis['natal_score'])}\n"
+    report += f"مؤشر الحب والجذب: {analysis['love_score']} من 100 / {classify(analysis['love_score'])}\n"
+    report += f"مؤشر الزواج الرسمي: {analysis['official_score']} من 100 / {classify(analysis['official_score'])}\n"
+    report += f"مؤشر التأخير أو النضج: {analysis['delay_score']} من 100 / {classify(analysis['delay_score'])}\n"
+    report += f"مؤشر التوتر أو الانفصال: {analysis['separation_score']} من 100 / {classify(analysis['separation_score'])}\n"
+    report += f"مؤشر الزواج الثاني: {analysis['second_score']} من 100 / {classify(analysis['second_score'])}\n"
+    report += f"قوة الزواج الأول: {analysis['first_marriage_score']} من 100 / {classify(analysis['first_marriage_score'])}\n"
+    report += f"قوة احتمال زواج لاحق/ثانٍ: {analysis['second_marriage_power']} من 100 / {classify(analysis['second_marriage_power'])}\n"
+    report += f"مؤشر عمق الزهرة/الثامن: {analysis['eighth_love_score']} من 100 / {classify(analysis['eighth_love_score'])}\n"
+    report += f"مؤشر الأزمة والتحول العاطفي: {analysis['crisis_score']} من 100 / {classify(analysis['crisis_score'])}\n"
+    report += f"مؤشر العودة بعد الانفصال: {analysis['return_score']} من 100 / {classify(analysis['return_score'])}\n"
+    report += f"مؤشر العلاقة القدرية/الكارمية: {analysis['karmic_score']} من 100 / {classify(analysis['karmic_score'])}\n"
+    report += f"مؤشر توقيت سنة {target_year}: {analysis['timing_score']} من 100 / {classify(analysis['timing_score'])}\n"
+    report += f"المؤشر المركب النهائي: {analysis['combined']} من 100 / {classify(analysis['combined'])}\n\n"
+
+    report += "شرح مبسط للنتيجة\n"
+    report += "----------------\n"
+    if analysis["combined"] <= 25:
+        report += "النتيجة النهائية ضعيفة. هذا لا يعني استحالة الزواج، لكنه يعني أن الخريطة وسنة الفحص لا تعطيان دفعًا قويًا كافيًا حاليًا.\n"
+    elif analysis["combined"] <= 50:
+        report += "النتيجة متوسطة. قد تظهر علاقة أو تفكير بالارتباط، لكن يحتاج الأمر إلى تفعيل أقوى أو ظروف واقعية أكثر وضوحًا.\n"
+    elif analysis["combined"] <= 75:
+        report += "النتيجة قوية. توجد قابلية جدية للحب أو الخطوبة أو الاتفاق، خصوصًا إذا دعمتها الظروف العائلية والاجتماعية.\n"
+    else:
+        report += "النتيجة قوية جدًا. السنة والخريطة تحملان مؤشرات واضحة للزواج أو القرار الرسمي إذا توفرت الظروف الواقعية.\n"
+
+    report += "\nدراسة الزهرة في الثامن والأزمات العاطفية\n"
+    report += "----------------------------------------\n"
+    if p['الزهرة']['house'] == 8:
+        report += "الزهرة موجودة في البيت الثامن. هذا يعطي حبًا عميقًا وتعلقًا قويًا، لكنه يجعل العلاقة حساسة تجاه الخوف من الفقد والغيرة والتحولات النفسية.\n"
+        if analysis['crisis_score'] >= 55:
+            report += "بسبب وجود ضغط إضافي على الزهرة أو حاكم الثامن، يتحول العمق العاطفي إلى مؤشر أزمة أقوى، وقد يظهر انفصال مؤقت أو علاقة صعبة النسيان.\n"
+        else:
+            report += "لا يظهر ضغط كافٍ لجعلها مؤشر انفصال مباشر؛ هنا تكون أقرب إلى عمق وتعلق ومشاركة نفسية أو مالية.\n"
+    else:
+        report += "الزهرة ليست في البيت الثامن، لذلك لا يوجد تفعيل مباشر لهذه القاعدة، وننظر إلى الثامن من خلال حاكمه واتصالاته.\n"
+    report += f"حاكم الثامن هو {analysis['ruler8']}، وبرج الثامن {analysis['eighth_sign']}.\n"
+
+    report += "\nدراسة الزواج الأول والزواج الثاني\n"
+    report += "--------------------------------\n"
+    report += f"الزواج الأول يُقرأ أساسًا من البيت السابع وحاكمه {analysis['ruler7']}.\n"
+    report += f"الزواج الثاني يُقرأ كطبقة إضافية من البيت التاسع وحاكمه {analysis['ruler9']}.\n"
+    if analysis['second_marriage_power'] > analysis['first_marriage_score']:
+        report += "في هذه الخريطة تبدو دلالة الزواج اللاحق أو الثاني أقوى من دلالة الزواج الأول، وهذا قد يعني أن التجربة الثانية أكثر وضوحًا أو نضجًا.\n"
+    elif analysis['second_marriage_power'] >= 50:
+        report += "توجد دلالة معتبرة على ارتباط لاحق أو زواج ثانٍ، لكنها لا تتجاوز بالضرورة قوة الزواج الأول.\n"
+    else:
+        report += "دلالة الزواج الثاني ليست غالبة في هذه القراءة، ويبقى التركيز الأكبر على الزواج الأول أو العلاقة الأساسية.\n"
+
+    report += "\nنقاط القوة\n"
+    report += "----------\n"
+    if analysis["strengths"]:
+        for s in analysis["strengths"]:
+            report += "+ " + s + "\n"
+    else:
+        report += "لا توجد نقاط قوة كبيرة حسب القواعد الحالية.\n"
+
+    report += "\nنقاط التحدي\n"
+    report += "-----------\n"
+    if analysis["challenges"]:
+        for c in analysis["challenges"]:
+            report += "- " + c + "\n"
+    else:
+        report += "لا تظهر تحديات قوية في ملف الزواج.\n"
+
+    report += "\nتحليل سنة الفحص\n"
+    report += "---------------\n"
+    report += f"العمر التقريبي: {analysis['age']}\n"
+    report += f"البروفكشن السنوي: البيت {analysis['prof_house']}، برجه {analysis['prof_sign']}، حاكمه {analysis['prof_ruler']}\n"
+    report += f"الفريدار: الرئيسي {analysis['main_f']}، الفرعي {analysis['sub_f']}، داخل الفترة منذ {analysis['inside_f']} سنة تقريبًا.\n"
+    if analysis["prog"]:
+        for n, lon in analysis["prog"].items():
+            report += f"{n}: {format_pos(lon)}\n"
+    if analysis["timing_notes"]:
+        for t in analysis["timing_notes"]:
+            report += "* " + t + "\n"
+    else:
+        report += "لا توجد تفعيلات زمنية قوية جدًا في هذه السنة.\n"
+
+    report += "\nأفضل الأشهر داخل سنة الفحص\n"
+    report += "-------------------------\n"
+    for month, score, notes in analysis["monthly"][:5]:
+        report += f"الشهر {month}: قوة {score}/100"
+        if notes:
+            report += " - " + "، ".join(notes[:3])
+        report += "\n"
+
+    report += "\nملاحظات فنية فلكية\n"
+    report += "------------------\n"
+    if analysis["expert"]:
+        for e in analysis["expert"]:
+            report += "* " + e + "\n"
+    else:
+        report += "لا توجد ملاحظات فنية إضافية.\n"
+
+    report += "\nالخلاصة النهائية\n"
+    report += "----------------\n"
+    report += "الزواج لا يُحكم عليه من مؤشر واحد. أقوى الحالات هي التي يتكرر فيها الوعد في الميلاد، ثم يظهر التفعيل في البروفكشن والفريدار والقوس الشمسي والتقدم والعبور. هذه النسخة تجمع هذه الطبقات لتعطي قراءة أقوى من النسخ السابقة.\n"
+    report += "\nتنبيه: التقرير قراءة فلكية رمزية للبحث والتحليل، وليس حكمًا قطعيًا أو بديلًا عن القرار الشخصي.\n"
+
+    return report
+
+
+def main():
+    print("محلل الزواج الفلكي المتقدم - Web Expert V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner")
+    print("==============================================")
+    print("نسخة Console بدون Kivy، تعمل داخل Pydroid. أضيفت قواعد أعمق للزهرة في الثامن والانفصال والزواج الثاني.\n")
+
+    name = input("اكتب الاسم: ").strip() or "بدون اسم"
+    gender = choose_from_list("اختر الجنس", ["ذكر", "أنثى"])
+
+    year = choose_number("اكتب سنة الميلاد", 1900, 2035)
+    month = choose_number("اختر الشهر", 1, 12)
+    if month in [1, 3, 5, 7, 8, 10, 12]:
+        max_day = 31
+    elif month in [4, 6, 9, 11]:
+        max_day = 30
+    else:
+        max_day = 29
+    day = choose_number("اختر اليوم", 1, max_day)
+    hour = choose_number("اختر الساعة", 0, 23)
+    minute = choose_number("اختر الدقيقة", 0, 59)
+    utc_offset = choose_utc()
+
+    city_name = choose_from_list("اختر المدينة", list(CITIES.keys()))
+    if city_name == "إدخال يدوي":
+        while True:
+            try:
+                lat = float(input("اكتب خط العرض: ").strip())
+                lon = float(input("اكتب خط الطول: ").strip())
+                city_name = "إحداثيات يدوية"
+                break
+            except ValueError:
+                print("اكتب أرقامًا صحيحة.")
+    else:
+        lat, lon = CITIES[city_name]
+
+    target_year = choose_number("اكتب السنة التي تريد فحص فرصة الزواج فيها", 1900, 2035)
+
+    chart = calculate_chart(year, month, day, hour, minute, utc_offset, lat, lon)
+    birth_info = f"{year}-{month:02d}-{day:02d} الساعة {hour:02d}:{minute:02d} / UTC {utc_offset:+}"
+
+    analysis = analyze(chart, target_year)
+    report = build_report(chart, analysis, name, gender, birth_info, city_name, target_year)
+
+    print("\n" + report)
+
+    file_name = "marriage_report.txt"
+    with open(file_name, "w", encoding="utf-8") as f:
+        f.write(report)
+
+    print("\nتم حفظ التقرير باسم:")
+    print(file_name)
+
+
+
+# =====================================================
+# V21.1 - ماسح توقيت الزواج بالسنة الشمسية العمرية
+# =====================================================
+
+def safe_birth_anniversary(chart, age):
+    y = chart["year"] + age
+    m = chart["month"]
+    d = chart["day"]
+    h = chart["hour"]
+    mi = chart["minute"]
+    try:
+        return datetime(y, m, d, h, mi)
+    except ValueError:
+        # لمواليد 29 شباط
+        return datetime(y, 2, 28, h, mi)
+
+
+def solar_age_period(chart, age):
+    start = safe_birth_anniversary(chart, age)
+    end = safe_birth_anniversary(chart, age + 1)
+    return start, end
+
+
+def solar_year_midpoint(chart, age):
+    start, end = solar_age_period(chart, age)
+    return start + (end - start) / 2
+
+
+def timing_age_analysis(chart, age):
+    """
+    يستخدم العمر الفعلي لا السنة الميلادية فقط.
+    هذا يصحح حالة الزواج قبل عيد الميلاد داخل نفس السنة الميلادية.
+    """
+    # نمرر سنة تقريبية للمحرك الأصلي ثم نعيد ضبط العمر داخليًا عبر year = birth+age
+    target_year = chart["year"] + age
+    return analyze(chart, target_year)
+
+
+def timing_aspect_weight(body, key, asp):
+    """
+    V21.1:
+    في توقيت الزواج لا تُعامل الزوايا الصعبة دائمًا كسلبية.
+    مقابلة المشتري للزهرة أو حاكم السابع قد تكون تفعيل زواج قوي جدًا.
+    """
+    name = asp[0]
+    weight = 0
+
+    if body == "المشتري":
+        weight = 20
+    elif body == "زحل":
+        weight = 18
+    elif body == "جونو":
+        weight = 20
+    elif body == "العقدة الشمالية":
+        weight = 18
+    elif body == "الزهرة":
+        weight = 5
+    elif body == "المريخ":
+        weight = 4
+    elif body == "أورانوس":
+        weight = 5
+    elif body == "نبتون":
+        weight = 4
+    elif body == "بلوتو":
+        weight = 6
+    else:
+        weight = 2
+
+    # أهم نقاط الزواج
+    if key in ["الهابط", "حاكم السابع", "الزهرة", "جونو"]:
+        weight += 10
+    elif key in ["الشمس/القمر", "الزهرة/المريخ"]:
+        weight += 5
+    elif key in ["القمر/الزهرة", "الطالع/الزهرة"]:
+        weight += 3
+
+    # نوع الزاوية
+    if name == "اقتران":
+        weight += 8
+    elif name == "مقابلة":
+        # المقابلة على محور الزواج/الزهرة تفتح حدثًا خارجيًا واضحًا
+        weight += 7 if key in ["الزهرة", "حاكم السابع", "الهابط", "جونو"] else 3
+    elif name == "تربيع":
+        # التربيع قد يعطي قرارًا تحت ضغط
+        weight += 5 if key in ["الزهرة", "حاكم السابع", "الهابط", "جونو"] else 2
+    elif name in ["تثليث", "تسديس"]:
+        weight += 5
+
+    return weight
+
+
+def scan_transits_in_solar_period(chart, age, keys):
+    """
+    فحص العبور داخل السنة العمرية من عيد الميلاد إلى عيد الميلاد.
+    يمنع التضخيم: كل كوكب/نقطة/زاوية تُحسب مرة واحدة بأقوى قرب.
+    """
+    start_local, end_local = solar_age_period(chart, age)
+    utc_offset = chart.get("utc_offset", 0)
+
+    transit_codes = {
+        "المشتري": swe.JUPITER,
+        "زحل": swe.SATURN,
+        "جونو": getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3),
+        "العقدة الشمالية": getattr(swe, "TRUE_NODE", swe.MEAN_NODE),
+        "الزهرة": swe.VENUS,
+        "المريخ": swe.MARS,
+        "أورانوس": swe.URANUS,
+        "نبتون": swe.NEPTUNE,
+        "بلوتو": swe.PLUTO,
+    }
+
+    priority_keys = {}
+    for k in ["الهابط", "الزهرة", "حاكم السابع", "جونو",
+              "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة", "الطالع/الزهرة"]:
+        if k in keys:
+            priority_keys[k] = keys[k]
+
+    best_hits = {}
+    month_power = {}
+
+    current = start_local
+    while current < end_local:
+        utc_dt = current - timedelta(hours=utc_offset)
+        jd = swe.julday(
+            utc_dt.year,
+            utc_dt.month,
+            utc_dt.day,
+            utc_dt.hour + utc_dt.minute / 60.0
+        )
+
+        for body, code in transit_codes.items():
+            try:
+                lon = norm(swe.calc_ut(jd, code)[0][0])
+            except Exception:
+                continue
+
+            for key, key_lon in priority_keys.items():
+                asp = find_aspect(lon, key_lon, tight=True)
+                if not asp:
+                    continue
+
+                asp_name, orb = asp
+                # الشمس/الزهرة/المريخ سريعة، لا نسمح لها برفع سنة كاملة إلا كعامل مساعد
+                w = timing_aspect_weight(body, key, asp)
+                if body in ["الزهرة", "المريخ"]:
+                    w = max(2, int(w * 0.45))
+
+                hit_key = (body, key, asp_name)
+                old = best_hits.get(hit_key)
+                if old is None or orb < old["orb"]:
+                    best_hits[hit_key] = {
+                        "date": current,
+                        "month": current.month,
+                        "body": body,
+                        "key": key,
+                        "aspect": asp_name,
+                        "orb": orb,
+                        "allowed_orb": locals().get("allowed_orb", None),
+                        "phase": locals().get("phase", "غير محدد"),
+                        "weight": w
+                    }
+
+        current += timedelta(days=7)
+
+    hits = list(best_hits.values())
+
+    # نرتب حسب الوزن ثم الدقة
+    hits.sort(key=lambda h: (h["weight"], -h["orb"]), reverse=True)
+
+    # سقف حسب النوع حتى لا تسيطر العقد أو المشتري وحدهما
+    body_counts = {}
+    filtered = []
+    for h in hits:
+        b = h["body"]
+        body_counts[b] = body_counts.get(b, 0)
+        max_allowed = 4 if b in ["المشتري", "زحل", "جونو", "العقدة الشمالية"] else 2
+        if body_counts[b] < max_allowed:
+            filtered.append(h)
+            body_counts[b] += 1
+
+    raw = sum(h["weight"] for h in filtered)
+
+    # بونص تنوع: سنة الزواج الحقيقية غالبًا لا تقوم على عامل واحد فقط
+    distinct_bodies = len(set(h["body"] for h in filtered))
+    distinct_keys = len(set(h["key"] for h in filtered))
+    diversity_bonus = min(18, distinct_bodies * 2 + distinct_keys)
+
+    score = min(100, int(raw * 0.68 + diversity_bonus))
+
+    for h in filtered:
+        month_power[h["month"]] = month_power.get(h["month"], 0) + h["weight"]
+    top_months = sorted(month_power.items(), key=lambda x: x[1], reverse=True)[:4]
+
+    return {
+        "score": score,
+        "raw": raw,
+        "hits": filtered[:10],
+        "top_months": top_months
+    }
+
+
+def solar_arc_hits_for_age(chart, analysis, age):
+    p = chart["positions"]
+    cusps = chart["cusps"]
+    keys = analysis["keys"]
+    ruler7 = analysis["ruler7"]
+    arc = age
+
+    points = {
+        "SA الزهرة": norm(p["الزهرة"]["lon"] + arc),
+        "SA القمر": norm(p["القمر"]["lon"] + arc),
+        "SA الشمس": norm(p["الشمس"]["lon"] + arc),
+        "SA الطالع": norm(cusps[0] + arc),
+        "SA الهابط": norm(cusps[6] + arc),
+        "SA حاكم السابع": norm(p[ruler7]["lon"] + arc)
+    }
+
+    hits = []
+    for name, lon in points.items():
+        for key in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة"]:
+            if key not in keys:
+                continue
+            asp = find_aspect(lon, keys[key], tight=True)
+            if asp:
+                hits.append((name, key, asp[0], asp[1]))
+                break
+    return hits
+
+
+def progressed_hits_for_age(chart, analysis, age):
+    keys = analysis["keys"]
+    jd = chart["jd"] + age
+    prog_points = {}
+    try:
+        prog_points["القمر التقدمي"] = norm(swe.calc_ut(jd, swe.MOON)[0][0])
+        prog_points["الزهرة التقدمية"] = norm(swe.calc_ut(jd, swe.VENUS)[0][0])
+        prog_points["الشمس التقدمية"] = norm(swe.calc_ut(jd, swe.SUN)[0][0])
+    except Exception:
+        pass
+
+    hits = []
+    for name, lon in prog_points.items():
+        for key in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة"]:
+            if key not in keys:
+                continue
+            asp = find_aspect(lon, keys[key], tight=True)
+            if asp:
+                hits.append((name, key, asp[0], asp[1]))
+                break
+    return hits
+
+
+
+
+def zodiac_delta(a, b):
+    """فرق دائري موجّه بين درجتين."""
+    return ((a - b + 180) % 360) - 180
+
+
+def find_solar_return_jd(chart, age):
+    """
+    إيجاد لحظة العودة الشمسية تقريبًا عندما تعود الشمس إلى درجتها الأصلية.
+    نبحث حول عيد الميلاد ثم نستخدم bisection.
+    """
+    natal_sun = chart["positions"]["الشمس"]["lon"]
+    target_year = chart["year"] + age
+    utc_offset = chart.get("utc_offset", 0)
+
+    approx_local = safe_birth_anniversary(chart, age)
+    approx_utc = approx_local - timedelta(hours=utc_offset)
+
+    def jd_from_dt(dt):
+        return swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60.0 + dt.second / 3600.0)
+
+    center_jd = jd_from_dt(approx_utc)
+
+    # ابحث عن انقلاب الإشارة خلال 10 أيام حول عيد الميلاد
+    prev_jd = center_jd - 5
+    prev_diff = zodiac_delta(norm(swe.calc_ut(prev_jd, swe.SUN)[0][0]), natal_sun)
+
+    bracket = None
+    step = 0.25
+    j = prev_jd + step
+    while j <= center_jd + 5:
+        try:
+            diff = zodiac_delta(norm(swe.calc_ut(j, swe.SUN)[0][0]), natal_sun)
+        except Exception:
+            j += step
+            continue
+        if prev_diff == 0 or diff == 0 or (prev_diff < 0 < diff) or (prev_diff > 0 > diff):
+            bracket = (j - step, j)
+            break
+        prev_diff = diff
+        j += step
+
+    if bracket is None:
+        # احتياط: استخدم أقرب نقطة من البحث
+        best_jd = center_jd
+        best_abs = 999
+        j = center_jd - 5
+        while j <= center_jd + 5:
+            diff = abs(zodiac_delta(norm(swe.calc_ut(j, swe.SUN)[0][0]), natal_sun))
+            if diff < best_abs:
+                best_abs = diff
+                best_jd = j
+            j += 0.1
+        return best_jd
+
+    lo, hi = bracket
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        d_lo = zodiac_delta(norm(swe.calc_ut(lo, swe.SUN)[0][0]), natal_sun)
+        d_mid = zodiac_delta(norm(swe.calc_ut(mid, swe.SUN)[0][0]), natal_sun)
+        if (d_lo < 0 < d_mid) or (d_lo > 0 > d_mid):
+            hi = mid
+        else:
+            lo = mid
+    return (lo + hi) / 2
+
+
+def calculate_solar_return_chart(chart, age):
+    """
+    حساب خريطة العودة الشمسية لموقع الميلاد نفسه.
+    """
+    sr_jd = find_solar_return_jd(chart, age)
+    local_dt = swe.revjul(sr_jd)
+    # revjul يرجع UT: year, month, day, hour_float
+    y, m, d, hour_float = local_dt
+    h = int(hour_float)
+    mi = int(round((hour_float - h) * 60))
+    if mi == 60:
+        h += 1
+        mi = 0
+
+    # الموقع الأصلي غير مخزن في chart، لذلك سنضيفه لاحقًا عند إنشاء chart
+    lat = chart.get("lat", 33.3152)
+    lon = chart.get("lon", 44.3661)
+
+    houses = swe.houses(sr_jd, lat, lon, b'P')
+    cusps = list(houses[0])
+    ascmc = houses[1]
+
+    positions = {}
+    all_codes = dict(PLANETS)
+    try:
+        all_codes["جونو"] = getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3)
+    except Exception:
+        pass
+    all_codes["العقدة الشمالية"] = getattr(swe, "TRUE_NODE", swe.MEAN_NODE)
+
+    for pname, pcode in all_codes.items():
+        try:
+            result = swe.calc_ut(sr_jd, pcode)
+            lon_deg = norm(result[0][0])
+            speed = result[0][3]
+            positions[pname] = {
+                "lon": lon_deg,
+                "pos": format_pos(lon_deg),
+                "sign": sign_name(lon_deg),
+                "speed": speed,
+                "retro": speed < 0,
+                "house": house_of(lon_deg, cusps)
+            }
+        except Exception:
+            pass
+
+    if "العقدة الشمالية" in positions:
+        sn = norm(positions["العقدة الشمالية"]["lon"] + 180)
+        positions["العقدة الجنوبية"] = {
+            "lon": sn,
+            "pos": format_pos(sn),
+            "sign": sign_name(sn),
+            "speed": positions["العقدة الشمالية"]["speed"],
+            "retro": positions["العقدة الشمالية"]["retro"],
+            "house": house_of(sn, cusps)
+        }
+
+    return {
+        "jd": sr_jd,
+        "positions": positions,
+        "cusps": cusps,
+        "ascmc": ascmc,
+        "ut_tuple": (y, m, d, h, mi)
+    }
+
+
+def solar_return_marriage_score(chart, analysis, age):
+    """
+    تحليل العودة الشمسية لسنة عمرية محددة.
+    أهم دلالات الزواج:
+    - طالع/هابط العودة على نقاط الزواج الأصلية.
+    - الزهرة أو المشتري أو جونو في السابع/الأول/الرابع/العاشر.
+    - حاكم السابع في العودة قوي أو متصل بالزهرة/المشتري.
+    - بيت السابع في العودة مرتبط ببيوت الزوايا أو بخريطة الميلاد.
+    """
+    sr = calculate_solar_return_chart(chart, age)
+    srp = sr["positions"]
+    src = sr["cusps"]
+    sr_asc = sr["ascmc"][0]
+    sr_dsc = src[6]
+    sr_mc = sr["ascmc"][1]
+
+    natal_p = chart["positions"]
+    natal_cusps = chart["cusps"]
+    natal_keys = analysis["keys"]
+
+    score = 0
+    notes = []
+
+    # مفاتيح العودة على نقاط الزواج الأصلية
+    sr_angles = {
+        "طالع العودة": sr_asc,
+        "هابط العودة": sr_dsc,
+        "منتصف سماء العودة": sr_mc,
+        "رابع العودة": src[3]
+    }
+
+    important_keys = {
+        "هابط الميلاد": natal_cusps[6],
+        "زهرة الميلاد": natal_p["الزهرة"]["lon"],
+        "حاكم السابع": natal_p[analysis["ruler7"]]["lon"],
+        "الشمس/القمر": natal_keys.get("الشمس/القمر"),
+        "الزهرة/المريخ": natal_keys.get("الزهرة/المريخ"),
+        "القمر/الزهرة": natal_keys.get("القمر/الزهرة"),
+    }
+    if "جونو" in natal_p:
+        important_keys["جونو الميلاد"] = natal_p["جونو"]["lon"]
+
+    for aname, alon in sr_angles.items():
+        for kname, klon in important_keys.items():
+            if klon is None:
+                continue
+            asp = find_aspect(alon, klon, tight=True)
+            if asp:
+                add = 14 if asp[0] in ["اقتران", "مقابلة"] else 9
+                score += add
+                notes.append(f"{aname} {asp[0]} {kname}: زاوية عودة شمسية تفتح ملف الزواج.")
+                break
+
+    # كواكب الزواج في بيوت العودة
+    for body in ["الزهرة", "المشتري", "جونو", "القمر"]:
+        if body in srp:
+            h = srp[body]["house"]
+            if h == 7:
+                score += 18
+                notes.append(f"{body} في البيت السابع في العودة الشمسية: دلالة مباشرة على علاقة أو زواج.")
+            elif h in [1, 4, 10]:
+                score += 10
+                notes.append(f"{body} في بيت زاوي في العودة الشمسية: دلالة ظهور وتأثير قوي.")
+            elif h == 5:
+                score += 8
+                notes.append(f"{body} في البيت الخامس في العودة الشمسية: دلالة حب ورومانسية.")
+
+    # حاكم السابع في العودة
+    sr7_sign, sr7_ruler = house_ruler(src, 7)
+    if sr7_ruler in srp:
+        h = srp[sr7_ruler]["house"]
+        if h in [1, 4, 7, 10]:
+            score += 16
+            notes.append(f"حاكم السابع في العودة {sr7_ruler} في بيت زاوي: قابلية رسمية قوية.")
+        elif h in [5, 11]:
+            score += 9
+            notes.append(f"حاكم السابع في العودة {sr7_ruler} في بيت حب أو مجتمع: فرصة تعارف أو ارتباط.")
+
+        # اتصال حاكم السابع بالزهرة/المشتري/جونو داخل العودة
+        for body in ["الزهرة", "المشتري", "جونو"]:
+            if body in srp and body != sr7_ruler:
+                asp = find_aspect(srp[sr7_ruler]["lon"], srp[body]["lon"])
+                if asp:
+                    if asp[0] in ["اقتران", "تثليث", "تسديس", "مقابلة"]:
+                        score += 10
+                        notes.append(f"حاكم السابع في العودة يتصل بـ {body} عبر {asp[0]}: تفعيل واضح للارتباط.")
+                        break
+
+    # العودة تربط الزهرة الأصلية بمحور السابع
+    if "الزهرة" in srp:
+        for key_name, key_lon in [("هابط الميلاد", natal_cusps[6]), ("حاكم السابع", natal_p[analysis["ruler7"]]["lon"])]:
+            asp = find_aspect(srp["الزهرة"]["lon"], key_lon, tight=True)
+            if asp:
+                score += 14
+                notes.append(f"زهرة العودة {asp[0]} {key_name}: تفعيل عاطفي مهم.")
+                break
+
+    # زحل في السابع قد يعني رسمية أو تأخير حسب الدعم
+    if "زحل" in srp and srp["زحل"]["house"] == 7:
+        score += 7
+        notes.append("زحل في السابع في العودة: قد يعطي رسمية ومسؤولية، أو تأخيرًا إذا غاب الدعم.")
+
+    score = max(0, min(100, score))
+
+    y, m, d, h, mi = sr["ut_tuple"]
+    return {
+        "score": score,
+        "notes": notes[:10],
+        "sr": sr,
+        "sr_date_ut": f"{y}-{m:02d}-{d:02d} {h:02d}:{mi:02d} UT",
+        "sr7_sign": sr7_sign,
+        "sr7_ruler": sr7_ruler
+    }
+
+
+
+def first_marriage_age_factor(age):
+    """
+    منحنى واقعي للزواج الأول.
+    لا يمنع الزواج المتأخر، لكنه يمنع عمر 60 من منافسة عمر 29 في زواج أول
+    إلا إذا كانت الدلالات استثنائية.
+    """
+    if age < 18:
+        return -20
+    if 18 <= age <= 21:
+        return -4
+    if 22 <= age <= 35:
+        return 12
+    if 36 <= age <= 42:
+        return 5
+    if 43 <= age <= 50:
+        return -4
+    if 51 <= age <= 60:
+        return -12
+    return -18
+
+
+def marriage_anchor_hits(chart, analysis, age):
+    """
+    نقاط فاصلة في الزواج:
+    عبور المشتري/زحل/جونو/العقد على الزهرة أو حاكم السابع أو الهابط.
+    هذه الطبقة مصممة كي تلتقط حالات مثل:
+    المشتري مقابل الزهرة في فترة الزواج.
+    """
+    start_local, end_local = solar_age_period(chart, age)
+    utc_offset = chart.get("utc_offset", 0)
+    p = chart["positions"]
+    cusps = chart["cusps"]
+    ruler7 = analysis["ruler7"]
+
+    anchor_keys = {
+        "الزهرة": p["الزهرة"]["lon"],
+        "حاكم السابع": p[ruler7]["lon"],
+        "الهابط": cusps[6],
+    }
+    if "جونو" in p:
+        anchor_keys["جونو"] = p["جونو"]["lon"]
+
+    bodies = {
+        "المشتري": swe.JUPITER,
+        "زحل": swe.SATURN,
+        "العقدة الشمالية": getattr(swe, "TRUE_NODE", swe.MEAN_NODE),
+        "جونو": getattr(swe, "JUNO", getattr(swe, "AST_OFFSET", 10000) + 3),
+    }
+
+    best = {}
+    current = start_local
+    while current < end_local:
+        utc_dt = current - timedelta(hours=utc_offset)
+        jd = swe.julday(
+            utc_dt.year,
+            utc_dt.month,
+            utc_dt.day,
+            utc_dt.hour + utc_dt.minute / 60.0
+        )
+
+        for body, code in bodies.items():
+            try:
+                lon = norm(swe.calc_ut(jd, code)[0][0])
+            except Exception:
+                continue
+
+            for key, key_lon in anchor_keys.items():
+                asp = find_aspect_window(lon, key_lon, body)
+                if not asp:
+                    continue
+
+                asp_name, orb, allowed_orb = asp
+                phase = estimate_applying_or_separating(jd, code, key_lon, asp_name)
+                hit_key = (body, key, asp_name)
+                old = best.get(hit_key)
+                if old is None or orb < old["orb"]:
+                    # وزن خاص للمشتري على الزهرة/حاكم السابع
+                    w = timing_aspect_weight(body, key, (asp_name, orb))
+                    if phase == "تطبيقية":
+                        w = int(w * 1.20)
+                    elif phase == "انفصالية":
+                        w = int(w * 0.88)
+                    if body == "المشتري" and key in ["الزهرة", "حاكم السابع"] and asp_name in ["مقابلة", "اقتران", "تثليث", "تسديس", "تربيع"]:
+                        w += 18
+                    if body == "زحل" and key in ["الهابط", "حاكم السابع", "الزهرة"]:
+                        w += 10
+                    if body == "جونو" and key in ["الزهرة", "حاكم السابع", "الهابط"]:
+                        w += 12
+                    if body == "العقدة الشمالية" and key in ["الزهرة", "حاكم السابع", "الهابط"]:
+                        w += 10
+
+                    best[hit_key] = {
+                        "date": current,
+                        "body": body,
+                        "key": key,
+                        "aspect": asp_name,
+                        "orb": orb,
+                        "allowed_orb": locals().get("allowed_orb", None),
+                        "phase": locals().get("phase", "غير محدد"),
+                        "weight": w
+                    }
+
+        current += timedelta(days=3)
+
+    hits = sorted(best.values(), key=lambda h: (h["weight"], -h["orb"]), reverse=True)
+    score = min(45, sum(h["weight"] for h in hits[:4]) // 3)
+    return score, hits[:8]
+
+
+
+def age_candidate(chart, age):
+    analysis = timing_age_analysis(chart, age)
+    transit = scan_transits_in_solar_period(chart, age, analysis["keys"])
+    anchor_score, anchor_hits = marriage_anchor_hits(chart, analysis, age)
+    solar_return = solar_return_marriage_score(chart, analysis, age)
+    sa_hits = solar_arc_hits_for_age(chart, analysis, age)
+    prog_hits = progressed_hits_for_age(chart, analysis, age)
+
+    # ضبط البروفكشن حسب العمر نفسه
+    prof_house = (age % 12) + 1
+    prof_bonus = 0
+    if prof_house == 7:
+        prof_bonus += 22
+    elif prof_house in [5, 4, 10]:
+        prof_bonus += 14
+    elif prof_house in [1, 11]:
+        prof_bonus += 7
+
+    # حاكم السنة
+    _, prof_ruler = house_ruler(chart["cusps"], prof_house)
+    if prof_ruler in ["الزهرة", "القمر", "المشتري", analysis["ruler7"]]:
+        prof_bonus += 10
+
+    # فريدار
+    day_chart = is_day_chart(chart["positions"])
+    main_f, sub_f, _inside = firdaria_for_age(age, day_chart)
+    firdar_bonus = 0
+    marriage_rulers = ["الزهرة", "القمر", "الشمس", "المشتري", analysis["ruler7"]]
+    if main_f in marriage_rulers:
+        firdar_bonus += 16
+    if sub_f in marriage_rulers:
+        firdar_bonus += 9
+    if main_f == "زحل":
+        firdar_bonus += 5
+
+    # القوس الشمسي والتقدم لا نتركهما يصلان إلى 100 وحدهما
+    sa_score = min(28, len(sa_hits) * 7)
+    prog_score = min(22, len(prog_hits) * 7)
+
+    official_base = analysis["official_score"]
+    natal_base = analysis["natal_score"]
+    love_base = analysis["love_score"]
+
+    internal_score = min(100, int(
+        prof_bonus * 0.85 +
+        firdar_bonus * 0.85 +
+        sa_score +
+        prog_score +
+        official_base * 0.12 +
+        love_base * 0.08
+    ))
+
+    final = int(
+        internal_score * 0.26 +
+        transit["score"] * 0.22 +
+        anchor_score * 0.20 +
+        solar_return["score"] * 0.22 +
+        official_base * 0.05 +
+        natal_base * 0.03 +
+        analysis["karmic_score"] * 0.02
+    )
+
+    # عامل العمر الواقعي للزواج الأول
+    final += first_marriage_age_factor(age)
+
+    # بونص اجتماع أكثر من تقنية
+    systems = 0
+    if prof_bonus >= 14:
+        systems += 1
+    if firdar_bonus >= 14:
+        systems += 1
+    if sa_hits:
+        systems += 1
+    if prog_hits:
+        systems += 1
+    if transit["score"] >= 35:
+        systems += 1
+    if anchor_score >= 20:
+        systems += 1
+    if solar_return["score"] >= 35:
+        systems += 1
+    if systems >= 4:
+        final += 8
+    elif systems == 3:
+        final += 5
+
+    final = max(0, min(100, final))
+
+    start, end = solar_age_period(chart, age)
+
+    kind = "تحريك عاطفي"
+    if final >= 65 and (official_base >= 35 or prof_house in [7, 4, 10]):
+        kind = "زواج أو خطوبة رسمية"
+    if analysis["second_marriage_power"] > analysis["first_marriage_score"] and analysis["second_marriage_power"] >= 50:
+        kind = "زواج لاحق أو تجربة ثانية أقوى"
+    if analysis["return_score"] >= 55:
+        kind = "عودة أو علاقة صعبة النسيان"
+
+    warning = ""
+    if max(analysis["separation_score"], analysis["crisis_score"]) >= 60:
+        warning = "السنة قوية لكنها تحمل ضغطًا أو أزمة عاطفية."
+    elif analysis["delay_score"] >= 60:
+        warning = "السنة تحمل جدية أو تأخيرًا ومسؤولية."
+
+    return {
+        "age": age,
+        "period_start": start,
+        "period_end": end,
+        "calendar_label": f"{start.year}-{end.year}",
+        "score": final,
+        "kind": kind,
+        "warning": warning,
+        "analysis": analysis,
+        "transit": transit,
+        "anchor_score": anchor_score,
+        "anchor_hits": anchor_hits,
+        "event_windows": merge_month_windows(anchor_hits + transit.get("hits", [])),
+        "solar_return": solar_return,
+        "sa_hits": sa_hits,
+        "prog_hits": prog_hits,
+        "prof_house": prof_house,
+        "prof_ruler": prof_ruler,
+        "main_f": main_f,
+        "sub_f": sub_f,
+        "internal_score": internal_score,
+        "systems": systems
+    }
+
+
+def scan_ages_for_marriage(chart, start_age=18, end_age=60):
+    results = []
+    for age in range(start_age, end_age + 1):
+        results.append(age_candidate(chart, age))
+    ranked = sorted(results, key=lambda x: x["score"], reverse=True)
+    return ranked, results
+
+
+def hit_text(hits, limit=7):
+    if not hits:
+        return "لا توجد ضربات عبور دقيقة كافية.\n"
+    text = ""
+    for h in hits[:limit]:
+        if "date" not in h:
+            continue
+        date = h["date"].strftime("%Y-%m-%d")
+        body = h.get("body", h.get("transit", ""))
+        aspect = h.get("aspect", "")
+        key = h.get("key", "")
+        orb = h.get("orb", "")
+        phase = h.get("phase", "غير محدد")
+        try:
+            win_start, win_end = event_window_dates(h["date"], body)
+            text += f"- الذروة حول {date}: {body} {aspect} {key}، قرب {orb}°، الحالة {phase}.\n"
+            text += f"  نافذة التأثير التقريبية: {win_start.strftime('%Y-%m-%d')} إلى {win_end.strftime('%Y-%m-%d')}.\n"
+        except Exception:
+            text += f"- الذروة حول {date}: {body} {aspect} {key}، قرب {orb}°.\n"
+    if not text:
+        return "لا توجد ضربات عبور دقيقة كافية.\n"
+    return text
+
+def sa_text(hits, limit=5):
+    if not hits:
+        return "لا توجد تفعيلات قوس شمسي دقيقة.\n"
+    text = ""
+    for name, key, asp, orb in hits[:limit]:
+        text += f"- {name} {asp} {key}، قرب {orb}°\n"
+    return text
+
+
+def prog_text(hits, limit=5):
+    if not hits:
+        return "لا توجد تفعيلات تقدم ثانوي دقيقة.\n"
+    text = ""
+    for name, key, asp, orb in hits[:limit]:
+        text += f"- {name} {asp} {key}، قرب {orb}°\n"
+    return text
+
+
+
+
+# =====================================================
+# V21.1 - نوافذ التأثير قبل وبعد الذروة
+# =====================================================
+
+BODY_WINDOWS_DAYS = {
+    "القمر": 1,
+    "الشمس": 7,
+    "عطارد": 7,
+    "الزهرة": 7,
+    "المريخ": 14,
+    "المشتري": 45,
+    "زحل": 45,
+    "جونو": 60,
+    "العقدة الشمالية": 60,
+    "العقدة الجنوبية": 60,
+    "أورانوس": 120,
+    "نبتون": 150,
+    "بلوتو": 180,
+}
+
+
+def body_window_days(body):
+    return BODY_WINDOWS_DAYS.get(body, 30)
+
+
+def body_orb_for_window(body):
+    if body == "القمر":
+        return 1.0
+    if body in ["الشمس", "عطارد", "الزهرة"]:
+        return 2.0
+    if body == "المريخ":
+        return 2.5
+    if body in ["المشتري", "زحل", "جونو", "العقدة الشمالية", "العقدة الجنوبية"]:
+        return 4.0
+    if body in ["أورانوس", "نبتون", "بلوتو"]:
+        return 5.0
+    return 2.0
+
+
+def find_aspect_window(transit_lon, key_lon, body):
+    orb = body_orb_for_window(body)
+    aspects = [
+        ("اقتران", 0, orb),
+        ("تسديس", 60, orb * 0.75),
+        ("تربيع", 90, orb),
+        ("تثليث", 120, orb * 0.85),
+        ("مقابلة", 180, orb),
+    ]
+    diff = distance(transit_lon, key_lon)
+    for name, angle, allowed in aspects:
+        off = abs(diff - angle)
+        if off <= allowed:
+            return name, round(off, 2), round(allowed, 2)
+    return None
+
+
+def estimate_applying_or_separating(jd, body_code, key_lon, aspect_name):
+    angle_map = {"اقتران": 0, "تسديس": 60, "تربيع": 90, "تثليث": 120, "مقابلة": 180}
+    target_angle = angle_map.get(aspect_name, 0)
+    try:
+        lon_now = norm(swe.calc_ut(jd, body_code)[0][0])
+        lon_next = norm(swe.calc_ut(jd + 1, body_code)[0][0])
+    except Exception:
+        return "غير محدد"
+    diff_now = abs(distance(lon_now, key_lon) - target_angle)
+    diff_next = abs(distance(lon_next, key_lon) - target_angle)
+    if diff_next < diff_now:
+        return "تطبيقية"
+    if diff_next > diff_now:
+        return "انفصالية"
+    return "ثابتة"
+
+
+def event_window_dates(peak_date, body):
+    days = body_window_days(body)
+    return peak_date - timedelta(days=days), peak_date + timedelta(days=days)
+
+
+def age_at_date(chart, dt):
+    birth = chart["local_dt"]
+    years = dt.year - birth.year
+    months = dt.month - birth.month
+    if dt.day < birth.day:
+        months -= 1
+    if months < 0:
+        years -= 1
+        months += 12
+    return years, months
+
+
+def merge_month_windows(hits):
+    windows = []
+    for h in hits:
+        body = h.get("body") or h.get("transit")
+        if not body or "date" not in h:
+            continue
+        start, end = event_window_dates(h["date"], body)
+        windows.append({
+            "start": start,
+            "end": end,
+            "peak": h["date"],
+            "body": body,
+            "key": h.get("key", ""),
+            "aspect": h.get("aspect", ""),
+            "weight": h.get("weight", 0),
+            "phase": h.get("phase", "غير محدد")
+        })
+
+    buckets = {}
+    for w in windows:
+        k = (w["peak"].year, w["peak"].month)
+        if k not in buckets:
+            buckets[k] = {"year": k[0], "month": k[1], "score": 0, "items": [], "start": w["start"], "end": w["end"], "peak": w["peak"]}
+        buckets[k]["score"] += w["weight"]
+        buckets[k]["items"].append(w)
+        if w["start"] < buckets[k]["start"]:
+            buckets[k]["start"] = w["start"]
+        if w["end"] > buckets[k]["end"]:
+            buckets[k]["end"] = w["end"]
+
+    return sorted(buckets.values(), key=lambda x: x["score"], reverse=True)[:5]
+
+
+def relationship_event_type(item):
+    a = item["analysis"]
+    sr = item.get("solar_return", {}).get("score", 0)
+    anchor = item.get("anchor_score", 0)
+    prof = item.get("prof_house", 0)
+
+    official_markers = 0
+    if sr >= 50:
+        official_markers += 1
+    if anchor >= 24:
+        official_markers += 1
+    if prof in [7, 4, 10]:
+        official_markers += 1
+    if item.get("main_f") in ["الزهرة", "القمر", "المشتري", a.get("ruler7", "")]:
+        official_markers += 1
+    if a.get("official_score", 0) >= 45:
+        official_markers += 1
+
+    if a.get("second_marriage_power", 0) > a.get("first_marriage_score", 0) and a.get("second_marriage_power", 0) >= 55:
+        return "زواج لاحق أو تجربة ثانية"
+    if a.get("return_score", 0) >= 60:
+        return "عودة أو علاقة صعبة النسيان"
+    if official_markers >= 3:
+        return "زواج أو خطوبة رسمية"
+    if a.get("love_score", 0) >= 55 and official_markers < 3:
+        return "حب أو تعارف قوي لا يثبت وحده"
+    return "تحريك عاطفي عام"
+
+
+
+def strict_marriage_filter(item):
+    """
+    فلتر صارم لاختيار سنوات الزواج الفعلي بدل سنوات التحريك العاطفي.
+    يعيد:
+    - pass_filter: هل تصلح كمرشح زواج فعلي؟
+    - strict_score: درجة الفلترة الصارمة
+    - reasons: أسباب الترشيح
+    """
+    reasons = []
+    strict = 0
+    systems = 0
+
+    a = item["analysis"]
+
+    # 1. العودة الشمسية
+    sr_score = item.get("solar_return", {}).get("score", 0)
+    if sr_score >= 55:
+        strict += 24
+        systems += 1
+        reasons.append("العودة الشمسية قوية ومباشرة.")
+    elif sr_score >= 38:
+        strict += 12
+        systems += 1
+        reasons.append("العودة الشمسية متوسطة لكنها داعمة.")
+
+    # 2. مرساة الزواج
+    anchor = item.get("anchor_score", 0)
+    if anchor >= 28:
+        strict += 24
+        systems += 1
+        reasons.append("مرساة الزواج قوية: تفعيل المشتري/زحل/جونو/العقد للزهرة أو السابع.")
+    elif anchor >= 18:
+        strict += 12
+        systems += 1
+        reasons.append("مرساة الزواج موجودة لكنها ليست قصوى.")
+
+    # 3. البروفكشن
+    prof_house = item.get("prof_house")
+    if prof_house == 7:
+        strict += 22
+        systems += 1
+        reasons.append("البروفكشن يفتح البيت السابع مباشرة.")
+    elif prof_house in [4, 5, 10]:
+        strict += 14
+        systems += 1
+        reasons.append("البروفكشن يفتح بيتًا مساعدًا للزواج: الرابع أو الخامس أو العاشر.")
+    elif prof_house in [1, 11]:
+        strict += 6
+        reasons.append("البروفكشن يفتح بيتًا ثانويًا داعمًا.")
+
+    # 4. الفريدار
+    main_f = item.get("main_f", "")
+    sub_f = item.get("sub_f", "")
+    marriage_rulers = ["الزهرة", "القمر", "المشتري", a.get("ruler7", "")]
+    if main_f in marriage_rulers:
+        strict += 14
+        systems += 1
+        reasons.append(f"الفريدار الرئيسي {main_f} من دلالات الزواج.")
+    if sub_f in marriage_rulers:
+        strict += 8
+        systems += 1
+        reasons.append(f"الفريدار الفرعي {sub_f} يدعم الزواج.")
+
+    # 5. القوس الشمسي
+    sa_hits = item.get("sa_hits", [])
+    strong_sa = []
+    for h in sa_hits:
+        # h = (name, key, aspect, orb)
+        if len(h) >= 4 and h[1] in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ"]:
+            strong_sa.append(h)
+    if strong_sa:
+        strict += min(18, len(strong_sa) * 7)
+        systems += 1
+        reasons.append("القوس الشمسي يفعّل مفاتيح الزواج.")
+
+    # 6. التقدم الثانوي
+    prog_hits = item.get("prog_hits", [])
+    strong_prog = []
+    for h in prog_hits:
+        if len(h) >= 4 and h[1] in ["الهابط", "الزهرة", "حاكم السابع", "الشمس/القمر", "الزهرة/المريخ", "القمر/الزهرة"]:
+            strong_prog.append(h)
+    if strong_prog:
+        strict += min(14, len(strong_prog) * 6)
+        systems += 1
+        reasons.append("التقدم الثانوي يفعّل مفاتيح الزواج.")
+
+    # 7. العبور الحقيقي
+    transit_score = item.get("transit", {}).get("score", 0)
+    if transit_score >= 55:
+        strict += 15
+        systems += 1
+        reasons.append("العبور الحقيقي داخل الفترة قوي.")
+    elif transit_score >= 35:
+        strict += 8
+        systems += 1
+        reasons.append("العبور الحقيقي داخل الفترة متوسط.")
+
+    # 8. الوعد الأصلي
+    if a.get("official_score", 0) >= 45:
+        strict += 8
+        reasons.append("وعد الزواج الرسمي في الخريطة مقبول.")
+    if a.get("natal_score", 0) >= 45:
+        strict += 5
+        reasons.append("وعد الزواج الأصلي داعم.")
+
+    # تقليل سنوات التحريك فقط
+    if item.get("kind") == "تحريك عاطفي":
+        strict -= 10
+
+    # سنوات الزواج الأول: ترجيح الأعمار الواقعية
+    age = item.get("age", 0)
+    if 22 <= age <= 35:
+        strict += 10
+    elif 18 <= age <= 21:
+        strict += 2
+    elif 36 <= age <= 45:
+        strict -= 2
+    elif age > 45:
+        strict -= 12
+
+    # شرط المرور:
+    # لا يكفي رقم عالٍ؛ يجب اجتماع 4 أنظمة على الأقل أو 3 أنظمة مع عودة شمسية/مرساة قوية.
+    pass_filter = False
+    if systems >= 4 and strict >= 58:
+        pass_filter = True
+    if systems >= 3 and strict >= 64 and (sr_score >= 55 or anchor >= 28):
+        pass_filter = True
+
+    strict = max(0, min(100, int(strict)))
+
+    return pass_filter, strict, reasons[:8], systems
+
+
+def apply_strict_marriage_filter(ranked):
+    enriched = []
+    for item in ranked:
+        passed, strict_score, reasons, systems = strict_marriage_filter(item)
+        item["event_type_final"] = relationship_event_type(item)
+        item["strict_pass"] = passed
+        item["strict_score"] = strict_score
+        item["strict_reasons"] = reasons
+        item["strict_systems"] = systems
+        enriched.append(item)
+
+    final_candidates = [x for x in enriched if x["strict_pass"]]
+    final_candidates.sort(key=lambda x: (x["strict_score"], x["score"]), reverse=True)
+
+    # إن لم ينجح شيء، نأخذ أعلى 3 كمرشحين ضعفاء لا كحكم نهائي
+    if not final_candidates:
+        fallback = sorted(enriched, key=lambda x: (x["strict_score"], x["score"]), reverse=True)[:3]
+        return [], fallback, enriched
+
+    backup = [x for x in enriched if not x["strict_pass"]]
+    backup.sort(key=lambda x: (x["strict_score"], x["score"]), reverse=True)
+    return final_candidates[:5], backup[:5], enriched
+
+
+
+def build_v18_report(chart, ranked, all_results, name, gender, birth_info, city_name, start_age, end_age):
+    final_candidates, backup_candidates, ranked_with_filter = apply_strict_marriage_filter(ranked)
+    base = timing_age_analysis(chart, start_age)
+    p = chart["positions"]
+    cusps = chart["cusps"]
+    ascmc = chart["ascmc"]
+
+    report = ""
+    report += "تقرير ماسح توقيت الزواج - V21.1 Solar Return Marriage Scanner Event Window Marriage Scanner\n"
+    report += "================================================\n\n"
+
+    report += "بيانات الخريطة\n"
+    report += "--------------\n"
+    report += f"الاسم: {name}\n"
+    report += f"الجنس: {gender}\n"
+    report += f"مكان الميلاد: {city_name}\n"
+    report += f"بيانات الميلاد المحلية: {birth_info}\n"
+    report += f"فرق التوقيت المستخدم: UTC {chart['utc_offset']:+g}\n"
+    report += f"الوقت العالمي المستخدم: {chart['utc_dt'].strftime('%Y-%m-%d %H:%M')} UT\n"
+    report += f"نطاق البحث: من عمر {start_age} إلى عمر {end_age}\n\n"
+
+    report += "تصحيح مهم في هذه النسخة\n"
+    report += "-----------------------\n"
+    report += "الفحص الآن يتم حسب السنة العمرية الشمسية: من عيد الميلاد إلى عيد الميلاد التالي، وليس حسب السنة الميلادية فقط. لذلك إذا حدث الزواج في شباط 1998 لشخص مولود في آب 1968، فهو يُحسب ضمن عمر 29، أي الفترة من آب 1997 إلى آب 1998.\n\n"
+
+    report += "مفاتيح الزواج الأصلية\n"
+    report += "---------------------\n"
+    report += f"الطالع: {format_pos(ascmc[0])}\n"
+    report += f"الهابط: {format_pos(cusps[6])}\n"
+    report += f"السابع: {base['seventh_sign']}، حاكمه {base['ruler7']}\n"
+    report += f"حاكم السابع: {p[base['ruler7']]['pos']}، البيت {base['ruler7_house']}\n"
+    report += f"الزهرة: {p['الزهرة']['pos']}، البيت {p['الزهرة']['house']}\n"
+    if "جونو" in p:
+        report += f"جونو: {p['جونو']['pos']}، البيت {p['جونو']['house']}\n"
+    report += f"الشمس/القمر: {format_pos(base['keys']['الشمس/القمر'])}\n"
+    report += f"الزهرة/المريخ: {format_pos(base['keys']['الزهرة/المريخ'])}\n\n"
+
+    report += "وعد الزواج الأصلي\n"
+    report += "-----------------\n"
+    report += f"وعد الزواج الأصلي: {base['natal_score']} / {classify(base['natal_score'])}\n"
+    report += f"مؤشر الزواج الرسمي: {base['official_score']} / {classify(base['official_score'])}\n"
+    report += f"مؤشر الحب والجذب: {base['love_score']} / {classify(base['love_score'])}\n"
+    report += f"قوة الزواج الأول: {base['first_marriage_score']} / {classify(base['first_marriage_score'])}\n"
+    report += f"قوة الزواج الثاني أو اللاحق: {base['second_marriage_power']} / {classify(base['second_marriage_power'])}\n\n"
+
+    report += "نوافذ الحدث بعد الفلترة الصارمة\n"
+    report += "--------------------------------------\n"
+    if final_candidates:
+        report += "هذه الفترات هي الأقوى بعد استبعاد سنوات التحريك العاطفي الضعيفة. الأول هو المرشح الرئيسي، والبقية احتمالات قريبة أو احتياطية.\n\n"
+        for i, item in enumerate(final_candidates[:5], start=1):
+            label = "المرشح الرئيسي" if i == 1 else "مرشح احتياطي"
+            report += f"{i}. {label}: عمر العودة الشمسية {item['age']} سنة، من {item['period_start'].strftime('%Y-%m-%d')} إلى {item['period_end'].strftime('%Y-%m-%d')}.\n"
+            report += f"   قوة الفلترة الصارمة: {item['strict_score']} / 100، القوة العامة: {item['score']} / 100، التصنيف: {item.get('event_type_final', item['kind'])}.\n"
+            if item.get("event_windows"):
+                w = item["event_windows"][0]
+                yy, mm = age_at_date(chart, w["peak"])
+                report += f"   أقوى نافذة ميلادية: {w['start'].strftime('%Y-%m-%d')} إلى {w['end'].strftime('%Y-%m-%d')}، والعمر الواقعي حول الذروة {yy} سنة و{mm} شهر.\n"
+            if item["strict_reasons"]:
+                report += "   أهم الأسباب:\n"
+                for r in item["strict_reasons"][:4]:
+                    report += f"   - {r}\n"
+    else:
+        report += "لم تنجح أي فترة في المرور من الفلترة الصارمة كزواج فعلي مؤكد نسبيًا.\n"
+        report += "أقرب خمسة احتمالات، لكنها تحتاج مراجعة وليست حكمًا نهائيًا:\n"
+        for i, item in enumerate(backup_candidates[:5], start=1):
+            report += f"{i}. عمر العودة الشمسية {item['age']} سنة، من {item['period_start'].strftime('%Y-%m-%d')} إلى {item['period_end'].strftime('%Y-%m-%d')}، فلترة {item['strict_score']} / 100، قوة عامة {item['score']} / 100.\n"
+    report += "\n"
+
+    report += "الفترات التي كانت قوية لكنها لم تمر كزواج فعلي\n"
+    report += "---------------------------------------------\n"
+    for item in backup_candidates[:8]:
+        report += f"- عمر {item['age']} سنة: {item['period_start'].strftime('%Y-%m-%d')} إلى {item['period_end'].strftime('%Y-%m-%d')}، فلترة {item['strict_score']}، قوة عامة {item['score']} - {item['kind']}\n"
+    report += "\n"
+
+    report += "شرح تفصيلي لأقوى ست فترات\n"
+    report += "--------------------------\n"
+    detail_list = final_candidates[:5] if final_candidates else backup_candidates[:5]
+    for item in detail_list:
+        start = item["period_start"].strftime("%Y-%m-%d")
+        end = item["period_end"].strftime("%Y-%m-%d")
+        report += f"\nعمر {item['age']} سنة: {start} إلى {end}\n"
+        report += "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+        report += f"القوة النهائية: {item['score']} / {classify(item['score'])}\n"
+        report += f"نوع الترشيح: {item['kind']}\n"
+        report += f"قوة التوقيت الداخلي: {item['internal_score']} / 100\n"
+        report += f"قوة العبور داخل السنة العمرية: {item['transit']['score']} / 100\n"
+        report += f"قوة مرساة الزواج، المشتري/زحل/جونو/العقد على الزهرة أو السابع: {item['anchor_score']} / 45\n"
+        report += f"قوة العودة الشمسية: {item['solar_return']['score']} / 100\n"
+        report += f"تاريخ العودة الشمسية التقريبي: {item['solar_return']['sr_date_ut']}\n"
+        report += f"السابع في العودة الشمسية: {item['solar_return']['sr7_sign']}، حاكمه {item['solar_return']['sr7_ruler']}\n"
+        report += f"البروفكشن: البيت {item['prof_house']}، حاكم السنة {item['prof_ruler']}\n"
+        report += f"الفريدار: الرئيسي {item['main_f']}، الفرعي {item['sub_f']}\n"
+        report += f"عدد الأنظمة المتفقة: {item['systems']}\n"
+        report += f"تصنيف الحدث بعد الفصل بين الحب والزواج: {item.get('event_type_final', item['kind'])}\n"
+
+        if item.get("event_windows"):
+            report += "أقوى النوافذ الميلادية داخل سنة العودة الشمسية:\n"
+            for w in item["event_windows"][:3]:
+                report += f"- {w['start'].strftime('%Y-%m-%d')} إلى {w['end'].strftime('%Y-%m-%d')}، الذروة الشهرية {w['month']}/{w['year']}، قوة {w['score']}.\n"
+
+        report += "مرساة الزواج الأساسية:\n"
+        report += hit_text(item["anchor_hits"])
+        report += "العودة الشمسية:\n"
+        if item["solar_return"]["notes"]:
+            for n in item["solar_return"]["notes"][:6]:
+                report += f"- {n}\n"
+        else:
+            report += "لا توجد دلالات عودة شمسية قوية.\n"
+        report += "القوس الشمسي:\n"
+        report += sa_text(item["sa_hits"])
+        report += "التقدم الثانوي:\n"
+        report += prog_text(item["prog_hits"])
+        report += "العبور الحقيقي:\n"
+        report += hit_text(item["transit"]["hits"])
+
+    # بحث خاص عن سنة 1997-1998 إن وجدت للفائدة التعليمية
+    report += "\nقراءة السنة التي تشمل شباط 1998، إن كانت ضمن النطاق\n"
+    report += "-----------------------------------------------\n"
+    found_1998 = None
+    for item in all_results:
+        if item["period_start"] <= datetime(1998, 2, 1) < item["period_end"]:
+            found_1998 = item
+            break
+    if found_1998:
+        report += f"شباط 1998 يقع داخل عمر {found_1998['age']} سنة، الفترة {found_1998['period_start'].strftime('%Y-%m-%d')} إلى {found_1998['period_end'].strftime('%Y-%m-%d')}.\n"
+        report += f"قوة هذه الفترة في V21.1: {found_1998['score']} / {classify(found_1998['score'])}.\n"
+        report += f"قوة التوقيت الداخلي: {found_1998['internal_score']}، وقوة العبور: {found_1998['transit']['score']}، قوة مرساة الزواج: {found_1998['anchor_score']}، وقوة العودة الشمسية: {found_1998['solar_return']['score']}.\n"
+        report += f"تاريخ العودة الشمسية لهذه الفترة: {found_1998['solar_return']['sr_date_ut']}\n"
+        report += "دلالات العودة الشمسية في هذه الفترة:\n"
+        if found_1998["solar_return"]["notes"]:
+            for n in found_1998["solar_return"]["notes"][:6]:
+                report += f"- {n}\n"
+        else:
+            report += "لا توجد دلالات عودة شمسية قوية.\n"
+        report += "مرساة الزواج في هذه الفترة:\n"
+        report += hit_text(found_1998["anchor_hits"], limit=6)
+        report += "أهم العبور العام فيها:\n"
+        report += hit_text(found_1998["transit"]["hits"], limit=5)
+    else:
+        report += "هذه الفترة ليست ضمن نطاق البحث المدخل.\n"
+
+    report += "\nالخلاصة\n"
+    report += "-------\n"
+    best = final_candidates[0] if final_candidates else (backup_candidates[0] if backup_candidates else None)
+    if best:
+        if final_candidates:
+            report += f"بعد فلترة نوافذ الحدث، أقوى فترة مرشحة للزواج الفعلي هي عمر {best['age']} سنة من {best['period_start'].strftime('%Y-%m-%d')} إلى {best['period_end'].strftime('%Y-%m-%d')}.\n"
+        else:
+            report += f"لا توجد فترة مؤكدة بالفلترة الصارمة، وأقرب فترة تحتاج مراجعة هي عمر {best['age']} سنة من {best['period_start'].strftime('%Y-%m-%d')} إلى {best['period_end'].strftime('%Y-%m-%d')}.\n"
+    report += "الدقة تعتمد على وقت الميلاد. وكلما تم اختبار النتائج على أحداث معروفة، يمكن تعديل الأوزان حتى يصبح التطبيق أكثر واقعية.\n"
+
+    return report
+
+
+# ==============================
+# واجهة ويب Pydroid - V21.1
+# ==============================
+
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs
+import html
+import webbrowser
+
+
+HTML_PAGE = """<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ماسح توقيت الزواج V21.1 - نوافذ الحدث - نوافذ الحدث.1</title>
+<style>
+body { font-family: Arial, Tahoma, sans-serif; background:#f3f6f8; color:#111; margin:0; padding:12px; direction:rtl; }
+.container { max-width:780px; margin:auto; background:white; border-radius:16px; padding:16px; box-shadow:0 4px 18px rgba(0,0,0,0.12); }
+h1 { text-align:center; color:#12364f; font-size:22px; }
+p.note { background:#eef6ff; border-right:5px solid #1d6fa5; padding:10px; border-radius:8px; line-height:1.8; }
+label { display:block; margin-top:12px; font-weight:bold; }
+input, select { width:100%; box-sizing:border-box; padding:11px; margin-top:5px; border:1px solid #ccd6dd; border-radius:10px; font-size:16px; direction:rtl; }
+button { width:100%; margin-top:18px; padding:14px; border:none; border-radius:12px; background:#12364f; color:white; font-size:18px; font-weight:bold; }
+button.secondary { background:#2f7d32; }
+.report { white-space:pre-wrap; background:#fbfbfb; border:1px solid #ddd; padding:14px; border-radius:12px; line-height:1.9; margin-top:18px; font-size:15px; }
+.small { font-size:13px; color:#555; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>ماسح توقيت الزواج V21.1 - نوافذ الحدث - نوافذ الحدث.1</h1>
+<p class="note">هذه النسخة لا تعرض كل الاحتمالات كزواج. بعد الحساب تطبق نوافذ الحدث لاستخراج المرشح الأقوى والاحتياطي فقط.</p>
+
+<form method="post">
+<label>الاسم</label><input name="name" value="@@name@@">
+
+<label>الجنس</label>
+<select name="gender"><option @@male_selected@@>ذكر</option><option @@female_selected@@>أنثى</option></select>
+
+<label>سنة الميلاد</label><input name="year" type="number" value="@@year@@">
+<label>الشهر</label><input name="month" type="number" value="@@month@@">
+<label>اليوم</label><input name="day" type="number" value="@@day@@">
+<label>الساعة المحلية بصيغة 24 ساعة</label><input name="hour" type="number" value="@@hour@@">
+<label>الدقيقة المحلية</label><input name="minute" type="number" value="@@minute@@">
+
+<label>فرق التوقيت عن UTC</label>
+<select name="utc">
+<option value="3" @@utc_3@@>UTC +3 العراق / السعودية / الكويت / قطر / البحرين / اليمن / تركيا</option>
+<option value="4" @@utc_4@@>UTC +4 الإمارات / عُمان / أذربيجان / جورجيا</option>
+<option value="2" @@utc_2@@>UTC +2 مصر / الأردن / فلسطين / لبنان / سوريا / ليبيا / السودان</option>
+<option value="1" @@utc_1@@>UTC +1 تونس / الجزائر / المغرب شتاءً / وسط أوروبا</option>
+<option value="0" @@utc_0@@>UTC +0 غرينتش / موريتانيا</option>
+<option value="3.5" @@utc_35@@>UTC +3:30 إيران</option>
+<option value="4.5" @@utc_45@@>UTC +4:30 أفغانستان</option>
+<option value="5" @@utc_5@@>UTC +5 باكستان</option>
+<option value="5.5" @@utc_55@@>UTC +5:30 الهند</option>
+<option value="-5" @@utc_m5@@>UTC -5 شرق أمريكا شتاءً</option>
+<option value="manual" @@utc_manual_selected@@>إدخال يدوي</option>
+</select>
+
+<label>فرق التوقيت اليدوي</label><input name="utc_manual" value="@@utc_manual@@">
+
+<label>المدينة</label><select name="city">@@city_options@@</select>
+<label>خط العرض اليدوي</label><input name="lat" value="@@lat@@">
+<label>خط الطول اليدوي</label><input name="lon" value="@@lon@@">
+
+<label>بداية عمر الفحص</label><input name="start_age" type="number" value="@@start_age@@">
+<label>نهاية عمر الفحص</label><input name="end_age" type="number" value="@@end_age@@">
+
+<button type="submit">استخراج الفترات المرشحة</button>
+</form>
+
+@@report_block@@
+
+<p class="small">الرابط المحلي:<br>http://127.0.0.1:5000</p>
+</div>
+
+<script>
+function copyReport() {
+    const el = document.getElementById("reportText");
+    if (!el) return;
+    navigator.clipboard.writeText(el.innerText).then(function(){ alert("تم نسخ التقرير"); });
+}
+</script>
+</body>
+</html>
+"""
+
+
+def esc(v):
+    return html.escape(str(v), quote=True)
+
+
+def selected(value, current):
+    return "selected" if str(value) == str(current) else ""
+
+
+def get_form_value(data, key, default):
+    if key in data and data[key]:
+        return data[key][0]
+    return default
+
+
+def fill_template(template, mapping):
+    page = template
+    for key, value in mapping.items():
+        page = page.replace("@@" + key + "@@", str(value))
+    return page
+
+
+class MarriageWebHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.render_page()
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        raw = self.rfile.read(length).decode("utf-8")
+        data = parse_qs(raw)
+        self.render_page(data)
+
+    def render_page(self, data=None):
+        values = {
+            "name": "",
+            "gender": "ذكر",
+            "year": "",
+            "month": "",
+            "day": "",
+            "hour": "",
+            "minute": "",
+            "utc": "3",
+            "utc_manual": "3",
+            "city": "بغداد",
+            "lat": "",
+            "lon": "",
+            "start_age": "18",
+            "end_age": "60",
+        }
+
+        if data:
+            for k in values:
+                values[k] = get_form_value(data, k, values[k])
+
+        report_block = ""
+
+        if data:
+            try:
+                name = values["name"].strip() or "بدون اسم"
+                gender = values["gender"].strip()
+                year = int(values["year"])
+                month = int(values["month"])
+                day = int(values["day"])
+                hour = int(values["hour"])
+                minute = int(values["minute"])
+                utc_offset = float(values["utc_manual"]) if values["utc"] == "manual" else float(values["utc"])
+
+                city_name = values["city"].strip()
+                if city_name == "إدخال يدوي":
+                    lat = float(values["lat"])
+                    lon = float(values["lon"])
+                    city_name_report = "إحداثيات يدوية"
+                else:
+                    lat, lon = CITIES[city_name]
+                    city_name_report = city_name
+
+                start_age = int(values["start_age"])
+                end_age = int(values["end_age"])
+                if start_age < 12:
+                    start_age = 18
+                if end_age < start_age:
+                    end_age = start_age
+                if end_age - start_age > 65:
+                    end_age = start_age + 65
+
+                chart = calculate_chart(year, month, day, hour, minute, utc_offset, lat, lon)
+                birth_info = f"{year}-{month:02d}-{day:02d} الساعة {hour:02d}:{minute:02d} بالتوقيت المحلي"
+
+                ranked, all_results = scan_ages_for_marriage(chart, start_age, end_age)
+                report = build_v18_report(chart, ranked, all_results, name, gender, birth_info, city_name_report, start_age, end_age)
+
+                with open("marriage_timing_v17_report.txt", "w", encoding="utf-8") as f:
+                    f.write(report)
+
+                report_block = '<button class="secondary" type="button" onclick="copyReport()">نسخ التقرير</button><div class="report" id="reportText">' + esc(report) + '</div>'
+
+                # تنظيف الحقول بعد استخراج التقرير حتى لا تبقى بيانات الشخص محفوظة في الصفحة
+                values["name"] = ""
+                values["gender"] = "ذكر"
+                values["year"] = ""
+                values["month"] = ""
+                values["day"] = ""
+                values["hour"] = ""
+                values["minute"] = ""
+                values["utc"] = "3"
+                values["utc_manual"] = "3"
+                values["city"] = "بغداد"
+                values["lat"] = ""
+                values["lon"] = ""
+                values["start_age"] = "18"
+                values["end_age"] = "60"
+
+            except Exception as e:
+                report_block = '<div class="report">حدث خطأ أثناء الحساب:\\n' + esc(e) + '</div>'
+
+                # تنظيف الحقول بعد استخراج التقرير حتى لا تبقى بيانات الشخص محفوظة في الصفحة
+                values["name"] = ""
+                values["gender"] = "ذكر"
+                values["year"] = ""
+                values["month"] = ""
+                values["day"] = ""
+                values["hour"] = ""
+                values["minute"] = ""
+                values["utc"] = "3"
+                values["utc_manual"] = "3"
+                values["city"] = "بغداد"
+                values["lat"] = ""
+                values["lon"] = ""
+                values["start_age"] = "18"
+                values["end_age"] = "60"
+
+
+        city_options = ""
+        for c in CITIES.keys():
+            city_options += f'<option value="{esc(c)}" {selected(c, values["city"])}>{esc(c)}</option>'
+
+        mapping = {
+            "name": esc(values["name"]),
+            "year": esc(values["year"]),
+            "month": esc(values["month"]),
+            "day": esc(values["day"]),
+            "hour": esc(values["hour"]),
+            "minute": esc(values["minute"]),
+            "lat": esc(values["lat"]),
+            "lon": esc(values["lon"]),
+            "start_age": esc(values["start_age"]),
+            "end_age": esc(values["end_age"]),
+            "male_selected": selected("ذكر", values["gender"]),
+            "female_selected": selected("أنثى", values["gender"]),
+            "utc_3": selected("3", values["utc"]),
+            "utc_4": selected("4", values["utc"]),
+            "utc_2": selected("2", values["utc"]),
+            "utc_1": selected("1", values["utc"]),
+            "utc_0": selected("0", values["utc"]),
+            "utc_35": selected("3.5", values["utc"]),
+            "utc_45": selected("4.5", values["utc"]),
+            "utc_5": selected("5", values["utc"]),
+            "utc_55": selected("5.5", values["utc"]),
+            "utc_m5": selected("-5", values["utc"]),
+            "utc_manual_selected": selected("manual", values["utc"]),
+            "utc_manual": esc(values["utc_manual"]),
+            "city_options": city_options,
+            "report_block": report_block
+        }
+
+        page = fill_template(HTML_PAGE, mapping)
+        content = page.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
+    def log_message(self, format, *args):
+        return
+
+
+def run_web_app():
+    host = "127.0.0.1"
+    port = 5000
+    url = f"http://{host}:{port}"
+    print("تم تشغيل ماسح توقيت الزواج V21.1 - نوافذ الحدث - نوافذ الحدث.1.")
+    print("افتح الرابط:")
+    print(url)
+    print("لا تغلق Pydroid أثناء فتح الصفحة.")
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+    server = HTTPServer((host, port), MarriageWebHandler)
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    run_web_app()
+'''
 import types as _marriage_types
 import sys as _marriage_sys
 _MARRIAGE_MODULE_NAME = "_astrogate_marriage_engine"
@@ -7547,6 +10348,309 @@ def build_midpoints_text(premium: bool = False) -> str:
         else:
             out.append("لا توجد تفعيلات دقيقة جدًا الآن ضمن أورب 1.5°، وهذا يعني أن نقاط المنتصف تعمل كخلفية وليست زرّ الحدث الأقوى في اللحظة الحالية.")
     return "\n".join(out)
+
+# ============================================================
+# قسم اختيار الوقت المناسب - مجاني V6.1.12
+# يعتمد على بيانات الميلاد المحفوظة وخريطة لحظة الفحص
+# ============================================================
+
+PLANET_AR_TO_KEY = {
+    "الشمس": "Sun", "القمر": "Moon", "عطارد": "Mercury", "الزهرة": "Venus",
+    "المريخ": "Mars", "المشتري": "Jupiter", "زحل": "Saturn",
+    "أورانوس": "Uranus", "نبتون": "Neptune", "بلوتو": "Pluto",
+}
+
+TIMING_DECISIONS = {
+    "love": {"label": "قرار عاطفي", "house": 7, "natural": ["Venus", "Moon", "Mercury"], "good_terms": ["الزهرة", "القمر", "المشتري", "عطارد"], "bad_terms": ["المريخ", "زحل"], "best_use": "تواصل هادئ، فتح باب حوار، ترتيب موعد، أو خطوة عاطفية خفيفة.", "avoid": "الضغط، العتاب، طلب الحسم الفوري، أو اختبار الطرف الآخر."},
+    "reconcile": {"label": "مصالحة أو عودة تواصل", "house": 7, "natural": ["Venus", "Moon", "Mercury"], "good_terms": ["الزهرة", "المشتري", "القمر", "عطارد"], "bad_terms": ["المريخ", "زحل"], "best_use": "رسالة لطيفة، اعتذار، تليين موقف، أو فتح موضوع دون شروط.", "avoid": "استرجاع الخلاف، رفع النبرة، أو جعل المصالحة امتحانًا للطرف الآخر."},
+    "money": {"label": "قرار مالي", "house": 2, "natural": ["Venus", "Jupiter", "Mercury"], "good_terms": ["الزهرة", "المشتري", "عطارد", "زحل"], "bad_terms": ["المريخ"], "best_use": "مراجعة الأرقام، ترتيب ميزانية، تفاوض مالي، أو قرار صغير محسوب.", "avoid": "المجازفة الكبيرة، الشراء الانفعالي، أو الثقة بوعد غير مكتوب."},
+    "buy": {"label": "شراء مهم", "house": 2, "natural": ["Venus", "Mercury", "Jupiter"], "good_terms": ["الزهرة", "عطارد", "المشتري", "زحل"], "bad_terms": ["المريخ", "القمر"], "best_use": "المقارنة، السؤال، المساومة، وفحص القيمة الحقيقية قبل الدفع.", "avoid": "الشراء السريع بسبب الحماس أو الخوف من ضياع الفرصة."},
+    "sell": {"label": "بيع أو تفاوض تجاري", "house": 2, "natural": ["Mercury", "Venus", "Jupiter"], "good_terms": ["عطارد", "الزهرة", "المشتري"], "bad_terms": ["المريخ", "زحل"], "best_use": "عرض السعر، التفاوض، شرح المزايا، أو جمع عروض بديلة.", "avoid": "التنازل السريع، الكلام الحاد، أو إغلاق الصفقة قبل وضوح التفاصيل."},
+    "work": {"label": "عمل أو مهنة", "house": 10, "natural": ["Sun", "Saturn", "Mercury", "Jupiter"], "good_terms": ["الشمس", "عطارد", "المشتري", "زحل"], "bad_terms": ["المريخ", "القمر"], "best_use": "ترتيب خطة، تقديم طلب، مراجعة مسؤول، أو بدء خطوة مهنية منظمة.", "avoid": "الصدام مع الإدارة، التسرع في ترك شيء ثابت، أو المبالغة بالوعود."},
+    "interview": {"label": "مقابلة أو ظهور أمام جهة", "house": 10, "natural": ["Sun", "Mercury", "Jupiter"], "good_terms": ["الشمس", "عطارد", "المشتري", "الزهرة"], "bad_terms": ["زحل", "المريخ"], "best_use": "تقديم نفسك بوضوح، ترتيب الكلام، إبراز الخبرة، وطلب فرصة مناسبة.", "avoid": "التوتر الزائد، الجواب المتسرع، أو الدخول في تفاصيل غير مطلوبة."},
+    "study": {"label": "دراسة أو امتحان", "house": 9, "natural": ["Mercury", "Jupiter", "Moon"], "good_terms": ["عطارد", "المشتري", "زحل"], "bad_terms": ["المريخ", "القمر"], "best_use": "مراجعة، تلخيص، تسجيل، بحث، أو تثبيت معلومة مهمة.", "avoid": "التشتت، فتح أكثر من موضوع في وقت واحد، أو الاعتماد على الذاكرة وحدها."},
+    "health": {"label": "صحة أو علاج", "house": 6, "natural": ["Moon", "Saturn", "Mars", "Mercury"], "good_terms": ["عطارد", "زحل", "المشتري", "القمر"], "bad_terms": ["المريخ", "نبتون"], "best_use": "مراجعة طبيب، تنظيم علاج، فحص، أو اتخاذ خطوة صحية هادئة.", "avoid": "القرار الطبي المتسرع، إهمال الأعراض، أو تغيير العلاج دون مختص."},
+    "travel": {"label": "سفر أو تنقل", "house": 9, "natural": ["Mercury", "Jupiter", "Moon"], "good_terms": ["المشتري", "عطارد", "القمر", "الزهرة"], "bad_terms": ["زحل", "المريخ"], "best_use": "حجز، تخطيط، مراسلة، متابعة معاملة، أو ترتيب طريق السفر.", "avoid": "الانطلاق بلا تأكد، إهمال الوثائق، أو الاعتماد على موعد غير مؤكد."},
+    "contract": {"label": "توقيع عقد أو التزام", "house": 7, "natural": ["Mercury", "Saturn", "Venus", "Jupiter"], "good_terms": ["عطارد", "زحل", "المشتري", "الزهرة"], "bad_terms": ["المريخ", "نبتون", "القمر"], "best_use": "قراءة البنود، التفاوض، تثبيت الشروط، أو توقيع التزام واضح.", "avoid": "التوقيع تحت ضغط، الثقة بكلام شفهي، أو تجاهل بند صغير."},
+    "general": {"label": "قرار عام", "house": 1, "natural": ["Moon", "Mercury", "Sun"], "good_terms": ["الشمس", "القمر", "عطارد", "المشتري", "الزهرة"], "bad_terms": ["المريخ", "زحل"], "best_use": "خطوة معتدلة، ترتيب النية، سؤال، مراجعة، أو بداية غير قاطعة.", "avoid": "القفز إلى نتيجة نهائية قبل وضوح الصورة."},
+}
+
+CHALDEAN_ORDER = ["زحل", "المشتري", "المريخ", "الشمس", "الزهرة", "عطارد", "القمر"]
+DAY_RULERS = ["القمر", "المريخ", "عطارد", "المشتري", "الزهرة", "زحل", "الشمس"]  # Monday=0
+
+
+def _safe_int(value, default=0):
+    try:
+        return int(str(value).strip())
+    except Exception:
+        return default
+
+
+def _profile_chart_context():
+    if not profile_is_complete():
+        raise ValueError("يرجى حفظ بيانات الميلاد أولًا من صفحة بياناتي الفلكية حتى يتم فحص التوقيت بدقة.")
+    saved = session.get("astro_profile", {})
+    if not isinstance(saved, dict):
+        raise ValueError("بيانات الميلاد غير محفوظة بصورة صحيحة.")
+    year = _safe_int(saved.get("year")); month = _safe_int(saved.get("month")); day = _safe_int(saved.get("day")); hour = _safe_int(saved.get("hour")); minute = _safe_int(saved.get("minute"))
+    country_code = str(saved.get("country_code", ""))
+    city_input = str(saved.get("city", "") or saved.get("city_select", ""))
+    city_info = find_city(country_code, city_input)
+    if not city_info:
+        raise ValueError("تعذر تحديد مدينة الميلاد المحفوظة. يرجى فتح بياناتي الفلكية وحفظ المدينة مرة أخرى.")
+    lat = float(city_info["lat"]); lon_geo = float(city_info["lon"])
+    timezone = get_selected_timezone_offset(saved, city_info, year, month, day, hour, minute)
+    house_system = saved.get("house_system", "P") or "P"
+    natal_positions, natal_cusps, natal_angles = calculate_chart(year, month, day, hour, minute, timezone, lat, lon_geo, house_system)
+    return {"saved": saved, "lat": lat, "lon": lon_geo, "timezone": timezone, "house_system": house_system, "natal_positions": natal_positions, "natal_cusps": natal_cusps, "natal_angles": natal_angles}
+
+
+def _default_timing_datetime() -> Dict[str, str]:
+    try:
+        ctx = _profile_chart_context()
+        now_local = datetime.utcnow() + timedelta(hours=float(ctx["timezone"]))
+    except Exception:
+        now_local = datetime.now()
+    return {"year": str(now_local.year), "month": str(now_local.month), "day": str(now_local.day), "hour": f"{now_local.hour:02d}", "minute": f"{now_local.minute:02d}"}
+
+
+def _ruler_key_for_sign(sign: str) -> str:
+    return PLANET_AR_TO_KEY.get(SIGN_RULERS.get(sign, ""), "")
+
+
+def _house_ruler_key(cusps: List[float], house_num: int) -> str:
+    sign, degree = sign_from_lon(cusps[house_num - 1])
+    return _ruler_key_for_sign(sign)
+
+
+def _aspect_quality_to_planet(target_ar: str, aspect_name: str) -> int:
+    benefics = {"الزهرة", "المشتري", "الشمس"}; malefics = {"المريخ", "زحل", "نبتون", "بلوتو"}
+    if aspect_name in ["تثليث", "تسديس"]:
+        return 4 if target_ar in benefics else (1 if target_ar in malefics else 2)
+    if aspect_name == "اقتران":
+        return 4 if target_ar in benefics else (-3 if target_ar in malefics else 1)
+    if aspect_name in ["تربيع", "مقابلة"]:
+        return -5 if target_ar in malefics else (-1 if target_ar in benefics else -3)
+    return 0
+
+
+def _find_applying_moon_aspect(positions: Dict[str, BodyPosition]) -> Tuple[str, str, float]:
+    moon = positions.get("Moon")
+    if not moon:
+        return "", "", 999.0
+    current = normalize_deg(moon.lon); remaining_in_sign = 30.0 - float(moon.degree)
+    aspect_defs = [("اقتران", 0), ("تسديس", 60), ("تربيع", 90), ("تثليث", 120), ("مقابلة", 180)]
+    best = ("", "", 999.0)
+    for key, p in positions.items():
+        if key == "Moon":
+            continue
+        for asp_name, asp_deg in aspect_defs:
+            for candidate in [normalize_deg(p.lon + asp_deg), normalize_deg(p.lon - asp_deg)]:
+                forward = normalize_deg(candidate - current)
+                if 0.05 < forward <= remaining_in_sign + 0.5 and forward < best[2]:
+                    best = (asp_name, p.name_ar, forward)
+    return best
+
+
+def _is_moon_void(positions: Dict[str, BodyPosition]) -> bool:
+    asp, target, distance = _find_applying_moon_aspect(positions)
+    return not bool(asp and target and distance < 999)
+
+
+def _approx_sunrise_sunset(local_dt: datetime, lat: float, lon_geo: float, timezone: float) -> Tuple[float, float]:
+    try:
+        n = local_dt.timetuple().tm_yday; lng_hour = lon_geo / 15.0
+        def calc(is_rise: bool) -> float:
+            t = n + ((6 if is_rise else 18) - lng_hour) / 24.0
+            m = (0.9856 * t) - 3.289
+            l = normalize_deg(m + (1.916 * math.sin(math.radians(m))) + (0.020 * math.sin(math.radians(2 * m))) + 282.634)
+            ra = normalize_deg(math.degrees(math.atan(0.91764 * math.tan(math.radians(l)))))
+            l_quadrant = (math.floor(l / 90)) * 90; ra_quadrant = (math.floor(ra / 90)) * 90
+            ra = (ra + (l_quadrant - ra_quadrant)) / 15.0
+            sin_dec = 0.39782 * math.sin(math.radians(l)); cos_dec = math.cos(math.asin(sin_dec))
+            cos_h = (math.cos(math.radians(90.833)) - (sin_dec * math.sin(math.radians(lat)))) / (cos_dec * math.cos(math.radians(lat)))
+            if cos_h > 1 or cos_h < -1:
+                return 6.0 if is_rise else 18.0
+            h = (360.0 - math.degrees(math.acos(cos_h)) if is_rise else math.degrees(math.acos(cos_h))) / 15.0
+            local_mean = h + ra - (0.06571 * t) - 6.622
+            return ((local_mean - lng_hour) + timezone) % 24.0
+        return calc(True), calc(False)
+    except Exception:
+        return 6.0, 18.0
+
+
+def _planetary_hour(local_dt: datetime, lat: float, lon_geo: float, timezone: float) -> str:
+    sunrise, sunset = _approx_sunrise_sunset(local_dt, lat, lon_geo, timezone)
+    current = local_dt.hour + local_dt.minute / 60.0
+    start_idx = CHALDEAN_ORDER.index(DAY_RULERS[local_dt.weekday()])
+    is_day = sunrise <= current < sunset if sunrise <= sunset else (current >= sunrise or current < sunset)
+    if is_day:
+        hour_len = ((sunset - sunrise) % 24.0 or 12.0) / 12.0
+        idx = int(((current - sunrise) % 24.0) // hour_len)
+        return CHALDEAN_ORDER[(start_idx + idx) % 7]
+    hour_len = ((sunrise - sunset) % 24.0 or 12.0) / 12.0
+    idx = int(((current - sunset) % 24.0) // hour_len)
+    return CHALDEAN_ORDER[(start_idx + 12 + idx) % 7]
+
+
+def _timing_level(score: int) -> str:
+    if score >= 80: return "مناسب جدًا"
+    if score >= 65: return "مناسب"
+    if score >= 50: return "متوسط"
+    if score >= 35: return "ضعيف"
+    return "غير مناسب"
+
+
+def _score_term(term: str, decision: Dict[str, object]) -> int:
+    if term in decision.get("good_terms", []): return 2
+    if term in decision.get("bad_terms", []): return -2
+    return 0
+
+
+def _score_aspect_between(p1: Optional[BodyPosition], p2: Optional[BodyPosition], good_extra: bool = False) -> int:
+    if not p1 or not p2: return 0
+    dist = angular_distance(p1.lon, p2.lon)
+    for asp_name, asp_deg, orb in [("اقتران",0,6),("تسديس",60,4),("تربيع",90,5),("تثليث",120,5),("مقابلة",180,5)]:
+        if abs(dist - asp_deg) <= orb:
+            if asp_name in ["تثليث", "تسديس"]: return 5 if good_extra else 4
+            if asp_name == "اقتران": return 3
+            return -5
+    return 0
+
+
+def build_timing_result(decision_key: str, local_dt: datetime, positions, cusps, angles, natal_positions, lat: float, lon_geo: float, timezone: float) -> Dict[str, object]:
+    decision = TIMING_DECISIONS.get(decision_key, TIMING_DECISIONS["general"])
+    score = 50; positives: List[str] = []; cautions: List[str] = []
+    moon = positions.get("Moon")
+    asc_sign = str(angles.get("ASC_sign", "")); asc_degree = float(angles.get("ASC_degree", 0.0)); asc_term = get_ptolemy_term(asc_sign, asc_degree)
+    asc_ruler = positions.get(_ruler_key_for_sign(asc_sign))
+    topic_house = int(decision.get("house", 1)); topic_ruler = positions.get(_house_ruler_key(cusps, topic_house))
+    if moon:
+        score += _score_term(moon.term or "", decision)
+        if _is_moon_void(positions):
+            score -= 8; cautions.append("حركة اللحظة مترددة؛ تصلح للمراجعة أو التهيئة أكثر من القرار النهائي.")
+        else:
+            score += 4; positives.append("حركة اللحظة نشطة وتسمح بظهور أثر واضح للخطوة إذا استُخدمت بهدوء.")
+        asp, target, distance = _find_applying_moon_aspect(positions)
+        if asp and target:
+            q = _aspect_quality_to_planet(target, asp); score += q
+            if q >= 3: positives.append("المسار القريب يدعم الانفتاح أو التسهيل، لذلك يمكن استخدام الوقت بخطوة عملية محسوبة.")
+            elif q <= -3: cautions.append("المسار القريب يحمل ضغطًا أو استعجالًا؛ الأفضل تقليل التوقعات وعدم فرض نتيجة فورية.")
+    score += _score_term(asc_term, decision)
+    if asc_degree < 2: score -= 3; cautions.append("اللحظة في بدايتها؛ الصورة لم تنضج بعد، فالأفضل أن تكون الخطوة تمهيدية.")
+    elif asc_degree > 28: score -= 4; cautions.append("اللحظة في نهايتها؛ قد يكون الوقت أقرب للإغلاق أو المراجعة منه إلى بداية جديدة.")
+    if asc_ruler:
+        score += _score_term(asc_ruler.term or "", decision)
+        if asc_ruler.retrograde: score -= 3; cautions.append("قدرة المبادرة تحتاج تروّيًا؛ لا تجعل الخطوة مبنية على رد فعل سريع.")
+        if asc_ruler.house in [1, 4, 7, 10]: score += 3; positives.append("قدرة المستخدم على التأثير في الموقف حاضرة وواضحة نسبيًا.")
+    if topic_ruler:
+        score += _score_term(topic_ruler.term or "", decision)
+        if topic_ruler.retrograde: score -= 4; cautions.append("موضوع القرار يحتاج مراجعة أو عودة للتفاصيل قبل الحسم.")
+        if topic_ruler.house in [1, 4, 7, 10, topic_house]: score += 5; positives.append("موضوع القرار حاضر بقوة في اللحظة، لذلك يمكن ملاحظته أو تحريكه بوضوح.")
+        rel = _score_aspect_between(asc_ruler, topic_ruler, True); score += rel
+        if rel >= 4: positives.append("هناك قابلية جيدة لربط رغبتك بموضوع القرار، وهذا يدعم اتخاذ خطوة مناسبة.")
+        elif rel <= -4: cautions.append("هناك احتكاك بين رغبتك وموضوع القرار؛ لا تضغط على النتيجة الآن.")
+    natural_keys = list(decision.get("natural", []))
+    for nk in natural_keys:
+        p = positions.get(nk)
+        if not p: continue
+        score += _score_term(p.term or "", decision)
+        if p.retrograde and nk in ["Mercury", "Venus", "Mars"]: score -= 3; cautions.append("جزء من دلالة القرار يعمل بطريقة مراجعة أو تردد، لذلك يحتاج إلى وضوح أكبر.")
+        if p.house in [1, 4, 7, 10, topic_house]: score += 2
+    main_nat = positions.get(natural_keys[0]) if natural_keys else None
+    for helper_key, delta_name in [("Venus", "تلطيف وقبول"), ("Jupiter", "توسيع وتسهيل")]:
+        val = _score_aspect_between(main_nat, positions.get(helper_key))
+        if val > 0: score += 2; positives.append(f"توجد قابلية لـ {delta_name} في طريقة التعامل مع القرار.")
+    for pressure_key in ["Mars", "Saturn", "Neptune"]:
+        if _score_aspect_between(main_nat, positions.get(pressure_key)) < 0:
+            score -= 3; cautions.append("توجد إشارة إلى ضغط أو تشويش؛ الأفضل طلب الوضوح وتجنب الاستعجال."); break
+    hour_ruler = _planetary_hour(local_dt, lat, lon_geo, timezone)
+    if hour_ruler in decision.get("good_terms", []): score += 6; positives.append(f"ساعة {hour_ruler} منسجمة مع نوع القرار، وهذا يقوّي جودة التوقيت.")
+    elif hour_ruler in decision.get("bad_terms", []): score -= 5; cautions.append(f"ساعة {hour_ruler} لا تناسب هذا النوع من القرارات تمامًا؛ استخدم الوقت بحذر.")
+    else: score += 1
+    mercury = positions.get("Mercury")
+    if mercury and decision_key in ["contract", "study", "travel", "sell", "buy", "interview", "reconcile"]:
+        if mercury.retrograde: score -= 7; cautions.append("موضوع الكلام أو التوقيع أو الفهم يحتاج تدقيقًا مضاعفًا؛ لا تعتمد على الانطباع الأول.")
+        else: score += 3; positives.append("جانب الكلام والفهم قابل للاستخدام إذا كان التعبير واضحًا ومختصرًا.")
+    natal_relevant = ["Sun", "Moon"] + natural_keys; checked = 0
+    for tk in ["Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"]:
+        tp = positions.get(tk)
+        if not tp: continue
+        for nk in natal_relevant[:5]:
+            np = natal_positions.get(nk)
+            if not np: continue
+            dist = angular_distance(tp.lon, np.lon)
+            for asp_name, asp_deg, orb in [("اقتران",0,2.5),("تسديس",60,2.0),("تربيع",90,2.5),("تثليث",120,2.0),("مقابلة",180,2.5)]:
+                if abs(dist - asp_deg) <= orb:
+                    checked += 1
+                    if asp_name in ["تثليث", "تسديس"] or (asp_name == "اقتران" and tp.name_ar in ["الزهرة", "المشتري", "الشمس"]): score += 3
+                    elif asp_name in ["تربيع", "مقابلة"] and tp.name_ar in ["المريخ", "زحل", "نبتون"]: score -= 4
+                    break
+            if checked >= 4: break
+        if checked >= 4: break
+    if checked: positives.append("تم ربط لحظة الفحص بخريطتك المحفوظة، لذلك النتيجة شخصية وليست حكمًا عامًا فقط.")
+    score = max(0, min(100, int(round(score)))); level = _timing_level(score)
+    if score >= 80: summary = "هذا توقيت قوي ويمكن استخدامه لخطوة واضحة، بشرط أن تكون الظروف الواقعية جاهزة."; advice = "تحرّك بثقة ووضوح، واجعل الخطوة عملية لا مبالغًا فيها."
+    elif score >= 65: summary = "هذا توقيت مناسب، يساعد على التحرك لكن مع بقاء الحاجة إلى هدوء وتنظيم."; advice = "ابدأ بخطوة محسوبة، واجعل القرار قابلًا للمراجعة إذا ظهرت تفاصيل جديدة."
+    elif score >= 50: summary = "هذا توقيت متوسط؛ يصلح للتحضير أو فتح الباب، لكنه ليس الأفضل للحسم النهائي."; advice = "استخدم الوقت للسؤال أو التهيئة أو جمع المعلومات، وانتظر قبل القرار القاطع."
+    elif score >= 35: summary = "هذا توقيت ضعيف نسبيًا؛ قد يحمل ترددًا أو ضغطًا أو نقص وضوح."; advice = "أجّل القرار إن استطعت، أو خفّف حجم الخطوة واجعلها مؤقتة."
+    else: summary = "هذا التوقيت غير مناسب لقرار مهم؛ الضغط أو التشويش أعلى من الدعم."; advice = "انتظر وقتًا أفضل، ولا تجعل هذه اللحظة أساسًا لالتزام أو قرار نهائي."
+    if not positives: positives.append("يمكن استخدام الوقت للمراجعة الهادئة وترتيب الفكرة قبل التنفيذ.")
+    if not cautions: cautions.append("لا توجد موانع قوية ظاهرة، لكن يبقى القرار مرتبطًا بالواقع والاختيار الشخصي.")
+    return {"decision_label": decision.get("label", "قرار عام"), "score": score, "level": level, "summary": summary, "best_use": decision.get("best_use", "خطوة هادئة ومدروسة."), "avoid": decision.get("avoid", "التسرع أو الحسم تحت ضغط."), "advice": advice, "positives": positives[:4], "cautions": cautions[:4], "hour_ruler": hour_ruler, "datetime_label": local_dt.strftime("%Y-%m-%d %H:%M")}
+
+
+TIMING_HTML = r'''
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>اختيار الوقت المناسب</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#f4f1ea;margin:0;color:#2d2926;line-height:1.9}.container{max-width:900px;margin:0 auto;padding:18px}.card{background:#fffdf8;border:1px solid #ded4c4;border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}h1,h2{margin-top:0;color:#3b2f2f}h1{text-align:center;font-size:25px}.nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 16px}.nav a{background:#fffdf8;border:1px solid #ded4c4;color:#5a3f2a;text-decoration:none;padding:8px 12px;border-radius:999px;font-weight:bold}.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}label{font-weight:bold;display:block;margin-bottom:5px}input,select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #c8bda9;border-radius:10px;font-size:16px;background:#fff}button{border:0;border-radius:12px;background:#6f4e37;color:#fff;font-size:16px;font-weight:bold;padding:12px 18px;cursor:pointer;width:100%}.note{background:#fff7ed;border:1px solid #e8c894;color:#6b3f15;padding:12px;border-radius:12px}.linked{background:#eaf5e8;border:1px solid #bdd8b5;color:#244c2c;padding:12px;border-radius:12px;font-weight:bold}.result-head{background:linear-gradient(135deg,#fffaf0,#ecd7b6);border:1px solid #c8a66a;border-radius:16px;padding:16px}.score{font-size:34px;font-weight:900;color:#3f5f45}.level{font-size:22px;font-weight:900;color:#6f4e37}.item{background:#faf6ef;border:1px solid #eadfce;border-radius:12px;padding:11px;margin:9px 0}.small{font-size:13px;color:#6d6259}.copy{background:#3f5f45;margin-top:10px}@media(max-width:800px){.grid,.grid2{grid-template-columns:1fr}.container{padding:10px}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>اختيار الوقت المناسب</h1>
+<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/forecast">التوقعات الشخصية</a></div>
+<div class="card"><p>فحص مجاني يساعدك على معرفة جودة التوقيت الحالي أو توقيت تختاره قبل قرار عاطفي، مالي، مهني، صحي، دراسي، سفر، عقد، أو قرار عام.</p>{% if profile_complete %}<div class="linked">تم ربط بياناتك الفلكية المحفوظة: {{ profile_name }}. اختر نوع القرار ووقت الفحص فقط.</div>{% else %}<div class="note">يرجى حفظ بيانات الميلاد أولًا من صفحة <a href="/profile">بياناتي الفلكية</a> حتى يتم فحص التوقيت بدقة. هذا القسم لا يطلب بيانات الميلاد مرة ثانية.</div>{% endif %}</div>
+{% if error %}<div class="card note">{{ error }}</div>{% endif %}
+<div class="card"><h2>بيانات الفحص</h2><form method="post" action="/timing"><div class="grid2"><div><label>نوع القرار</label><select name="decision_key">{% for k,d in decisions.items() %}<option value="{{k}}" {% if form.decision_key==k %}selected{% endif %}>{{d.label}}</option>{% endfor %}</select></div><div><label>استخدام الوقت</label><select name="time_mode"><option value="now" {% if form.time_mode=='now' %}selected{% endif %}>الوقت الحالي</option><option value="custom" {% if form.time_mode=='custom' %}selected{% endif %}>وقت أختاره</option></select></div></div><br><div class="grid"><div><label>السنة</label><input name="year" type="number" value="{{ form.year }}"></div><div><label>الشهر</label><input name="month" type="number" value="{{ form.month }}"></div><div><label>اليوم</label><input name="day" type="number" value="{{ form.day }}"></div><div><label>الساعة</label><input name="hour" type="number" value="{{ form.hour }}"></div><div><label>الدقيقة</label><input name="minute" type="number" value="{{ form.minute }}"></div></div><br><button type="submit">فحص التوقيت</button><p class="small">يعتمد الفحص على بيانات الميلاد المحفوظة في التطبيق الرئيسي، وعلى خريطة لحظة الفحص وربطها بخريطتك الشخصية. التقرير الظاهر للمستخدم لا يعرض تفاصيل فنية.</p></form></div>
+{% if result %}<div class="card" id="timingReport"><h2>نتيجة فحص التوقيت</h2><div class="result-head"><div>نوع القرار: <b>{{ result.decision_label }}</b></div><div>وقت الفحص: <b>{{ result.datetime_label }}</b></div><div class="score">{{ result.score }}%</div><div class="level">{{ result.level }}</div><p>{{ result.summary }}</p></div><h3>أفضل استخدام لهذا الوقت</h3><div class="item">{{ result.best_use }}</div><h3>ما يجب تجنبه</h3><div class="item">{{ result.avoid }}</div><h3>مؤشرات الدعم</h3>{% for x in result.positives %}<div class="item">{{ x }}</div>{% endfor %}<h3>مؤشرات الحذر</h3>{% for x in result.cautions %}<div class="item">{{ x }}</div>{% endfor %}<h3>النصيحة النهائية</h3><div class="item"><b>{{ result.advice }}</b></div><p class="small">هذا الفحص قراءة فلكية رمزية مجانية لجودة التوقيت، ولا يغني عن القرار الشخصي أو الظروف الواقعية أو الاستشارة المختصة في الأمور الطبية والقانونية والمالية.</p><button class="copy" onclick="navigator.clipboard.writeText(document.getElementById('timingReport').innerText).then(()=>alert('تم نسخ التقرير'))">نسخ التقرير</button></div>{% endif %}
+</div>
+</body>
+</html>
+'''
+
+
+@app.route("/timing", methods=["GET", "POST"])
+def timing():
+    defaults = _default_timing_datetime()
+    form = {"decision_key": "general", "time_mode": "now", **defaults}
+    result = None; error = ""
+    if request.method == "POST":
+        for k in ["decision_key", "time_mode", "year", "month", "day", "hour", "minute"]:
+            form[k] = str(request.form.get(k, form.get(k, ""))).strip()
+        try:
+            ctx = _profile_chart_context()
+            if form.get("time_mode") == "now":
+                local_dt = datetime.utcnow() + timedelta(hours=float(ctx["timezone"]))
+                form.update({"year": str(local_dt.year), "month": str(local_dt.month), "day": str(local_dt.day), "hour": f"{local_dt.hour:02d}", "minute": f"{local_dt.minute:02d}"})
+            else:
+                local_dt = datetime(_safe_int(form["year"]), _safe_int(form["month"]), _safe_int(form["day"]), _safe_int(form["hour"]), _safe_int(form["minute"]))
+            positions, cusps, angles = calculate_chart(local_dt.year, local_dt.month, local_dt.day, local_dt.hour, local_dt.minute, float(ctx["timezone"]), float(ctx["lat"]), float(ctx["lon"]), str(ctx["house_system"] or "P"))
+            result = build_timing_result(form.get("decision_key", "general"), local_dt, positions, cusps, angles, ctx["natal_positions"], float(ctx["lat"]), float(ctx["lon"]), float(ctx["timezone"]))
+        except Exception as exc:
+            error = str(exc)
+    profile_name = ""
+    if profile_is_complete():
+        saved = session.get("astro_profile", {})
+        if isinstance(saved, dict):
+            profile_name = str(saved.get("name", ""))
+    return render_template_string(TIMING_HTML, form=form, decisions=TIMING_DECISIONS, profile_complete=profile_is_complete(), profile_name=profile_name, result=result, error=error)
+
 
 @app.route("/midpoints", methods=["GET", "POST"])
 def midpoints():
