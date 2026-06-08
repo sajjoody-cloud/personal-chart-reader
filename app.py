@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V6.1.12 Timing Free Railway Final
+قراءة الخريطة الشخصية - V6.1.14 Daily Energy 24H Free Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -4681,6 +4681,11 @@ HOME_HTML = r"""
                 <span class="tool-text">بياناتي الفلكية</span>
                 <span class="tool-badge active">أساسي</span>
             </a>
+            <a class="tool-item" href="/daily-energy">
+                <span class="tool-icon">✺</span>
+                <span class="tool-text">طاقتي اليوم</span>
+                <span class="tool-badge open">مجاني</span>
+            </a>
             <a class="tool-item" href="/natal">
                 <span class="tool-icon">◉</span>
                 <span class="tool-text">قراءة الخريطة</span>
@@ -4757,6 +4762,549 @@ HOME_HTML = r"""
 </body>
 </html>
 """
+
+
+DAILY_ENERGY_HTML = r"""
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>طاقتي اليوم | ASTROGATE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:linear-gradient(180deg,#160d22 0%,#241432 48%,#170d21 100%);margin:0;color:#2d2926;line-height:1.95}.container{max-width:860px;margin:0 auto;padding:14px}.card{background:#fffdf8;border:1px solid #ded4c4;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 8px 22px rgba(0,0,0,.16)}h1{text-align:center;color:#2d221c;margin:6px 0 4px;font-size:28px}h2{border-right:5px solid #9b7b4f;padding-right:10px;color:#3b2f2f;margin-top:0;font-size:21px}.nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0 16px}.nav a,.btn{background:#fffdf8;border:1px solid #ded4c4;color:#5a3f2a;text-decoration:none;padding:8px 12px;border-radius:999px;font-weight:bold}.hero{background:#f7f1e4;border:1px solid rgba(197,172,125,.72);border-radius:22px;padding:18px;margin-bottom:16px;text-align:center}.muted{color:#6d6259;font-size:14px}.report{white-space:pre-wrap;background:#f7fbf2;border:1px solid #cfe9c8;color:#123b27;border-radius:16px;padding:16px;font-size:16px;line-height:2;overflow-wrap:anywhere}.warning{background:#fff3cd;border:1px solid #f0d98c;color:#6d4b0f;border-radius:14px;padding:14px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.actions button,.actions a{flex:1;text-align:center;border:none;border-radius:14px;padding:12px 14px;font-weight:bold;font-size:15px;text-decoration:none}.actions button{background:#6f4e37;color:white}.actions a{background:#d8c7ad;color:#2d2926}@media(max-width:600px){h1{font-size:24px}.container{padding:10px}.card{padding:14px}}
+</style>
+<script>
+function copyDaily(){const el=document.getElementById('dailyReport'); if(!el)return; navigator.clipboard.writeText(el.innerText).then(()=>alert('تم نسخ التقرير'));}
+</script>
+</head>
+<body>
+<div class="container">
+<div class="hero"><h1>طاقتي اليوم</h1><div class="muted">قراءة يومية مجانية اعتمادًا على بياناتك الفلكية المحفوظة داخل المنصة.</div></div>
+<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/forecast">التوقعات الشخصية</a></div>
+{% if not profile_complete %}
+<div class="card warning">
+حتى يعمل قسم طاقتي اليوم بدقة، يجب حفظ بيانات الميلاد أولًا من صفحة بياناتي الفلكية.
+<div class="actions"><a href="/profile">إدخال بياناتي الفلكية</a><a href="/">العودة للرئيسية</a></div>
+</div>
+{% else %}
+<div class="card"><h2>تقرير اليوم</h2><button class="btn" onclick="copyDaily()">نسخ التقرير</button><br><br><div class="report" id="dailyReport">{{ report }}</div><div class="actions"><a href="/daily-energy">تحديث القراءة</a><a href="/">العودة للرئيسية</a></div></div>
+{% endif %}
+</div>
+</body>
+</html>
+"""
+
+
+def _current_local_datetime_for_profile(saved: Dict[str, str], city_info: Dict[str, object]) -> Tuple[datetime, float]:
+    """يرجع وقت اليوم المحلي وفرق التوقيت الحالي اعتمادًا على مدينة المستخدم أو فرق التوقيت المحفوظ."""
+    tz_name = str(city_info.get("timezone", "") or "")
+    if tz_name and ZONEINFO_AVAILABLE:
+        try:
+            now_local = datetime.now(ZoneInfo(tz_name))
+            off = now_local.utcoffset()
+            tz_offset = (off.total_seconds() / 3600.0) if off else float(saved.get("timezone_offset", 3) or 3)
+            return now_local.replace(tzinfo=None), tz_offset
+        except Exception:
+            pass
+    try:
+        tz_offset = float(saved.get("timezone_offset", 3) or 3)
+    except Exception:
+        tz_offset = 3.0
+    return datetime.utcnow() + timedelta(hours=tz_offset), tz_offset
+
+
+def _house_daily_theme(house_num: int) -> Dict[str, str]:
+    themes = {
+        1: {"general":"اليوم يسلّط الضوء على حضورك الشخصي وطريقة تعاملك المباشر مع الناس.","love":"عاطفيًا، تميل إلى طلب الوضوح والاهتمام المباشر، لكن تجنب الحساسية من ردود الفعل الصغيرة.","work":"عمليًا، مناسب للبدايات الصغيرة وإظهار نفسك بثقة.","health":"نفسيًا وجسديًا، انتبه لطاقة الجسد ولا تضغط نفسك أكثر من اللازم.","time":"الصباح وبداية اليوم أفضل للتحرك.","word":"مبادرة"},
+        2: {"general":"اليوم يحرّك موضوع القيمة والثقة والمال والموارد.","love":"عاطفيًا، تحتاج إلى شعور بالأمان والاحترام لا إلى كلام عابر.","work":"ماليًا، مناسب للمراجعة وتنظيم المصروف أو التفكير بمصدر دخل.","health":"انتبه للغذاء والراحة الجسدية وتجنب التعويض بالأكل عند التوتر.","time":"منتصف النهار أفضل للمراجعة المالية والقرارات الهادئة.","word":"ثبات"},
+        3: {"general":"اليوم يزيد التفكير والكلام والرسائل والتنقلات القصيرة.","love":"عاطفيًا، التواصل ممكن، لكن انتبه من سوء الفهم أو الرد السريع.","work":"عمليًا، مناسب للاتصالات، الدراسة، الكتابة، وترتيب الأفكار.","health":"ذهنيًا، خفف تشتت الهاتف وكثرة الأخبار.","time":"الفترة الممتدة من الظهر إلى العصر أفضل للتواصل.","word":"وضوح"},
+        4: {"general":"اليوم يوجّهك نحو الداخل، البيت، العائلة، والراحة النفسية.","love":"عاطفيًا، قد تميل للحنين أو طلب الاحتواء بدل المواجهة.","work":"عمليًا، أنجز من مكان هادئ وابتعد عن الضغط الخارجي إن أمكن.","health":"نفسياً، الراحة والهدوء أهم من كثرة الحركة.","time":"المساء أفضل للهدوء وترتيب الداخل.","word":"أمان"},
+        5: {"general":"اليوم يفتح طاقة الإبداع، الحب، المتعة، والرغبة في التعبير.","love":"عاطفيًا، اليوم ألطف للتقارب والكلام الدافئ، بشرط عدم المبالغة في التوقع.","work":"عمليًا، مناسب للتسويق، الظهور، الأفكار الإبداعية، والهوايات.","health":"نفسيًا، تحتاج إلى شيء يفرحك ويكسر الروتين.","time":"العصر والمساء أفضل للتعبير والتواصل اللطيف.","word":"فرح"},
+        6: {"general":"اليوم يركّز على العمل اليومي، الصحة، الواجبات، وترتيب التفاصيل.","love":"عاطفيًا، لا تجعل النقد أو الانشغال العملي يبرد الكلام.","work":"عمليًا، ممتاز للتنظيم، تنظيف الملفات، إنهاء مهمة مؤجلة، ومراجعة التفاصيل.","health":"انتبه للجهاز الهضمي، الإرهاق، والنوم المنتظم.","time":"ساعات العمل الأولى أفضل للإنجاز.","word":"تنظيم"},
+        7: {"general":"اليوم يسلّط الضوء على العلاقات المباشرة والشراكات وردود فعل الآخرين.","love":"عاطفيًا، مناسب للحوار الهادئ أو قياس نية الطرف الآخر دون ضغط.","work":"عمليًا، جيد للمفاوضات والتعاون، لكن لا تتنازل عن حقك لإرضاء الآخرين.","health":"نفسيًا، توازنك يتأثر بطريقة تعامل الناس معك اليوم.","time":"المساء أفضل للحوار المتزن.","word":"توازن"},
+        8: {"general":"اليوم عميق نفسيًا وقد يحرّك قلقًا داخليًا أو موضوعًا ماليًا مشتركًا.","love":"عاطفيًا، المشاعر قوية، لكن لا تختبر الآخر أو تفسّر الصمت كحكم نهائي.","work":"ماليًا، مناسب للمراجعة والحذر لا للمخاطرة أو القرار السريع.","health":"خفف التفكير الزائد والتوتر الخفي، وامنح نفسك مساحة تنفس.","time":"آخر النهار أفضل للهدوء لا للمواجهة.","word":"تحرر"},
+        9: {"general":"اليوم يفتح أفقًا أوسع: تعلم، سفر، معنى، أو نظرة جديدة للحياة.","love":"عاطفيًا، تحتاج إلى صراحة وارتفاع عن التفاصيل الصغيرة.","work":"عمليًا، مناسب للتعليم، التخطيط البعيد، المحتوى، أو التواصل مع جهات خارجية.","health":"نفسيًا، المشي أو تغيير المكان يفيدك.","time":"الصباح المتأخر إلى الظهر أفضل للتخطيط والتعلم.","word":"أفق"},
+        10: {"general":"اليوم يضع العمل والسمعة والمسؤولية في الواجهة.","love":"عاطفيًا، قد تكون منشغلًا أو جادًا؛ حاول ألا تبدو باردًا.","work":"مهنيًا، مناسب للظهور، الإنجاز، المقابلات، وتنظيم الهدف.","health":"انتبه من ضغط المسؤولية على الأعصاب والكتفين.","time":"وقت الدوام أو الظهيرة أفضل للخطوات العملية.","word":"إنجاز"},
+        11: {"general":"اليوم يحرّك الأصدقاء، الجمهور، الدعم، والخطط المستقبلية.","love":"عاطفيًا، التواصل عبر الأصدقاء أو الوسائل الاجتماعية أكثر احتمالًا.","work":"عمليًا، مناسب للعمل الجماعي ونشر فكرة أو طلب دعم.","health":"نفسيًا، لا تعزل نفسك إذا احتجت إلى رأي أو مساندة.","time":"العصر والمساء أفضل للتواصل الاجتماعي.","word":"دعم"},
+        12: {"general":"اليوم يميل إلى الهدوء، العزلة، المراجعة الداخلية، وإنهاء ما يتعبك بصمت.","love":"عاطفيًا، لا تضغط نفسك على الكلام إن كنت غير جاهز، لكن لا تسمح للخيال أن يصنع قلقًا بلا دليل.","work":"عمليًا، مناسب للعمل خلف الكواليس والمراجعة لا للظهور الكبير.","health":"النوم والراحة النفسية مهمان جدًا اليوم.","time":"الليل أو الساعات الهادئة أفضل للتأمل وترتيب النفس.","word":"هدوء"},
+    }
+    return themes.get(int(house_num), themes[1])
+
+
+
+
+def _house_public_label(house_num: int) -> str:
+    labels = {
+        1: "الحضور الشخصي والبدايات",
+        2: "المال والقيمة والثقة بالنفس",
+        3: "التفكير والكلام والرسائل",
+        4: "البيت والعائلة والراحة النفسية",
+        5: "الحب والإبداع والمتعة",
+        6: "العمل اليومي والصحة والتنظيم",
+        7: "العلاقات والشراكات المباشرة",
+        8: "العمق النفسي والمال المشترك",
+        9: "التعلم والسفر وتوسيع الأفق",
+        10: "العمل والسمعة والمسؤولية",
+        11: "الأصدقاء والدعم والخطط المستقبلية",
+        12: "الهدوء والمراجعة والعمل خلف الكواليس",
+    }
+    return labels.get(int(house_num), "مجال عام في الخريطة")
+
+
+def _planet_background_house_sentence(ar: str, house_num: int) -> str:
+    label = _house_public_label(house_num)
+    specific = {
+        "الشمس": f"يظهر أثر الشمس اليوم عبر {label}؛ لذلك يكون الوعي والقرار أوضح في هذا الجانب.",
+        "عطارد": f"يظهر أثر عطارد اليوم عبر {label}؛ لذلك يزداد التفكير والكلام والحاجة إلى ترتيب التفاصيل في هذا الجانب.",
+        "الزهرة": f"يظهر أثر الزهرة اليوم عبر {label}؛ لذلك تميل الطاقة إلى التهدئة والقبول وتحسين المزاج في هذا الجانب.",
+        "المريخ": f"يظهر أثر المريخ اليوم عبر {label}؛ لذلك تحتاج طاقتك إلى هدف واضح حتى لا تتحول إلى استعجال.",
+    }
+    return specific.get(ar, f"يظهر أثر {ar} اليوم عبر {label}.")
+
+def _planet_daily_modifier(pname: str, sign: str, house_num: int) -> str:
+    if pname == "عطارد":
+        if house_num in [3, 6, 10]:
+            return "عطارد اليوم يدعم التفكير العملي وترتيب الكلام والمهام، لذلك استثمره في المراجعة والكتابة والاتصال الواضح."
+        if house_num in [8, 12]:
+            return "عطارد اليوم قد يزيد التفكير الداخلي أو القلق الصامت؛ لا تبنِ استنتاجًا نهائيًا قبل اكتمال المعلومة."
+        return "عطارد اليوم يساعدك على الفهم والتواصل بشرط عدم الاستعجال في الرد."
+    if pname == "الزهرة":
+        if house_num in [5, 7, 11]:
+            return "الزهرة اليوم تلطف الجو العاطفي والاجتماعي، وتفتح باب قبول أو كلام أهدأ."
+        if house_num in [6, 8, 12]:
+            return "الزهرة اليوم تحتاج إلى رقة مع الذات؛ لا تجعل التعب أو الحساسية يفسدان التوازن العاطفي."
+        return "الزهرة اليوم تضيف رغبة في الهدوء والقبول وتحسين المزاج."
+    if pname == "المريخ":
+        if house_num in [1, 6, 10]:
+            return "المريخ اليوم يرفع طاقة الإنجاز، لكنه يحتاج إلى ضبط حتى لا يتحول الحماس إلى توتر."
+        if house_num in [4, 7, 8, 12]:
+            return "المريخ اليوم قد يثير حساسية أو انفعالًا مكتومًا؛ تجنب المواجهة السريعة واختر توقيتك بهدوء."
+        return "المريخ اليوم يعطي حركة ودافعًا، والأفضل توجيهه إلى عمل واضح."
+    return ""
+
+
+
+def _daily_period_label(dt: datetime) -> str:
+    h = int(dt.hour)
+    if h < 6:
+        return "بداية اليوم"
+    if h < 12:
+        return "الصباح"
+    if h < 18:
+        return "الظهيرة والعصر"
+    return "المساء والليل"
+
+
+def _format_time_short(dt: datetime) -> str:
+    return dt.strftime("%H:%M")
+
+
+def _moon_range_text(start_moon: BodyPosition, end_moon: BodyPosition) -> str:
+    if start_moon.sign == end_moon.sign:
+        return f"القمر يتحرك خلال هذا اليوم في برج {start_moon.sign} من {format_degree(start_moon.degree)} إلى {format_degree(end_moon.degree)} تقريبًا."
+    return f"القمر يبدأ اليوم في برج {start_moon.sign} عند {format_degree(start_moon.degree)} تقريبًا، ثم ينتقل خلال اليوم إلى برج {end_moon.sign} حتى يصل إلى {format_degree(end_moon.degree)} تقريبًا."
+
+
+def _houses_summary_for_day(houses: List[int]) -> str:
+    clean = []
+    for h in houses:
+        if h not in clean:
+            clean.append(h)
+    names = [_house_public_label(h) for h in clean[:4]]
+    if len(clean) == 1:
+        h = clean[0]
+        return f"أغلب تأثير القمر يقع في مجال {_house_public_label(h)} في الخريطة."
+    return "القمر يمر خلال اليوم بأكثر من مجال في خريطتك، لذلك قد تنتقل طاقة اليوم بين " + "، ".join(names) + "."
+
+
+def _term_sequence_text(terms: List[str]) -> str:
+    clean = []
+    for t in terms:
+        if t and t not in clean:
+            clean.append(t)
+    if not clean:
+        return ""
+    if len(clean) == 1:
+        interp = TERM_INTERPRETATION.get(clean[0], "")
+        return f"حد بطليموس الغالب للقمر خلال اليوم هو حد {clean[0]}. {interp}"
+    return "القمر يغيّر حدّه خلال اليوم بين " + "، ".join(clean[:4]) + "، لذلك تتغير نبرة اليوم تدريجيًا ولا تبقى على إيقاع واحد."
+
+
+def _daily_planet_background(transit_positions: Dict[str, BodyPosition], natal_cusps: List[float], strong_planets: Optional[set] = None) -> List[str]:
+    strong_planets = strong_planets or set()
+    lines: List[str] = []
+    config = [
+        ("Sun", "الشمس", "تضع تركيزك العام على الوعي والقرار والوضوح."),
+        ("Mercury", "عطارد", "ينشّط التفكير والكلام والرسائل وترتيب التفاصيل."),
+        ("Venus", "الزهرة", "تلطف المزاج وتحرّك القبول والعلاقات والراحة والمال الخفيف."),
+        ("Mars", "المريخ", "يرفع الحركة والدافع وقد يزيد الاستعجال إذا لم يُوجّه جيدًا."),
+        ("Jupiter", "المشتري", "يفتح باب توسع أو ثقة أو نظرة أوسع للموقف."),
+        ("Saturn", "زحل", "يطلب مسؤولية وصبرًا وتنظيمًا بدل الاستعجال."),
+        ("Uranus", "أورانوس", "قد يضيف مفاجأة أو رغبة في كسر الروتين."),
+        ("Neptune", "نبتون", "يزيد الحساسية والحدس، لكنه يحتاج إلى وضوح حتى لا تختلط الصورة."),
+        ("Pluto", "بلوتو", "يكشف ضغطًا عميقًا أو حاجة إلى إعادة ترتيب موقف داخلي."),
+    ]
+    always = {"Sun", "Mercury", "Venus", "Mars"}
+    for key, ar, base in config:
+        if key not in transit_positions:
+            continue
+        if key not in always and key not in strong_planets:
+            continue
+        h = house_from_cusps(transit_positions[key].lon, natal_cusps)
+        if key in ["Sun", "Mercury", "Venus", "Mars"]:
+            lines.append(f"{ar}: {base} {_planet_background_house_sentence(ar, h)}")
+        else:
+            lines.append(f"{ar}: {base} يظهر أثره اليوم لأن له تفعيلًا واضحًا مع خريطتك.")
+    return lines[:7]
+
+
+def _aspect_quality(tr_key: str, asp_name: str) -> str:
+    if asp_name in ["تربيع", "مقابلة"]:
+        return "pressure"
+    if asp_name in ["تثليث", "تسديس"]:
+        return "support"
+    if tr_key in ["Jupiter", "Venus"]:
+        return "support"
+    if tr_key in ["Mars", "Saturn", "Pluto"]:
+        return "pressure"
+    return "focus"
+
+
+def _aspect_specific_meaning(tr_ar: str, nat_ar: str, asp_name: str, quality: str) -> str:
+    if tr_ar == "القمر" and nat_ar == "الطالع" and quality == "pressure":
+        return "قد تزيد الحساسية تجاه نظرة الآخرين أو طريقة تعاملهم معك."
+    if tr_ar == "الشمس" and nat_ar == "عطارد" and quality == "pressure":
+        return "قد يظهر توتر ذهني أو استعجال في الكلام والقرار."
+    if tr_ar == "المشتري" and nat_ar == "القمر" and quality == "pressure":
+        return "قد تميل إلى تضخيم الشعور أو توقع أكثر مما يحتمل الموقف."
+    if tr_ar == "الزهرة" and nat_ar == "القمر" and quality == "pressure":
+        return "قد يظهر شد بين ما تريده عاطفيًا وما تحتاجه نفسيًا."
+    if tr_ar == "القمر" and nat_ar == "عطارد":
+        return "يصبح التفكير والكلام والرسائل أكثر حضورًا، فاختر كلماتك بهدوء."
+    if tr_ar == "عطارد" and nat_ar == "الزهرة":
+        return "تظهر أهمية الكلام اللطيف، وقد يكون الوضوح العاطفي أفضل من التلميح."
+    if tr_ar == "المريخ" and quality == "pressure":
+        return "ترتفع سرعة الانفعال، لذلك وجّه الطاقة إلى عمل واضح بدل المواجهة."
+    if tr_ar == "زحل" and quality == "pressure":
+        return "تظهر مسؤولية أو تأخير، والتعامل الهادئ أفضل من مقاومة الضغط."
+    if quality == "support":
+        return "هذا يفتح بابًا أسهل للتفاهم أو الإنجاز إذا استخدمت الفترة بوعي."
+    if quality == "pressure":
+        return "هذه فترة تحتاج إلى هدوء ومراجعة قبل الرد أو اتخاذ القرار."
+    return "هذا يجعل الموضوع حاضرًا بوضوح خلال اليوم."
+
+
+def _aspect_phrase(tr_ar: str, nat_ar: str, asp_name: str, quality: str, period: str) -> str:
+    relation_map = {
+        "اقتران": "تفعيل مباشر",
+        "تسديس": "دعم خفيف",
+        "تربيع": "ضغط واضح",
+        "تثليث": "انسجام مساعد",
+        "مقابلة": "شدّ أو مواجهة",
+    }
+    relation = relation_map.get(asp_name, "تفعيل")
+    meaning = _aspect_specific_meaning(tr_ar, nat_ar, asp_name, quality)
+    return f"{period}: {relation} بين {tr_ar} و{nat_ar}. {meaning}"
+
+
+def _collect_day_aspect_hits(samples: List[Tuple[datetime, Dict[str, BodyPosition]]], natal_positions: Dict[str, BodyPosition], natal_angles: Dict[str, float]) -> Tuple[List[Dict[str, object]], set]:
+    natal_points = {
+        "الشمس": natal_positions["Sun"].lon,
+        "القمر": natal_positions["Moon"].lon,
+        "عطارد": natal_positions["Mercury"].lon,
+        "الزهرة": natal_positions["Venus"].lon,
+        "المريخ": natal_positions["Mars"].lon,
+        "الطالع": float(natal_angles["ASC"]),
+        "العاشر": float(natal_angles["MC"]),
+    }
+    transit_map = [
+        ("الشمس", "Sun", 1.2), ("القمر", "Moon", 2.2), ("عطارد", "Mercury", 1.5),
+        ("الزهرة", "Venus", 1.5), ("المريخ", "Mars", 1.5), ("المشتري", "Jupiter", 1.0),
+        ("زحل", "Saturn", 1.0), ("أورانوس", "Uranus", 0.8), ("نبتون", "Neptune", 0.8), ("بلوتو", "Pluto", 0.8),
+    ]
+    aspects = [("اقتران", 0), ("تسديس", 60), ("تربيع", 90), ("تثليث", 120), ("مقابلة", 180)]
+    seen = set()
+    hits: List[Dict[str, object]] = []
+    strong_planets = set()
+    for dt, tr_positions in samples:
+        period = _daily_period_label(dt)
+        for tr_ar, tr_key, orb in transit_map:
+            if tr_key not in tr_positions:
+                continue
+            tr_lon = tr_positions[tr_key].lon
+            for nat_ar, nat_lon in natal_points.items():
+                best = None
+                for asp_name, asp_deg in aspects:
+                    diff = abs(angular_distance(tr_lon, nat_lon) - asp_deg)
+                    if diff <= orb:
+                        best = (diff, asp_name)
+                        break
+                if not best:
+                    continue
+                diff, asp_name = best
+                key = (tr_ar, nat_ar, asp_name, period)
+                broad_key = (tr_ar, nat_ar, asp_name)
+                if key in seen:
+                    continue
+                seen.add(key)
+                strong_planets.add(tr_key)
+                quality = _aspect_quality(tr_key, asp_name)
+                score = max(1, int(round((orb - diff + 0.15) * 10)))
+                if quality == "pressure":
+                    score += 8
+                elif quality == "support":
+                    score += 6
+                else:
+                    score += 4
+                if nat_ar in ["الشمس", "القمر", "الطالع", "العاشر"]:
+                    score += 4
+                if tr_key == "Moon":
+                    score += 2
+                hits.append({
+                    "time": _format_time_short(dt),
+                    "period": period,
+                    "transit_key": tr_key,
+                    "transit": tr_ar,
+                    "natal": nat_ar,
+                    "aspect": asp_name,
+                    "quality": quality,
+                    "score": score,
+                    "phrase": _aspect_phrase(tr_ar, nat_ar, asp_name, quality, period),
+                    "broad_key": broad_key,
+                })
+    # تقليل التكرار: نأخذ أقوى ظهور لكل تفعيل واسع
+    best_by_key: Dict[Tuple[str, str, str], Dict[str, object]] = {}
+    for h in hits:
+        bk = h["broad_key"]  # type: ignore
+        if bk not in best_by_key or int(h["score"]) > int(best_by_key[bk]["score"]):
+            best_by_key[bk] = h
+    selected = list(best_by_key.values())
+    selected.sort(key=lambda x: int(x["score"]), reverse=True)
+    return selected[:8], strong_planets
+
+
+def _period_summary_text(label: str, moon_house: int, moon_term: str, period_hits: List[Dict[str, object]]) -> str:
+    theme = _house_daily_theme(moon_house)
+    base = theme.get("general", "")
+    if label == "بداية اليوم":
+        start = "بداية اليوم تصلح للمراجعة الهادئة وترتيب النية قبل الانشغال بالتفاصيل."
+    elif label == "الصباح":
+        start = "الصباح هو وقت الحركة العملية الأولى، فحاول أن تبدأ بما هو واضح وقابل للإنجاز."
+    elif label == "الظهيرة والعصر":
+        start = "الظهيرة والعصر يحملان ذروة النشاط اليومي، وهما أنسب للخطوات التي تحتاج تركيزًا أو ظهورًا."
+    else:
+        start = "المساء والليل يحتاجان إلى تهدئة وتخفيف الضغط، خصوصًا إذا تراكمت الانفعالات خلال اليوم."
+    term_note = ""
+    if moon_term:
+        ruler = moon_term
+        if ruler == "المريخ":
+            term_note = " نبرة هذه الفترة أكثر حرارة، لذلك الهدوء مهم."
+        elif ruler == "زحل":
+            term_note = " نبرة هذه الفترة أكثر جدية، لذلك لا تستعجل النتيجة."
+        elif ruler in ["الزهرة", "المشتري"]:
+            term_note = " نبرة هذه الفترة ألطف وتساعد على التفاهم إذا وُجد وضوح."
+        elif ruler == "عطارد":
+            term_note = " نبرة هذه الفترة ذهنية وتحتاج إلى كلام واضح ومراجعة التفاصيل."
+    hit_text = ""
+    if period_hits:
+        hit_text = " أبرز ما يظهر فيها: " + period_hits[0]["phrase"].split(":", 1)[-1].strip()
+    return f"{start} {base}{term_note}{hit_text}"
+
+
+def _best_and_caution_periods(hits: List[Dict[str, object]]) -> Tuple[str, str]:
+    if not hits:
+        return "الفترة التي تشعر فيها بصفاء ذهني أكبر هي الأفضل للتحرك.", "أي وقت تشعر فيه بتوتر أو استعجال يحتاج إلى تأجيل القرار."
+    periods = ["بداية اليوم", "الصباح", "الظهيرة والعصر", "المساء والليل"]
+    support_scores: Dict[str, int] = {p: 0 for p in periods}
+    pressure_scores: Dict[str, int] = {p: 0 for p in periods}
+    focus_scores: Dict[str, int] = {p: 0 for p in periods}
+    for h in hits:
+        p = str(h.get("period", ""))
+        if p not in support_scores:
+            continue
+        val = int(h.get("score", 0))
+        if h.get("quality") == "support":
+            support_scores[p] += val
+        elif h.get("quality") == "pressure":
+            pressure_scores[p] += val
+        else:
+            focus_scores[p] += val
+
+    def best_key(scores: Dict[str, int], reverse: bool = True, exclude: Optional[str] = None) -> str:
+        items = [(p, v) for p, v in scores.items() if p != exclude]
+        items.sort(key=lambda x: x[1], reverse=reverse)
+        return items[0][0] if items else periods[0]
+
+    if any(support_scores.values()):
+        best = best_key(support_scores)
+    else:
+        combined = {p: (pressure_scores[p] * -2 + focus_scores[p]) for p in periods}
+        best = best_key(combined)
+
+    caution = best_key(pressure_scores) if any(pressure_scores.values()) else "المساء والليل"
+    if caution == best:
+        if any(v for p, v in support_scores.items() if p != caution):
+            best = best_key(support_scores, exclude=caution)
+        else:
+            pressure_without = {p: v for p, v in pressure_scores.items() if p != caution}
+            best = min(pressure_without, key=pressure_without.get) if pressure_without else "الصباح"
+
+    return f"أفضل وقت نسبيًا اليوم: {best}، خصوصًا للخطوات الواضحة والهادئة.", f"وقت يحتاج إلى حذر: {caution}، لأن التوتر أو الحساسية قد يكونان أعلى."
+
+
+def _daily_index_from_hits(hits: List[Dict[str, object]], moon_houses: List[int]) -> Tuple[int, str]:
+    score = 62
+    for h in hits[:8]:
+        if h.get("quality") == "support":
+            score += 4
+        elif h.get("quality") == "pressure":
+            score -= 3
+        else:
+            score += 1
+    if any(h in [6, 8, 12] for h in moon_houses):
+        score -= 3
+    if any(h in [1, 5, 9, 10, 11] for h in moon_houses):
+        score += 3
+    score = max(35, min(92, score))
+    if score >= 78:
+        nature = "نشط وداعم إذا استُخدم بوعي"
+    elif score >= 65:
+        nature = "جيد مع حاجة إلى ترتيب وهدوء"
+    elif score >= 52:
+        nature = "متوسط ويحتاج إلى عدم الاستعجال"
+    else:
+        nature = "حساس ويحتاج إلى راحة ومراجعة"
+    return score, nature
+
+
+def build_daily_energy_report_from_profile() -> str:
+    saved = session.get("astro_profile", {})
+    if not isinstance(saved, dict) or not profile_is_complete():
+        raise ValueError("لا توجد بيانات ميلاد محفوظة بعد.")
+
+    name = str(saved.get("name", "")).strip() or "صديق ASTROGATE"
+    gender = str(saved.get("gender", "ذكر")).strip() or "ذكر"
+    year = int(saved.get("year", "0")); month = int(saved.get("month", "0")); day = int(saved.get("day", "0"))
+    hour = int(saved.get("hour", "0")); minute = int(saved.get("minute", "0"))
+    country_code = str(saved.get("country_code", "")); city_input = str(saved.get("city", "") or saved.get("city_select", ""))
+    city_info = find_city(country_code, city_input)
+    if not city_info:
+        raise ValueError("تعذر العثور على المدينة المحفوظة. يرجى إعادة حفظ بياناتك الفلكية.")
+
+    lat = float(city_info["lat"]); lon_geo = float(city_info["lon"])
+    natal_tz = get_selected_timezone_offset(saved, city_info, year, month, day, hour, minute)
+    house_system = str(saved.get("house_system", "P") or "P")
+    natal_positions, natal_cusps, natal_angles = calculate_chart(year, month, day, hour, minute, natal_tz, lat, lon_geo, house_system)
+
+    now_local, now_tz = _current_local_datetime_for_profile(saved, city_info)
+    day_start = datetime(now_local.year, now_local.month, now_local.day, 0, 0)
+    day_end = datetime(now_local.year, now_local.month, now_local.day, 23, 59)
+    sample_times = [
+        day_start,
+        day_start + timedelta(hours=3),
+        day_start + timedelta(hours=6),
+        day_start + timedelta(hours=9),
+        day_start + timedelta(hours=12),
+        day_start + timedelta(hours=15),
+        day_start + timedelta(hours=18),
+        day_start + timedelta(hours=21),
+        day_end,
+    ]
+
+    samples: List[Tuple[datetime, Dict[str, BodyPosition], List[float], Dict[str, float]]] = []
+    for dt in sample_times:
+        tp, tc, ta = calculate_chart(dt.year, dt.month, dt.day, dt.hour, dt.minute, now_tz, lat, lon_geo, house_system)
+        samples.append((dt, tp, tc, ta))
+
+    start_moon = samples[0][1]["Moon"]
+    end_moon = samples[-1][1]["Moon"]
+    moon_houses = [house_from_cusps(s[1]["Moon"].lon, natal_cusps) for s in samples]
+    moon_terms = [get_ptolemy_term(s[1]["Moon"].sign, s[1]["Moon"].degree) for s in samples]
+
+    aspect_samples = [(dt, tp) for dt, tp, tc, ta in samples]
+    hits, strong_planets = _collect_day_aspect_hits(aspect_samples, natal_positions, natal_angles)
+    index_value, index_nature = _daily_index_from_hits(hits, moon_houses)
+    background = _daily_planet_background(samples[4][1], natal_cusps, strong_planets)
+
+    periods_order = ["بداية اليوم", "الصباح", "الظهيرة والعصر", "المساء والليل"]
+    period_mid_times = {
+        "بداية اليوم": samples[1],
+        "الصباح": samples[3],
+        "الظهيرة والعصر": samples[5],
+        "المساء والليل": samples[7],
+    }
+    period_lines = []
+    for label in periods_order:
+        dt, tp, tc, ta = period_mid_times[label]
+        mh = house_from_cusps(tp["Moon"].lon, natal_cusps)
+        mt = get_ptolemy_term(tp["Moon"].sign, tp["Moon"].degree)
+        phits = [h for h in hits if h.get("period") == label]
+        period_lines.append((label, _period_summary_text(label, mh, mt, phits)))
+
+    best_line, caution_line = _best_and_caution_periods(hits)
+    date_label = now_local.strftime("%Y-%m-%d")
+    city_label = str(city_info.get("display", "") or city_input or "الموقع المحفوظ")
+    timezone_label = f"UTC{now_tz:+g}"
+
+    top_hits = [str(h.get("phrase", "")) for h in hits[:5] if h.get("phrase")]
+    if not top_hits:
+        top_hits = ["لا توجد تفعيلات حادة جدًا خلال اليوم ضمن الأورب القريب، لذلك تكون الطاقة أقرب إلى تنظيم المزاج والمهام اليومية."]
+
+    address = "طاقتكِ" if gender == "أنثى" else "طاقتك"
+    do_word = "افعلي" if gender == "أنثى" else "افعل"
+    avoid_word = "تجنبي" if gender == "أنثى" else "تجنب"
+    word = _house_daily_theme(max(set(moon_houses), key=moon_houses.count)).get("word", "وعي")
+
+    report = f"""طاقتي اليوم
+{name}
+تاريخ التقرير: {date_label}
+الفترة المدروسة: من 00:00 إلى 23:59 حسب التوقيت المحلي ({city_label} / {timezone_label})
+
+مؤشر اليوم العام
+{index_value}%
+طبيعة اليوم: {index_nature}.
+
+خلفية الكواكب اليوم
+{chr(10).join(background)}
+
+حركة القمر خلال اليوم
+{_moon_range_text(start_moon, end_moon)} {_houses_summary_for_day(moon_houses)} {_term_sequence_text(moon_terms)}
+
+بداية اليوم
+{period_lines[0][1]}
+
+الصباح
+{period_lines[1][1]}
+
+الظهيرة والعصر
+{period_lines[2][1]}
+
+المساء والليل
+{period_lines[3][1]}
+
+أقوى تفعيلات اليوم
+- """ + "\n- ".join(top_hits) + f"""
+
+أفضل وقت اليوم
+{best_line}
+
+وقت يحتاج إلى حذر
+{caution_line}
+
+{do_word} اليوم
+رتّب أولوياتك، اختر خطوة واحدة واضحة، وراقب الوقت الذي تشعر فيه بصفاء أكبر للتحرك.
+
+{avoid_word} اليوم
+تجنب الرد السريع، تضخيم الإحساس، أو اتخاذ قرار تحت ضغط مزاجي مؤقت.
+
+كلمة اليوم
+{word}
+
+الخلاصة
+{address} اليوم لا تُقرأ من لحظة واحدة، بل من حركة 24 ساعة كاملة. استفد من الفترات الداعمة للإنجاز أو التواصل، وتعامل مع فترات الضغط بهدوء حتى لا يتحول تأثير عابر إلى قرار غير مناسب."""
+    return re.sub(r"[ \t]+\n", "\n", report).strip()
+
 
 
 
@@ -5569,6 +6117,24 @@ def _natal_template_context(form: Dict[str, str], **extra) -> Dict[str, object]:
     ctx.update(extra)
     return ctx
 
+
+
+
+@app.route("/daily-energy")
+def daily_energy():
+    report = ""
+    error = ""
+    if profile_is_complete():
+        try:
+            report = build_daily_energy_report_from_profile()
+        except Exception as exc:
+            error = f"تعذر استخراج قراءة طاقتي اليوم:\n{exc}"
+            report = error
+    return render_template_string(
+        DAILY_ENERGY_HTML,
+        report=report,
+        profile_complete=profile_is_complete(),
+    )
 
 
 @app.route("/about")
