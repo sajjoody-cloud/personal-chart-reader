@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V6.1.14 Daily Energy 24H Free Railway Final
+قراءة الخريطة الشخصية - V6.1.22 Life Path Planet Explanations Free Railway Final
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -4686,6 +4686,11 @@ HOME_HTML = r"""
                 <span class="tool-text">طاقتي اليوم</span>
                 <span class="tool-badge open">مجاني</span>
             </a>
+            <a class="tool-item" href="/life-path">
+                <span class="tool-icon">⑧</span>
+                <span class="tool-text">مسارك في الحياة</span>
+                <span class="tool-badge open">مجاني</span>
+            </a>
             <a class="tool-item" href="/natal">
                 <span class="tool-icon">◉</span>
                 <span class="tool-text">قراءة الخريطة</span>
@@ -4764,6 +4769,804 @@ HOME_HTML = r"""
 """
 
 
+# ============================================================
+# قسم مسارك في الحياة - حساب رقمي من تاريخ الميلاد فقط
+# ============================================================
+
+MASTER_NUMBERS = {11, 22, 33}
+
+
+def numerology_digit_sum(value: int | str) -> int:
+    return sum(int(ch) for ch in str(value) if ch.isdigit())
+
+
+def numerology_reduce(value: int, keep_master: bool = True) -> Dict[str, object]:
+    """يرجع الرقم المختزل مع حفظ الأرقام الرئيسية 11/22/33 عند الحاجة."""
+    original = int(value)
+    current = abs(original)
+    steps = [current]
+    while current > 9:
+        if keep_master and current in MASTER_NUMBERS:
+            break
+        current = numerology_digit_sum(current)
+        steps.append(current)
+    base = current
+    root = current
+    if keep_master and current in MASTER_NUMBERS:
+        root = numerology_digit_sum(current)
+    label = f"{current}/{root}" if keep_master and current in MASTER_NUMBERS else str(current)
+    return {"value": current, "root": root, "label": label, "steps": steps, "original": original}
+
+
+def numerology_reduce_plain(value: int) -> int:
+    """اختزال عادي إلى رقم مفرد، ويُستخدم خصوصًا في التحديات."""
+    current = abs(int(value))
+    while current > 9:
+        current = numerology_digit_sum(current)
+    return current
+
+
+NUMEROLOGY_PLANET_SYMBOLS = {
+    1: {
+        "planet": "الشمس",
+        "meaning": "يرتبط الرقم بطاقة الهوية، الإرادة، القيادة، الظهور، وإثبات الذات."
+    },
+    2: {
+        "planet": "القمر",
+        "meaning": "يرتبط الرقم بطاقة المشاعر، الحساسية، الاحتواء، الذاكرة، والحاجة إلى الأمان."
+    },
+    3: {
+        "planet": "المشتري",
+        "meaning": "يرتبط الرقم بطاقة التوسع، التعبير، التعليم، الفرح، النمو، والرؤية المتفائلة."
+    },
+    4: {
+        "planet": "أورانوس",
+        "meaning": "يرتبط الرقم بطاقة الاختلاف، التحرر، التغيير، كسر النمط، وبناء طريق غير تقليدي."
+    },
+    5: {
+        "planet": "عطارد",
+        "meaning": "يرتبط الرقم بطاقة الكلام، الذكاء، الحركة، التجارة، التنقل، والمرونة."
+    },
+    6: {
+        "planet": "الزهرة",
+        "meaning": "يرتبط الرقم بطاقة الحب، الجمال، العائلة، الرعاية، التوازن، والمال اللطيف."
+    },
+    7: {
+        "planet": "نبتون",
+        "meaning": "يرتبط الرقم بطاقة الحدس، الروحانية، العزلة، العمق، البحث الداخلي، وما وراء الظاهر."
+    },
+    8: {
+        "planet": "زحل",
+        "meaning": "يرتبط الرقم بطاقة المسؤولية، المال، السلطة، البناء، الاختبار، والنضج العملي."
+    },
+    9: {
+        "planet": "المريخ",
+        "meaning": "يرتبط الرقم بطاقة القوة، الشجاعة، الحسم، المواجهة، وإنهاء الدورات بطاقة فعّالة."
+    },
+    11: {
+        "planet": "القمر / نبتون",
+        "meaning": "رقم رئيسي يجمع الحساسية القمرية مع الإلهام النبتوني، لذلك يحتاج إلى حماية نفسية وتنظيم داخلي."
+    },
+    22: {
+        "planet": "زحل / أورانوس",
+        "meaning": "رقم رئيسي يجمع البناء الزحلي مع الرؤية الأورانية، فيحوّل الفكرة الكبيرة إلى نظام واقعي."
+    },
+    33: {
+        "planet": "الزهرة / المشتري",
+        "meaning": "رقم رئيسي يجمع المحبة الزهرية مع التوسع المشتري، ويدل على الرعاية والتعليم والخدمة الواعية."
+    },
+}
+
+
+def numerology_planet_key(item: object) -> int:
+    """يختار الرقم المناسب للرمز الكوكبي، مع حفظ 11/22/33 إن ظهرت."""
+    if isinstance(item, dict):
+        value = int(item.get("value", item.get("root", 0)) or 0)
+        root = int(item.get("root", value) or value)
+        return value if value in MASTER_NUMBERS else root
+    value = int(item or 0)
+    return value if value in MASTER_NUMBERS else numerology_reduce_plain(value)
+
+
+def numerology_planet_symbol(item: object) -> Dict[str, str]:
+    key = numerology_planet_key(item)
+    if key == 0:
+        return {
+            "planet": "لا يرتبط بكوكب واحد",
+            "meaning": "رقم الصفر في التحديات يدل على درس واسع ومتعدد، لذلك لا نحصره بطاقة كوكب واحد."
+        }
+    return NUMEROLOGY_PLANET_SYMBOLS.get(key, NUMEROLOGY_PLANET_SYMBOLS.get(numerology_reduce_plain(key), NUMEROLOGY_PLANET_SYMBOLS[1]))
+
+
+def numerology_planet_line(item: object) -> str:
+    symbol = numerology_planet_symbol(item)
+    return f"الرمز الكوكبي: {symbol['planet']}. {symbol['meaning']}"
+
+
+def numerology_display_label(item: object) -> str:
+    """يعرض الرقم بصيغته المركبة إذا كان رئيسيًا أو كارميًا، مثل 13/4 بدل 4 فقط."""
+    try:
+        debt = numerology_contains_karmic_debt(item)
+    except Exception:
+        debt = None
+    if debt:
+        return f"{debt}/{numerology_reduce_plain(debt)}"
+    if isinstance(item, dict):
+        return str(item.get("label") or item.get("value") or item.get("root") or "")
+    try:
+        v = int(item)
+        return str(v)
+    except Exception:
+        return str(item or "")
+
+
+def numerology_root_key(item: object) -> int:
+    """يعطي الجذر العملي للرقم، حتى مع الصيغ المركبة أو الكارمية."""
+    if isinstance(item, dict):
+        try:
+            debt = numerology_contains_karmic_debt(item)
+            if debt:
+                return numerology_reduce_plain(debt)
+        except Exception:
+            pass
+        try:
+            return int(item.get("root", item.get("value", 0)) or 0)
+        except Exception:
+            return 0
+    try:
+        return numerology_reduce_plain(int(item))
+    except Exception:
+        return 0
+
+
+NUMEROLOGY_PLANET_DEEP_EFFECTS = {
+    1: "تحت حكم الشمس، تعمل هذه الطاقة عبر الظهور، الإرادة، الثقة، وقرار أن يكون للإنسان حضور واضح. لذلك لا يكفي وجود الرقم وحده؛ نجاحه يحتاج إلى وضوح في الهوية وعدم انتظار الاعتراف من الخارج.",
+    2: "تحت حكم القمر، تعمل هذه الطاقة عبر المشاعر، الذاكرة، القبول، والحاجة إلى الأمان. لذلك تظهر قوتها عندما تُدار الحساسية بوعي، لا عندما تتحول إلى تردد أو انتظار لردود فعل الآخرين.",
+    3: "تحت حكم المشتري، تعمل هذه الطاقة عبر التعبير، التعليم، الفرح، والتوسع. لذلك تصبح موهبة الرقم أقوى عندما تتحول الكلمة أو الفكرة إلى رسالة نافعة، لا إلى تشتت أو مبالغة.",
+    4: "تحت حكم أورانوس، لا يكون البناء تقليديًا بالكامل؛ فالرقم يطلب نظامًا وثباتًا، لكن أورانوس يطلب تغييرًا وكسر نمط قديم وإعادة ترتيب الحياة بطريقة جديدة. هنا تصبح الدلالة: بناء جديد بعد كسر نمط قديم.",
+    5: "تحت حكم عطارد، تعمل هذه الطاقة عبر الحركة، الكلام، الذكاء، التنقل، والتكيّف. لذلك تنجح عندما تصبح الحرية منظمة بالفهم، لا مجرد هروب من الملل أو الالتزام.",
+    6: "تحت حكم الزهرة، تعمل هذه الطاقة عبر الحب، الجمال، العائلة، الرعاية، والتوازن. لذلك تصبح الرعاية صحيحة عندما تشمل الذات أيضًا، لا عندما تتحول إلى تضحية تستنزف القلب.",
+    7: "تحت حكم نبتون، تعمل هذه الطاقة عبر الحدس، التأمل، العزلة، والبحث في ما وراء الظاهر. لذلك تحتاج إلى حدود ووضوح حتى لا يتحول العمق إلى ضياع أو شك أو انفصال عن الواقع.",
+    8: "تحت حكم زحل، تعمل هذه الطاقة عبر المسؤولية، المال، الإدارة، الاختبار، والبناء الطويل. لذلك لا تُعطي نتائجها بسرعة، بل تكافئ الصبر والتنظيم وتحويل القوة إلى إنجاز ناضج.",
+    9: "تحت حكم المريخ، تعمل هذه الطاقة عبر الشجاعة والحسم وإنهاء الدورات. لذلك لا يكون الرقم 9 عاطفة فقط، بل قوة تدفع إلى القطع الواعي، الدفاع عن المعنى، وعدم البقاء في مرحلة انتهت.",
+    11: "هذا رقم رئيسي تحت تأثير القمر ونبتون معًا؛ القمر يعطي حساسية واستقبالًا نفسيًا، ونبتون يعطي إلهامًا وحدسًا عاليًا. لذلك يحتاج صاحبه إلى حماية نفسية وتنظيم يومي حتى لا يتحول الإلهام إلى توتر.",
+    22: "هذا رقم رئيسي يجمع زحل وأورانوس؛ زحل يطلب البناء والنظام، وأورانوس يفتح الرؤية الجديدة وكسر القالب القديم. لذلك يدل على تحويل فكرة كبيرة إلى شكل واقعي جديد، لا مجرد حلم ولا مجرد روتين.",
+    33: "هذا رقم رئيسي يجمع الزهرة والمشتري؛ الزهرة تمنح المحبة والرعاية، والمشتري يوسع التعليم والمعنى والخدمة. لذلك يدل على عطاء واعٍ يرفع الآخرين بشرط ألا يتحول إلى إنقاذ مرهق أو تضحية بلا حدود.",
+}
+
+
+def numerology_planet_control_line(item: object, target: str = "هذا الرقم") -> str:
+    """سطر تفسير عملي يربط الرقم بالكوكب المتحكم، لا يكتفي بذكر الرمز."""
+    symbol = numerology_planet_symbol(item)
+    key = numerology_planet_key(item)
+    root = numerology_root_key(item)
+    effect = NUMEROLOGY_PLANET_DEEP_EFFECTS.get(key) or NUMEROLOGY_PLANET_DEEP_EFFECTS.get(root, symbol.get("meaning", ""))
+    try:
+        debt = numerology_contains_karmic_debt(item)
+    except Exception:
+        debt = None
+    karmic_note = ""
+    if debt:
+        karmic_note = " " + KARMIC_DEBT_MEANINGS.get(debt, "")
+        if debt == 13:
+            karmic_note += " وبما أن الجذر هو 4، فإن أورانوس هنا لا يهدم لأجل الهدم، بل يدفع إلى بناء نظام جديد بعد كسر طريقة قديمة لم تعد نافعة."
+    return f"الكوكب المتحكم في {target}: {symbol['planet']}. {effect}{karmic_note}"
+
+
+NUMEROLOGY_MEANINGS = {
+    1: {
+        "title": "البداية والقيادة",
+        "message": "مسارك يدفعك إلى بناء شخصية مستقلة، واتخاذ المبادرة بدل انتظار الآخرين.",
+        "strength": "قوة القرار، الجرأة، فتح الطرق الجديدة، والقدرة على إثبات الذات.",
+        "challenge": "التحدي هو عدم تحويل الاستقلال إلى عناد أو اندفاع أو رفض للنصيحة.",
+        "advice": "ابدأ بخطوة واضحة، لكن اجعل القيادة مرتبطة بالوعي لا برد الفعل."
+    },
+    2: {
+        "title": "التعاون والحساسية",
+        "message": "مسارك يعلّمك فهم العلاقات، الإصغاء، وبناء التوازن بين حاجتك وحاجة الآخر.",
+        "strength": "الحدس، اللطف، القدرة على المصالحة، وفهم التفاصيل العاطفية.",
+        "challenge": "التحدي هو عدم الذوبان في الآخرين أو انتظار القبول قبل اتخاذ القرار.",
+        "advice": "حافظ على قلبك اللين، لكن لا تجعل حساسيتك تقود اختياراتك كلها."
+    },
+    3: {
+        "title": "التعبير والإبداع",
+        "message": "مسارك يطلب منك أن تعبّر عن نفسك بالكلام، الكتابة، الفن، التعليم، أو الحضور الاجتماعي.",
+        "strength": "الخفة، التواصل، الإبداع، نشر الفرح، وتحويل الفكرة إلى كلمة مؤثرة.",
+        "challenge": "التحدي هو التشتت أو كثرة الكلام دون تنفيذ، أو الهروب من العمق بالمزاح.",
+        "advice": "حوّل موهبة التعبير إلى رسالة واضحة لا إلى طاقة مبعثرة."
+    },
+    4: {
+        "title": "البناء والنظام",
+        "message": "مسارك يرتبط ببناء شيء ثابت: عمل، أسرة، مهارة، مشروع، أو أساس طويل الأمد.",
+        "strength": "الصبر، التنظيم، الانضباط، الواقعية، والقدرة على تحمّل المسؤولية.",
+        "challenge": "التحدي هو الجمود، الخوف من التغيير، أو تحميل نفسك أكثر مما يجب.",
+        "advice": "ابنِ حياتك خطوة خطوة، واترك مساحة للمرونة حتى لا يتحول النظام إلى قيد."
+    },
+    5: {
+        "title": "الحرية والتغيير",
+        "message": "مسارك يدفعك إلى التجربة، الحركة، السفر، التعلّم من الحياة، وكسر الروتين.",
+        "strength": "المرونة، الذكاء العملي، سرعة التكيّف، وحب الاكتشاف.",
+        "challenge": "التحدي هو التسرع، الملل السريع، أو ترك الأمور قبل اكتمالها.",
+        "advice": "استخدم حريتك بوعي، واجعل التغيير وسيلة للنمو لا هروبًا من الالتزام."
+    },
+    6: {
+        "title": "الرعاية والمسؤولية العاطفية",
+        "message": "مسارك يربطك بالحب، العائلة، الخدمة، الجمال، وإصلاح ما يحتاج إلى توازن.",
+        "strength": "الاحتواء، الوفاء، الذوق، تحمل المسؤولية، والقدرة على حماية من تحب.",
+        "challenge": "التحدي هو التضحية الزائدة، التدخل، أو حمل مسؤوليات ليست كلها لك.",
+        "advice": "أحبّ بعمق، لكن لا تنسَ أن رعاية نفسك جزء من رسالتك."
+    },
+    7: {
+        "title": "البحث والعمق",
+        "message": "مسارك يطلب منك الفهم العميق، التأمل، البحث، والاقتراب من الحقيقة لا من المظاهر.",
+        "strength": "التحليل، الحدس، الحكمة، قوة الملاحظة، وحب المعرفة الهادئة.",
+        "challenge": "التحدي هو العزلة الزائدة، الشك، أو صعوبة الثقة بالآخرين.",
+        "advice": "امنح عقلك عمقًا، لكن لا تجعل البحث يمنعك من عيش الحياة."
+    },
+    8: {
+        "title": "القوة والإنجاز",
+        "message": "مسارك يرتبط بالإدارة، المال، السلطة، المسؤولية، وتحويل الطموح إلى نتيجة ملموسة.",
+        "strength": "القيادة العملية، قوة التحمل، إدارة الموارد، وبناء المكانة.",
+        "challenge": "التحدي هو السيطرة، الضغط الزائد، أو قياس القيمة بالنجاح المادي فقط.",
+        "advice": "استخدم قوتك للبناء لا للسيطرة، واجعل المال نتيجة وعي لا مصدر خوف."
+    },
+    9: {
+        "title": "النضج والإنسانية",
+        "message": "مسارك يدفعك إلى الرحمة، الفهم الواسع، إغلاق الدورات، وخدمة معنى أكبر من الذات.",
+        "strength": "النضج، التعاطف، الحكمة، القدرة على التسامح، ورؤية الصورة الكبيرة.",
+        "challenge": "التحدي هو التعلق بالماضي، أو إنقاذ الآخرين على حساب نفسك.",
+        "advice": "تعلم أن تنهي ما انتهى، فكل إغلاق واعٍ يفتح لك بابًا أنضج."
+    },
+    11: {
+        "title": "الإلهام والحدس العالي",
+        "message": "هذا رقم رئيسي يحمل حساسية عالية ورسالة إلهام وتأثير في وعي الآخرين.",
+        "strength": "الحدس، الإلهام، قراءة ما وراء الكلام، وتحويل التجربة الداخلية إلى نور للآخرين.",
+        "challenge": "التحدي هو التوتر، الحساسية الزائدة، أو صعوبة تحويل الرؤية إلى فعل ثابت.",
+        "advice": "احمِ حساسيتك بالنظام، واجعل إلهامك قابلًا للتطبيق في الواقع."
+    },
+    22: {
+        "title": "البنّاء الكبير",
+        "message": "هذا رقم رئيسي يدل على القدرة على تحويل الرؤية الكبيرة إلى مشروع واقعي مؤثر.",
+        "strength": "التخطيط الكبير، القيادة العملية، بناء مؤسسات أو مشاريع، وجمع الحلم مع التنفيذ.",
+        "challenge": "التحدي هو الخوف من حجم الرسالة أو ضغط المسؤولية أو تأجيل البداية.",
+        "advice": "قسّم الرؤية الكبيرة إلى خطوات صغيرة، فالبناء العظيم يبدأ من حجر واضح."
+    },
+    33: {
+        "title": "المعلم والراعي",
+        "message": "هذا رقم رئيسي يرتبط بالخدمة الواعية، التعليم، الشفاء الرمزي، والحب المسؤول.",
+        "strength": "العطاء، التعليم، الرعاية، القدرة على رفع الآخرين، وتحويل الألم إلى حكمة.",
+        "challenge": "التحدي هو التضحية المفرطة أو محاولة إنقاذ الجميع أو حمل عبء أكبر من طاقتك.",
+        "advice": "اخدم من الوعي لا من الاستنزاف، فطاقتك لا تنجح إلا عندما تبقى متوازنة."
+    },
+}
+
+
+CHALLENGE_MEANINGS = {
+    0: "تحدي الصفر يعني أن الدرس واسع وغير محصور بصفة واحدة؛ الحياة تطلب وعيًا عامًا ومرونة في التعامل مع أكثر من محور.",
+    1: "تحديك هو الثقة بالنفس والمبادرة دون خوف من الرفض أو الفشل.",
+    2: "تحديك هو الحساسية والعلاقات؛ تحتاج إلى عدم ربط قيمتك بردود فعل الآخرين.",
+    3: "تحديك هو التعبير؛ تحتاج إلى قول ما في داخلك بوضوح دون تشتت أو مبالغة.",
+    4: "تحديك هو النظام والصبر؛ تحتاج إلى بناء الاستقرار دون أن تتحول المسؤولية إلى ثقل.",
+    5: "تحديك هو الحرية والانضباط؛ تحتاج إلى تجربة الحياة دون الهروب من الالتزام.",
+    6: "تحديك هو الحب والمسؤولية؛ تحتاج إلى العطاء دون أن تلغي نفسك.",
+    7: "تحديك هو الثقة والفهم؛ تحتاج إلى عدم تحويل البحث أو الشك إلى عزلة.",
+    8: "تحديك هو القوة والمال والسيطرة؛ تحتاج إلى استخدام الطموح بوعي وعدل.",
+    9: "تحديك هو الإنهاء والتسامح؛ تحتاج إلى ترك الماضي دون حمله كعبء دائم.",
+}
+
+
+BIRTH_LAYER_HINTS = {
+    1: "يضيف إلى داخلك رغبة في الاستقلال، المبادرة، وعدم انتظار الإذن كي تبدأ.",
+    2: "يضيف إلى داخلك حساسية عالية تجاه العلاقات، الكلام، والقبول العاطفي.",
+    3: "يضيف إلى داخلك خفة تعبير، حبًا للكلام أو الإبداع، وحاجة إلى إخراج الفكرة بدل كتمانها.",
+    4: "يضيف إلى داخلك حاجة إلى النظام، الثبات، وإحساسًا بأن الأمان يأتي من البناء خطوة خطوة.",
+    5: "يضيف إلى داخلك رغبة في الحركة، التجربة، التغيير، وعدم البقاء طويلًا داخل قالب واحد.",
+    6: "يضيف إلى داخلك حس المسؤولية، الرعاية، العائلة، والبحث عن توازن بين الواجب والمشاعر.",
+    7: "يضيف إلى داخلك ميلًا للتأمل، البحث، الخصوصية، وفهم ما وراء الظاهر.",
+    8: "يضيف إلى داخلك جدية وطموحًا ورغبة في السيطرة على الظروف وتحويل الجهد إلى نتيجة واضحة.",
+    9: "يضيف إلى داخلك نضجًا إنسانيًا، حسًا واسعًا، وقدرة على فهم النهايات والتحولات.",
+    11: "يضيف إلى داخلك حدسًا عاليًا وحساسية إلهامية تحتاج إلى تنظيم وهدوء.",
+    22: "يضيف إلى داخلك قابلية لبناء شيء كبير إذا توفرت الخطة والمسؤولية.",
+    33: "يضيف إلى داخلك نزعة رعاية وتعليم وخدمة تحتاج إلى توازن حتى لا تتحول إلى استنزاف.",
+}
+
+
+def numerology_value_key(item: object) -> int:
+    """يرجع الرقم المناسب لاختيار المعنى، مع إعطاء الأفضلية للأرقام الرئيسية."""
+    if isinstance(item, dict):
+        value = int(item.get("value", item.get("root", 0)) or 0)
+        root = int(item.get("root", value) or value)
+        return value if value in MASTER_NUMBERS else root
+    return int(item or 0)
+
+
+def birth_layer_hint(item: object) -> str:
+    key = numerology_value_key(item)
+    if key not in BIRTH_LAYER_HINTS and isinstance(item, dict):
+        key = int(item.get("root", key) or key)
+    return BIRTH_LAYER_HINTS.get(key, "هذه طبقة مساعدة توضّح نبرة إضافية في الشخصية ولا تُقرأ وحدها كحكم نهائي.")
+
+
+def calculate_exact_age(year: int, month: int, day: int, now_dt: datetime) -> int:
+    """العمر الكامل بالسنوات في تاريخ القراءة."""
+    age = int(now_dt.year) - int(year)
+    try:
+        if (int(now_dt.month), int(now_dt.day)) < (int(month), int(day)):
+            age -= 1
+    except Exception:
+        pass
+    return max(0, age)
+
+
+def calculate_life_pinnacles(day_item: Dict[str, object], month_item: Dict[str, object], year_item: Dict[str, object], life_path_item: Dict[str, object], age: int) -> List[Dict[str, object]]:
+    """حساب مثلث مراحل الحياة / القمم الأربع من تاريخ الميلاد فقط."""
+    d = int(day_item.get("root", day_item.get("value", 0)) or 0)
+    m = int(month_item.get("root", month_item.get("value", 0)) or 0)
+    y = int(year_item.get("root", year_item.get("value", 0)) or 0)
+
+    p1 = numerology_reduce(m + d, keep_master=True)
+    p2 = numerology_reduce(d + y, keep_master=True)
+    p3 = numerology_reduce(int(p1.get("value", p1.get("root", 0))) + int(p2.get("value", p2.get("root", 0))), keep_master=True)
+    p4 = numerology_reduce(m + y, keep_master=True)
+
+    life_root = int(life_path_item.get("root", life_path_item.get("value", 0)) or 0)
+    first_end = max(18, 36 - life_root)
+    periods = [
+        (0, first_end),
+        (first_end + 1, first_end + 9),
+        (first_end + 10, first_end + 18),
+        (first_end + 19, None),
+    ]
+    numbers = [p1, p2, p3, p4]
+    names = ["القمة الأولى", "القمة الثانية", "القمة الثالثة", "القمة الرابعة"]
+    output = []
+    for idx, (num, period) in enumerate(zip(numbers, periods), start=1):
+        start, end = period
+        if end is None:
+            period_text = f"من عمر {start} فما بعد"
+            active = age >= start
+        else:
+            period_text = f"من عمر {start} إلى {end}"
+            active = start <= age <= end
+        output.append({
+            "index": idx,
+            "name": names[idx - 1],
+            "number": num,
+            "start_age": start,
+            "end_age": end,
+            "period_text": period_text,
+            "active": active,
+        })
+    return output
+
+
+KARMIC_DEBT_MEANINGS = {
+    13: "درس كارمي 13/4: الحرية لا تستقر إلا بالعمل المنظم، والتقدم يحتاج إلى صبر بدل اختصار الطريق.",
+    14: "درس كارمي 14/5: الحرية تحتاج إلى انضباط؛ التغيير مفيد عندما لا يتحول إلى تشتت أو هروب من الالتزام.",
+    16: "درس كارمي 16/7: الوعي ينمو بعد كسر الأوهام؛ المطلوب تواضع داخلي وبناء حقيقة أعمق بدل التعلق بصورة قديمة.",
+    19: "درس كارمي 19/1: الاستقلال الحقيقي لا يعني حمل كل شيء وحدك؛ القوة تنضج عندما تتوازن القيادة مع التعاون.",
+}
+
+
+def numerology_contains_karmic_debt(item: object) -> Optional[int]:
+    """يفحص هل ظهر أحد أرقام الدين الكارمي قبل الاختزال."""
+    if isinstance(item, dict):
+        candidates = []
+        for k in ["original", "value", "root"]:
+            try:
+                candidates.append(int(item.get(k, 0) or 0))
+            except Exception:
+                pass
+        steps = item.get("steps", [])
+        if isinstance(steps, list):
+            for step in steps:
+                try:
+                    candidates.append(int(step))
+                except Exception:
+                    pass
+        for c in candidates:
+            if c in KARMIC_DEBT_MEANINGS:
+                return c
+    else:
+        try:
+            v = int(item)
+            if v in KARMIC_DEBT_MEANINGS:
+                return v
+        except Exception:
+            return None
+    return None
+
+
+def numerology_karmic_hits(result: Dict[str, object]) -> List[Dict[str, str]]:
+    """يجمع الأرقام الكارمية التي ظهرت في أهم مواضع التقرير."""
+    fields = [
+        ("مسار الحياة", "life_path"),
+        ("يوم الميلاد", "birth_day"),
+        ("شهر الميلاد", "birth_month"),
+        ("سنة الميلاد", "birth_year"),
+        ("رقم النضج من تاريخ الميلاد", "maturity"),
+        ("رقم الموقف", "attitude"),
+        ("السنة الشخصية", "personal_year"),
+        ("الشهر الشخصي", "personal_month"),
+        ("اليوم الشخصي", "personal_day"),
+    ]
+    hits = []
+    seen = set()
+    for label, key in fields:
+        debt = numerology_contains_karmic_debt(result.get(key))
+        if debt and (label, debt) not in seen:
+            hits.append({"field": label, "number": f"{debt}/{numerology_reduce_plain(debt)}", "text": KARMIC_DEBT_MEANINGS[debt]})
+            seen.add((label, debt))
+    for p in result.get("pinnacles", []) or []:
+        debt = numerology_contains_karmic_debt(p.get("number"))
+        field = str(p.get("name", "قمة"))
+        if debt and (field, debt) not in seen:
+            hits.append({"field": field, "number": f"{debt}/{numerology_reduce_plain(debt)}", "text": KARMIC_DEBT_MEANINGS[debt]})
+            seen.add((field, debt))
+    return hits
+
+
+def calculate_life_cycles(day_item: Dict[str, object], month_item: Dict[str, object], year_item: Dict[str, object], life_path_item: Dict[str, object], age: int) -> List[Dict[str, object]]:
+    """حساب دورات الحياة الثلاث من الشهر، اليوم، السنة."""
+    month_cycle = numerology_reduce(int(month_item.get("root", month_item.get("value", 0)) or 0), keep_master=True)
+    day_cycle = numerology_reduce(int(day_item.get("root", day_item.get("value", 0)) or 0), keep_master=True)
+    year_cycle = numerology_reduce(int(year_item.get("root", year_item.get("value", 0)) or 0), keep_master=True)
+    life_root = int(life_path_item.get("root", life_path_item.get("value", 0)) or 0)
+    first_end = max(18, 36 - life_root)
+    second_end = first_end + 27
+    periods = [(0, first_end), (first_end + 1, second_end), (second_end + 1, None)]
+    nums = [month_cycle, day_cycle, year_cycle]
+    names = ["الدورة الأولى", "الدورة الثانية", "الدورة الثالثة"]
+    notes = [
+        "خلفية الطفولة وبناء الاستجابة الأولى للحياة.",
+        "خلفية منتصف الحياة وطريقة تفعيل الموهبة والخبرة.",
+        "خلفية النضج المتأخر وما يستقر مع الخبرة الطويلة.",
+    ]
+    output = []
+    for idx, (num, period) in enumerate(zip(nums, periods), start=1):
+        start, end = period
+        if end is None:
+            period_text = f"من عمر {start} فما بعد"
+            active = age >= start
+        else:
+            period_text = f"من عمر {start} إلى {end}"
+            active = start <= age <= end
+        output.append({"index": idx, "name": names[idx - 1], "number": num, "start_age": start, "end_age": end, "period_text": period_text, "active": active, "note": notes[idx - 1]})
+    return output
+
+
+def numerology_address(gender: str) -> Dict[str, str]:
+    if gender == "أنثى":
+        return {"you": "أنتِ", "your": "حياتكِ", "need": "تحتاجين", "carry": "تحملين"}
+    return {"you": "أنتَ", "your": "حياتك", "need": "تحتاج", "carry": "تحمل"}
+
+
+def get_life_path_current_date() -> datetime:
+    try:
+        if ZONEINFO_AVAILABLE:
+            return datetime.now(ZoneInfo("Asia/Baghdad"))
+    except Exception:
+        pass
+    return datetime.utcnow() + timedelta(hours=3)
+
+
+def numerology_calc_from_date(year: int, month: int, day: int, now_dt: Optional[datetime] = None) -> Dict[str, object]:
+    if now_dt is None:
+        now_dt = get_life_path_current_date()
+    # تأكد من صحة التاريخ قبل الحساب
+    datetime(int(year), int(month), int(day))
+
+    day_sum = numerology_digit_sum(day)
+    month_sum = numerology_digit_sum(month)
+    year_sum = numerology_digit_sum(year)
+    total_sum = day_sum + month_sum + year_sum
+
+    life_path = numerology_reduce(total_sum, keep_master=True)
+    birth_day = numerology_reduce(numerology_digit_sum(day), keep_master=True)
+    birth_month = numerology_reduce(numerology_digit_sum(month), keep_master=False)
+    birth_year = numerology_reduce(year_sum, keep_master=True)
+
+    maturity_total = int(life_path["root"]) + int(birth_day["root"])
+    maturity = numerology_reduce(maturity_total, keep_master=True)
+
+    d = numerology_reduce_plain(day_sum)
+    m = numerology_reduce_plain(month_sum)
+    y = numerology_reduce_plain(year_sum)
+    challenge_1 = abs(d - m)
+    challenge_2 = abs(y - d)
+    challenge_main = abs(challenge_1 - challenge_2)
+    challenge_4 = abs(y - m)
+
+    current_year_sum = numerology_digit_sum(now_dt.year)
+    personal_year = numerology_reduce(day_sum + month_sum + current_year_sum, keep_master=False)
+    personal_month = numerology_reduce(int(personal_year["root"]) + now_dt.month, keep_master=False)
+    personal_day = numerology_reduce(int(personal_month["root"]) + now_dt.day, keep_master=False)
+    age = calculate_exact_age(year, month, day, now_dt)
+    attitude = numerology_reduce(int(birth_day["root"]) + int(birth_month["root"]), keep_master=True)
+    pinnacles = calculate_life_pinnacles(birth_day, birth_month, birth_year, life_path, age)
+    cycles = calculate_life_cycles(birth_day, birth_month, birth_year, life_path, age)
+
+    temp_result_for_karmic = {
+        "life_path": life_path,
+        "birth_day": birth_day,
+        "birth_month": birth_month,
+        "birth_year": birth_year,
+        "attitude": attitude,
+        "maturity": maturity,
+        "personal_year": personal_year,
+        "personal_month": personal_month,
+        "personal_day": personal_day,
+        "pinnacles": pinnacles,
+        "cycles": cycles,
+    }
+    karmic_hits = numerology_karmic_hits(temp_result_for_karmic)
+
+    return {
+        "day": day,
+        "month": month,
+        "year": year,
+        "current_date": now_dt.strftime("%Y-%m-%d"),
+        "age": age,
+        "life_path": life_path,
+        "birth_day": birth_day,
+        "birth_month": birth_month,
+        "birth_year": birth_year,
+        "maturity": maturity,
+        "attitude": attitude,
+        "challenge_main": challenge_main,
+        "challenge_1": challenge_1,
+        "challenge_2": challenge_2,
+        "challenge_4": challenge_4,
+        "personal_year": personal_year,
+        "personal_month": personal_month,
+        "personal_day": personal_day,
+        "pinnacles": pinnacles,
+        "cycles": cycles,
+        "karmic_hits": karmic_hits,
+    }
+
+
+def numerology_meaning_for(result: Dict[str, object], key: str) -> Dict[str, str]:
+    item = result.get(key, {})
+    if isinstance(item, dict):
+        value = int(item.get("value", item.get("root", 0)) or 0)
+        root = int(item.get("root", value) or value)
+    else:
+        value = int(item or 0)
+        root = value
+    return NUMEROLOGY_MEANINGS.get(value) or NUMEROLOGY_MEANINGS.get(root) or NUMEROLOGY_MEANINGS[1]
+
+
+def build_life_path_report(name: str, gender: str, result: Dict[str, object]) -> str:
+    address = numerology_address(gender)
+    life = result["life_path"]
+    day = result["birth_day"]
+    month = result["birth_month"]
+    year = result["birth_year"]
+    maturity = result["maturity"]
+    attitude = result.get("attitude", {})
+    py = result["personal_year"]
+    pm = result["personal_month"]
+    pd = result["personal_day"]
+
+    life_meaning = numerology_meaning_for(result, "life_path")
+    day_meaning = numerology_meaning_for(result, "birth_day")
+    maturity_meaning = numerology_meaning_for(result, "maturity")
+    attitude_meaning = numerology_meaning_for(result, "attitude")
+    py_meaning = numerology_meaning_for(result, "personal_year")
+    pm_meaning = numerology_meaning_for(result, "personal_month")
+    pd_meaning = numerology_meaning_for(result, "personal_day")
+    month_meaning = numerology_meaning_for(result, "birth_month")
+    year_meaning = numerology_meaning_for(result, "birth_year")
+    pinnacles = result.get("pinnacles", []) or []
+    cycles = result.get("cycles", []) or []
+    karmic_hits = result.get("karmic_hits", []) or []
+    active_pinnacle = next((p for p in pinnacles if p.get("active")), None)
+    active_cycle = next((c for c in cycles if c.get("active")), None)
+
+    display_name = (name or "صاحب التقرير").strip()
+    lines = [
+        f"أهلًا {display_name}",
+        "",
+        "تقرير مسارك في الحياة",
+        f"تاريخ الميلاد: {int(result['day']):02d} / {int(result['month']):02d} / {int(result['year'])}",
+        f"تاريخ القراءة: {result['current_date']} بتوقيت بغداد",
+        "",
+        f"رقم مسار الحياة: {numerology_display_label(life)}",
+        numerology_planet_control_line(life, "مسار الحياة"),
+        f"معناه الأساسي: {life_meaning['title']}",
+        f"رسالتك في الحياة: {life_meaning['message']}",
+        f"نقطة القوة: {life_meaning['strength']}",
+        f"التحدي المتكرر: {life_meaning['challenge']}",
+        f"نصيحة المسار: {life_meaning['advice']}",
+        "",
+        f"رقم يوم الميلاد: {numerology_display_label(day)}",
+        numerology_planet_control_line(day, "موهبة يوم الميلاد"),
+        f"هذا الرقم يوضح الموهبة الفطرية التي تظهر بسرعة في شخصيتك. طاقته هنا: {day_meaning['title']}. {day_meaning['strength']}",
+        "",
+        f"رقم شهر الميلاد: {numerology_display_label(month)}",
+        numerology_planet_control_line(month, "النبرة الداخلية لشهر الميلاد"),
+        f"هذا الرقم يصف الاستجابة الأولى للحياة من الداخل. طاقته هنا: {month_meaning['title']}. {birth_layer_hint(month)}",
+        "",
+        f"رقم سنة الميلاد: {numerology_display_label(year)}",
+        numerology_planet_control_line(year, "خلفية سنة الميلاد"),
+        f"هذا الرقم يصف الخلفية العامة والطاقة الرقمية التي جاء منها الشخص. طاقته هنا: {year_meaning['title']}. {birth_layer_hint(year)}",
+        "",
+        f"رقم الموقف: {numerology_display_label(attitude)}",
+        numerology_planet_control_line(attitude, "رقم الموقف ورد الفعل الأول"),
+        f"هذا الرقم يوضح ردّك الأول على الحياة وطريقة ظهورك عند بداية المواقف. طاقته: {attitude_meaning['title']}. {attitude_meaning['advice']}",
+        "",
+        f"رقم النضج من تاريخ الميلاد: {numerology_display_label(maturity)}",
+        numerology_planet_control_line(maturity, "رقم النضج من تاريخ الميلاد"),
+        f"هذا الرقم يوضح ما يبدأ بالظهور أكثر مع العمر والخبرة اعتمادًا على تاريخ الميلاد فقط. طاقته: {maturity_meaning['title']}. {maturity_meaning['advice']}",
+        "",
+        f"رقم التحدي الأساسي: {result['challenge_main']}",
+        numerology_planet_control_line(int(result["challenge_main"]), "التحدي الأساسي"),
+        CHALLENGE_MEANINGS.get(int(result["challenge_main"]), "هذا التحدي يحتاج إلى وعي ومراجعة متكررة."),
+        f"التحدي الأول: {result['challenge_1']} - {numerology_planet_control_line(int(result['challenge_1']), 'التحدي الأول')} {CHALLENGE_MEANINGS.get(int(result['challenge_1']), 'يحتاج إلى وعي ومراجعة.')}",
+        f"التحدي الثاني: {result['challenge_2']} - {numerology_planet_control_line(int(result['challenge_2']), 'التحدي الثاني')} {CHALLENGE_MEANINGS.get(int(result['challenge_2']), 'يحتاج إلى وعي ومراجعة.')}",
+        f"التحدي الرابع: {result['challenge_4']} - {numerology_planet_control_line(int(result['challenge_4']), 'التحدي الرابع')} {CHALLENGE_MEANINGS.get(int(result['challenge_4']), 'يحتاج إلى وعي ومراجعة.')}",
+        "",
+        "مثلث مراحل الحياة:",
+        *[f"{p['name']}: {numerology_display_label(p['number'])} — الكوكب المتحكم بالمرحلة: {numerology_planet_symbol(p['number'])['planet']} — {p['period_text']}" + (" ← المرحلة الحالية" if p.get("active") else "") for p in pinnacles],
+    ]
+
+    if active_pinnacle:
+        active_label = numerology_display_label(active_pinnacle['number'])
+        active_meaning = numerology_meaning_for({'tmp': active_pinnacle['number']}, 'tmp')
+        lines.extend([
+            "",
+            f"{address['you']} الآن في {active_pinnacle['name']} برقم {active_label}:",
+            active_meaning['message'],
+            numerology_planet_control_line(active_pinnacle['number'], "هذه المرحلة"),
+        ])
+
+    lines.extend([
+        "",
+        "دورات الحياة الثلاث:",
+        *[f"{c['name']}: {numerology_display_label(c['number'])} — الكوكب المتحكم بالدورة: {numerology_planet_symbol(c['number'])['planet']} — {c['period_text']}" + (" ← الدورة الحالية" if c.get("active") else "") for c in cycles],
+    ])
+
+    if active_cycle:
+        active_cycle_label = numerology_display_label(active_cycle['number'])
+        active_cycle_meaning = numerology_meaning_for({'tmp': active_cycle['number']}, 'tmp')
+        lines.extend([
+            "",
+            f"الدورة الحالية هي {active_cycle['name']} برقم {active_cycle_label}:",
+            active_cycle_meaning['message'],
+            numerology_planet_control_line(active_cycle['number'], "هذه الدورة"),
+        ])
+
+    if karmic_hits:
+        lines.extend(["", "الأرقام الكارمية الظاهرة:"])
+        for h in karmic_hits:
+            lines.append(f"{h['field']}: {h['number']} — {h['text']}")
+        lines.append("")
+    else:
+        lines.append("")
+
+    lines.extend([
+        f"رقم السنة الشخصية: {numerology_display_label(py)}",
+        numerology_planet_control_line(py, "السنة الشخصية"),
+        f"طاقة السنة الحالية: {py_meaning['title']}. {py_meaning['message']}",
+        "",
+        f"رقم الشهر الشخصي: {numerology_display_label(pm)}",
+        numerology_planet_control_line(pm, "الشهر الشخصي"),
+        f"طاقة الشهر الحالي: {pm_meaning['title']}. {pm_meaning['advice']}",
+        "",
+        f"رقم اليوم الشخصي: {numerology_display_label(pd)}",
+        numerology_planet_control_line(pd, "اليوم الشخصي"),
+        f"طاقة اليوم: {pd_meaning['title']}. " + ("اليوم يكرر نبرة الشهر، لذلك اجعله يوم ترتيب وإنهاء وتخفيف تعلق بما لم يعد نافعًا." if numerology_display_label(pd) == numerology_display_label(pm) else pd_meaning['advice']),
+        "",
+        "الخلاصة:",
+        f"{address['you']} لا تُقرأ من رقم واحد فقط، بل من اجتماع مسار الحياة مع يوم الميلاد والسنة الشخصية والتحدي. الرقم الأساسي يصف الطريق، والكوكب المتحكم يوضح كيف يعمل هذا الطريق عمليًا، والقمم والدورات تكشف المرحلة التي تعيشها الآن.",
+        "",
+        "تنبيه: هذا التقرير قراءة رمزية رقمية من تاريخ الميلاد فقط، وليس حكمًا نهائيًا على حياة الإنسان أو بديلًا عن القرار الشخصي."
+    ])
+    return "\n".join(lines).strip()
+
+
+LIFE_PATH_HTML = r"""
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>مسارك في الحياة | ASTROGATE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:linear-gradient(180deg,#160d22 0%,#241432 48%,#170d21 100%);margin:0;color:#2d2926;line-height:1.95}.container{max-width:900px;margin:0 auto;padding:14px}.card{background:#fffdf8;border:1px solid #ded4c4;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 8px 22px rgba(0,0,0,.16)}.hero{background:#f7f1e4;border:1px solid rgba(197,172,125,.72);border-radius:22px;padding:18px;margin-bottom:16px;text-align:center}h1{text-align:center;color:#2d221c;margin:6px 0 4px;font-size:28px}h2{border-right:5px solid #9b7b4f;padding-right:10px;color:#3b2f2f;margin-top:0;font-size:21px}.nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0 16px}.nav a,.btn{background:#fffdf8;border:1px solid #ded4c4;color:#5a3f2a;text-decoration:none;padding:8px 12px;border-radius:999px;font-weight:bold}.muted{color:#6d6259;font-size:14px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}label{display:block;margin-bottom:5px;font-weight:bold}input,select{width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #c8bda9;background:#fff;font-size:16px}button{background:#6f4e37;color:white;border:none;border-radius:14px;padding:12px 18px;font-size:16px;font-weight:bold;cursor:pointer;width:100%;margin-top:14px}.report{white-space:pre-wrap;background:#f7fbf2;border:1px solid #cfe9c8;color:#123b27;border-radius:16px;padding:14px;font-size:15px;line-height:1.9;overflow-wrap:anywhere}.warning{background:#fff3cd;border:1px solid #f0d98c;color:#6d4b0f;border-radius:14px;padding:14px}.numbers{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px;margin-top:10px}.num-card{background:#faf6ef;border:1px solid #eadfce;border-radius:12px;padding:8px 7px;text-align:center;min-height:auto}.num-card b{display:block;font-size:13px;color:#5a3f2a;line-height:1.4}.num-card span{display:block;font-size:18px;font-weight:800;color:#223b2a;line-height:1.4;margin:2px 0}.num-card small{display:block;font-size:12px;line-height:1.5;color:#6d6259}.life-data-table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:8px}.life-data-table th,.life-data-table td{background:#faf6ef;border-top:1px solid #eadfce;border-bottom:1px solid #eadfce;padding:8px 10px;font-size:14px}.life-data-table th{color:#5a3f2a;text-align:right;border-right:1px solid #eadfce;border-radius:0 12px 12px 0;width:45%}.life-data-table td{color:#223b2a;font-weight:bold;border-left:1px solid #eadfce;border-radius:12px 0 0 12px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.actions a,.actions button{flex:1;text-align:center;text-decoration:none;border-radius:14px;padding:12px 14px;font-weight:bold;font-size:15px;margin-top:0}.actions a{background:#d8c7ad;color:#2d2926;border:none}.actions button{background:#3f5f45;color:#fff;border:none}@media(max-width:700px){.grid,.grid2{grid-template-columns:1fr}.numbers{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.container{padding:10px}h1{font-size:24px}.card{padding:14px}.num-card span{font-size:17px}}
+</style>
+<script>
+function copyLifePath(){const el=document.getElementById('lifePathReport'); if(!el)return; navigator.clipboard.writeText(el.innerText).then(()=>alert('تم نسخ التقرير'));}
+</script>
+</head>
+<body>
+<div class="container">
+<div class="hero"><h1>مسارك في الحياة</h1><div class="muted">قسم مجاني يحسب الأرقام الأساسية من تاريخ الميلاد فقط، بدون استخدام الاسم أو الحروف.</div></div>
+<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/daily-energy">طاقتي اليوم</a><a href="/natal">قراءة الخريطة</a></div>
+
+{% if profile_complete %}
+<div class="card warning">تم رفع تاريخ الميلاد من بياناتك الرئيسية: {{ form.day }} / {{ form.month }} / {{ form.year }}. هذا القسم يستخدم تاريخ الميلاد فقط، لذلك لا يحتاج ساعة الميلاد أو المدينة.</div>
+<div class="card">
+<h2>بيانات الحساب المعتمدة</h2>
+<table class="life-data-table">
+  <tr><th>الاسم</th><td>{{ form.name or 'غير مذكور' }}</td></tr>
+  <tr><th>الجنس</th><td>{{ form.gender or 'ذكر' }}</td></tr>
+  <tr><th>تاريخ الميلاد</th><td>{{ form.day }} / {{ form.month }} / {{ form.year }}</td></tr>
+</table>
+<div class="actions"><a href="/profile">تعديل بياناتي الفلكية</a><a href="/">العودة للرئيسية</a></div>
+</div>
+{% else %}
+<div class="card warning">لم يتم العثور على تاريخ ميلاد محفوظ داخل بياناتي الفلكية. احفظ بياناتك من صفحة بياناتي الفلكية، أو استخدم هذا النموذج كحساب مؤقت فقط.</div>
+<div class="card">
+<h2>بيانات الحساب المؤقت</h2>
+<form method="post" action="/life-path">
+  <div class="grid2">
+    <div><label>الاسم للعرض فقط</label><input name="name" value="{{ form.name }}" placeholder="مثال: عباس"></div>
+    <div><label>الجنس</label><select name="gender"><option value="ذكر" {% if form.gender != 'أنثى' %}selected{% endif %}>ذكر</option><option value="أنثى" {% if form.gender == 'أنثى' %}selected{% endif %}>أنثى</option></select></div>
+  </div>
+  <div class="grid">
+    <div><label>سنة الميلاد</label><input type="number" name="year" value="{{ form.year }}" min="1900" max="2100" required></div>
+    <div><label>شهر الميلاد</label><input type="number" name="month" value="{{ form.month }}" min="1" max="12" required></div>
+    <div><label>يوم الميلاد</label><input type="number" name="day" value="{{ form.day }}" min="1" max="31" required></div>
+  </div>
+  <button type="submit">احسب مساري في الحياة</button>
+</form>
+</div>
+{% endif %}
+
+{% if error %}<div class="card warning">{{ error }}</div>{% endif %}
+
+{% if result %}
+<div class="card">
+<h2>الأرقام المستخرجة</h2>
+<div class="numbers">
+  <div class="num-card"><b>مسار الحياة</b><span>{{ number_label(result.life_path) }}</span><small>{{ planet_symbol(result.life_path).planet }}</small></div>
+  <div class="num-card"><b>يوم الميلاد</b><span>{{ number_label(result.birth_day) }}</span><small>{{ planet_symbol(result.birth_day).planet }}</small></div>
+  <div class="num-card"><b>النضج من الميلاد</b><span>{{ number_label(result.maturity) }}</span><small>{{ planet_symbol(result.maturity).planet }}</small></div>
+  <div class="num-card"><b>التحدي الأساسي</b><span>{{ result.challenge_main }}</span><small>{{ planet_symbol(result.challenge_main).planet }}</small></div>
+  <div class="num-card"><b>السنة الشخصية</b><span>{{ number_label(result.personal_year) }}</span><small>{{ planet_symbol(result.personal_year).planet }}</small></div>
+  <div class="num-card"><b>الشهر الشخصي</b><span>{{ number_label(result.personal_month) }}</span><small>{{ planet_symbol(result.personal_month).planet }}</small></div>
+  <div class="num-card"><b>اليوم الشخصي</b><span>{{ number_label(result.personal_day) }}</span><small>{{ planet_symbol(result.personal_day).planet }}</small></div>
+  <div class="num-card"><b>شهر الميلاد</b><span>{{ number_label(result.birth_month) }}</span><small>{{ planet_symbol(result.birth_month).planet }}</small></div>
+  <div class="num-card"><b>سنة الميلاد</b><span>{{ number_label(result.birth_year) }}</span><small>{{ planet_symbol(result.birth_year).planet }}</small></div>
+  <div class="num-card"><b>رقم الموقف</b><span>{{ number_label(result.attitude) }}</span><small>{{ planet_symbol(result.attitude).planet }}</small></div>
+</div>
+</div>
+<div class="card">
+<h2>مثلث مراحل الحياة</h2>
+<div class="numbers">
+{% for p in result.pinnacles %}
+  <div class="num-card"><b>{{ p.name }}</b><span>{{ number_label(p.number) }}</span><small>{{ planet_symbol(p.number).planet }}<br>{{ p.period_text }}{% if p.active %} — المرحلة الحالية{% endif %}</small></div>
+{% endfor %}
+</div>
+</div>
+<div class="card">
+<h2>دورات الحياة الثلاث</h2>
+<div class="numbers">
+{% for c in result.cycles %}
+  <div class="num-card"><b>{{ c.name }}</b><span>{{ number_label(c.number) }}</span><small>{{ planet_symbol(c.number).planet }}<br>{{ c.period_text }}{% if c.active %} — الدورة الحالية{% endif %}</small></div>
+{% endfor %}
+</div>
+</div>
+{% if result.karmic_hits %}
+<div class="card">
+<h2>الأرقام الكارمية الظاهرة</h2>
+<div class="numbers">
+{% for h in result.karmic_hits %}
+  <div class="num-card"><b>{{ h.field }}</b><span>{{ h.number }}</span><small>{{ h.text }}</small></div>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+<div class="card"><h2>التقرير</h2><div class="actions"><button type="button" onclick="copyLifePath()">نسخ التقرير</button><a href="/life-path">إعادة الحساب</a><a href="/">العودة للرئيسية</a></div><br><div class="report" id="lifePathReport">{{ report }}</div></div>
+{% endif %}
+</div>
+</body>
+</html>
+"""
+
+
 DAILY_ENERGY_HTML = r"""
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -4781,7 +5584,7 @@ function copyDaily(){const el=document.getElementById('dailyReport'); if(!el)ret
 <body>
 <div class="container">
 <div class="hero"><h1>طاقتي اليوم</h1><div class="muted">قراءة يومية مجانية اعتمادًا على بياناتك الفلكية المحفوظة داخل المنصة.</div></div>
-<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/forecast">التوقعات الشخصية</a></div>
+<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/life-path">مسارك في الحياة</a><a href="/forecast">التوقعات الشخصية</a></div>
 {% if not profile_complete %}
 <div class="card warning">
 حتى يعمل قسم طاقتي اليوم بدقة، يجب حفظ بيانات الميلاد أولًا من صفحة بياناتي الفلكية.
@@ -5663,7 +6466,7 @@ PROFILE_HTML = r"""
 <body>
 <div class="container">
     <h1>بياناتي الفلكية</h1>
-    <div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a></div>
+    <div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/life-path">مسارك في الحياة</a></div>
     {% if saved %}<div class="success">تم حفظ البيانات. يمكنك الآن استخدام تطبيق قراءة الخريطة وبقية التطبيقات لاحقًا.</div>{% endif %}
     <div class="card">
         <form method="post" action="/profile" autocomplete="off">
@@ -5821,6 +6624,58 @@ def profile_is_complete() -> bool:
         return False
     needed = ["name", "gender", "year", "month", "day", "hour", "minute", "timezone_offset", "country_code", "city", "house_system"]
     return all(str(saved.get(k, "")).strip() for k in needed)
+
+
+def _life_path_birth_source() -> Dict[str, str]:
+    """
+    يبحث عن تاريخ الميلاد داخل بيانات المنصة الرئيسية بأكثر من صيغة.
+    الهدف: قسم مسارك في الحياة يحتاج تاريخ الميلاد فقط، لذلك لا نربطه باكتمال الساعة أو المدينة.
+    يدعم مفاتيح بياناتي الفلكية الحالية: year/month/day
+    ويدعم أي صيغة قديمة أو داخلية: birth_year/birth_month/birth_day.
+    """
+    possible_sources = [
+        session.get("astro_profile", {}),
+        session.get("profile", {}),
+        session.get("birth_profile", {}),
+        session.get("birth_data", {}),
+        session.get("saved_birth_data", {}),
+    ]
+    for saved in possible_sources:
+        if not isinstance(saved, dict):
+            continue
+        year = str(saved.get("year") or saved.get("birth_year") or saved.get("birthYear") or "").strip()
+        month = str(saved.get("month") or saved.get("birth_month") or saved.get("birthMonth") or "").strip()
+        day = str(saved.get("day") or saved.get("birth_day") or saved.get("birthDay") or "").strip()
+        if not (year and month and day):
+            continue
+        try:
+            datetime(int(year), int(month), int(day))
+        except Exception:
+            continue
+        return {
+            "name": str(saved.get("name") or saved.get("full_name") or saved.get("display_name") or "").strip(),
+            "gender": str(saved.get("gender") or "ذكر").strip() or "ذكر",
+            "year": year,
+            "month": month,
+            "day": day,
+        }
+    return {}
+
+
+def life_path_profile_has_birth_data() -> bool:
+    """
+    فحص خاص بقسم مسارك في الحياة.
+    يكفي وجود اليوم والشهر والسنة في البيانات الرئيسية، ولا نطلب ساعة الميلاد أو المدينة.
+    """
+    return bool(_life_path_birth_source())
+
+
+def life_path_form_from_profile() -> Dict[str, str]:
+    """يسحب بيانات قسم مسارك في الحياة من البيانات الرئيسية فقط."""
+    source = _life_path_birth_source()
+    if source:
+        return source
+    return {"name": "", "gender": "ذكر", "year": "", "month": "", "day": ""}
 
 
 @app.route("/api/cities")
@@ -6118,6 +6973,55 @@ def _natal_template_context(form: Dict[str, str], **extra) -> Dict[str, object]:
     return ctx
 
 
+
+
+@app.route("/life-path", methods=["GET", "POST"])
+def life_path_page():
+    linked_profile = life_path_profile_has_birth_data()
+
+    # إذا كانت بيانات تاريخ الميلاد موجودة في البيانات الرئيسية، نعتمدها هنا مباشرة
+    # حتى لو لم تكن بقية حقول الخريطة الفلكية مكتملة، لأن هذا القسم لا يحتاج ساعة أو مدينة.
+    if linked_profile:
+        form = life_path_form_from_profile()
+    elif request.method == "POST":
+        form = {
+            "name": str(request.form.get("name", "")).strip(),
+            "gender": str(request.form.get("gender", "ذكر")).strip() or "ذكر",
+            "year": str(request.form.get("year", "")).strip(),
+            "month": str(request.form.get("month", "")).strip(),
+            "day": str(request.form.get("day", "")).strip(),
+        }
+    else:
+        form = {"name": "", "gender": "ذكر", "year": "", "month": "", "day": ""}
+
+    result = None
+    report = ""
+    error = ""
+
+    should_calculate = linked_profile or request.method == "POST"
+    if should_calculate:
+        try:
+            year = int(form.get("year", ""))
+            month = int(form.get("month", ""))
+            day = int(form.get("day", ""))
+            result = numerology_calc_from_date(year, month, day)
+            report = build_life_path_report(form.get("name", ""), form.get("gender", "ذكر"), result)
+        except Exception as exc:
+            if request.method == "POST" or linked_profile:
+                error = f"تعذر حساب مسارك في الحياة. تأكد من صحة تاريخ الميلاد في بياناتي الفلكية. التفاصيل: {exc}"
+            result = None
+            report = ""
+
+    return render_template_string(
+        LIFE_PATH_HTML,
+        form=form,
+        result=result,
+        report=report,
+        error=error,
+        profile_complete=linked_profile,
+        planet_symbol=numerology_planet_symbol,
+        number_label=numerology_display_label,
+    )
 
 
 @app.route("/daily-energy")
@@ -10283,7 +11187,7 @@ window.addEventListener('DOMContentLoaded',function(){
 <div id="loadingOverlay" class="loading-overlay"><div class="loading-card"><h2>جارٍ فحص نوافذ الزواج والخطوبة...</h2><p>يتم الآن فحص طبقات زمنية متعددة، لذلك قد يستغرق التحليل بضع ثوانٍ.</p><div class="progress-wrap"><div id="marriageProgressBar" class="progress-bar"></div></div><div id="marriageProgressPercent" class="progress-percent">0%</div><div id="marriageProgressText" class="progress-text">تجهيز البيانات...</div></div></div>
 <div class="page">
 <div class="hero"><h1>الزواج والخطوبة</h1><p>تقرير أولي مجاني لاستخراج أقوى نوافذ الزواج أو الخطوبة، مع إمكانية طلب التقرير الاحترافي عبر تيليغرام.</p></div>
-<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/forecast">التوقعات الشخصية</a></div>
+<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/life-path">مسارك في الحياة</a><a href="/forecast">التوقعات الشخصية</a></div>
 {% if linked_profile %}<div class="note">تم ربط بياناتك المحفوظة: {{ linked_profile_name }}. لن تظهر بيانات الميلاد هنا.</div>{% else %}<div class="warn">لم يتم العثور على بيانات ميلاد محفوظة. يرجى حفظها أولًا من صفحة <a href="/profile">بياناتي الفلكية</a>.</div>{% endif %}
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 {% if not engine_ready %}<div class="error">محرك الزواج غير جاهز حاليًا: {{ engine_error }}</div>{% endif %}
@@ -11180,7 +12084,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#f4f1ea;margin:0;color:#2d29
 <body>
 <div class="container">
 <h1>اختيار الوقت المناسب</h1>
-<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/forecast">التوقعات الشخصية</a></div>
+<div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/life-path">مسارك في الحياة</a><a href="/forecast">التوقعات الشخصية</a></div>
 <div class="card"><p>فحص مجاني يساعدك على معرفة جودة التوقيت الحالي أو توقيت تختاره قبل قرار عاطفي، مالي، مهني، صحي، دراسي، سفر، عقد، أو قرار عام.</p>{% if profile_complete %}<div class="linked">تم ربط بياناتك الفلكية المحفوظة: {{ profile_name }}. اختر نوع القرار ووقت الفحص فقط.</div>{% else %}<div class="note">يرجى حفظ بيانات الميلاد أولًا من صفحة <a href="/profile">بياناتي الفلكية</a> حتى يتم فحص التوقيت بدقة. هذا القسم لا يطلب بيانات الميلاد مرة ثانية.</div>{% endif %}</div>
 {% if error %}<div class="card note">{{ error }}</div>{% endif %}
 <div class="card"><h2>بيانات الفحص</h2><form method="post" action="/timing"><div class="grid2"><div><label>نوع القرار</label><select name="decision_key">{% for k,d in decisions.items() %}<option value="{{k}}" {% if form.decision_key==k %}selected{% endif %}>{{d.label}}</option>{% endfor %}</select></div><div><label>استخدام الوقت</label><select name="time_mode"><option value="now" {% if form.time_mode=='now' %}selected{% endif %}>الوقت الحالي</option><option value="custom" {% if form.time_mode=='custom' %}selected{% endif %}>وقت أختاره</option></select></div></div><br><div class="grid"><div><label>السنة</label><input name="year" type="number" value="{{ form.year }}"></div><div><label>الشهر</label><input name="month" type="number" value="{{ form.month }}"></div><div><label>اليوم</label><input name="day" type="number" value="{{ form.day }}"></div><div><label>الساعة</label><input name="hour" type="number" value="{{ form.hour }}"></div><div><label>الدقيقة</label><input name="minute" type="number" value="{{ form.minute }}"></div></div><br><button type="submit">فحص التوقيت</button><p class="small">يعتمد الفحص على بيانات الميلاد المحفوظة في التطبيق الرئيسي، وعلى خريطة لحظة الفحص وربطها بخريطتك الشخصية. التقرير الظاهر للمستخدم لا يعرض تفاصيل فنية.</p></form></div>
@@ -11340,7 +12244,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#f4f1ea;margin:0;color:#2d29
 </style>
 </head>
 <body><div class="container">
-<div class="card"><h1>المؤشرات الصحية الوقائية</h1><p>قراءة فلكية رمزية للمحاور الجسدية الأكثر قابلية للتأثر. هذه الأداة مجانية ولا تقدم تشخيصًا طبيًا.</p><div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a></div></div>
+<div class="card"><h1>المؤشرات الصحية الوقائية</h1><p>قراءة فلكية رمزية للمحاور الجسدية الأكثر قابلية للتأثر. هذه الأداة مجانية ولا تقدم تشخيصًا طبيًا.</p><div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/life-path">مسارك في الحياة</a></div></div>
 {% if error %}<div class="card notice"><strong>{{ error }}</strong><br><a href="/profile">إدخال بياناتي الفلكية</a></div>{% endif %}
 {% if report %}
 <div class="card"><h2>بيانات الحساب</h2><p><strong>{{ report.name }}</strong> — {{ report.gender }}<br>تاريخ الميلاد: {{ report.date }} — الوقت: {{ report.time }} — GMT {{ '%+.2f'|format(report.timezone) }}<br>المدينة: {{ report.city }}<br>الطالع: {{ report.asc }} — MC: {{ report.mc }}</p><div class="notice">ارتفاع المؤشر يعني حضورًا فلكيًا رمزيًا يحتاج انتباهًا وقائيًا فقط، ولا يغني عن الطبيب أو الفحوصات.</div></div>
