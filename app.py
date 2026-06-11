@@ -6453,13 +6453,66 @@ PROFILE_HTML = r"""
             if (citySelect.value === "__manual__") { manualBox.classList.remove("hidden"); manualInput.required = true; }
             else { manualBox.classList.add("hidden"); manualInput.required = false; manualInput.value = ""; }
         }
+        const ASTRO_PROFILE_KEY = "astrogate_profile_v1";
+
+        function profileFormFields() {
+            return ["name", "gender", "year", "month", "day", "hour", "minute", "timezone_offset", "country_code", "city_select", "city_manual", "house_system"];
+        }
+
+        function saveProfileToDevice() {
+            const form = document.getElementById("profileForm");
+            if (!form) return;
+            const data = {};
+            profileFormFields().forEach(function(fieldName) {
+                const el = form.querySelector(`[name='${fieldName}']`);
+                if (el) data[fieldName] = el.value || "";
+            });
+            const citySelect = document.getElementById("city_select");
+            const manualInput = document.getElementById("city_manual");
+            data.city = (citySelect && citySelect.value && citySelect.value !== "__manual__") ? citySelect.value : (manualInput ? manualInput.value : "");
+            data.saved_at = new Date().toISOString();
+            try { localStorage.setItem(ASTRO_PROFILE_KEY, JSON.stringify(data)); } catch(e) {}
+        }
+
+        function pageAlreadyHasServerProfile() {
+            const name = document.querySelector("[name='name']")?.value || "";
+            const year = document.querySelector("[name='year']")?.value || "";
+            const month = document.querySelector("[name='month']")?.value || "";
+            const day = document.querySelector("[name='day']")?.value || "";
+            return !!(name || year || month || day);
+        }
+
+        function restoreProfileFromDeviceIfNeeded() {
+            if (pageAlreadyHasServerProfile()) return;
+            let data = null;
+            try { data = JSON.parse(localStorage.getItem(ASTRO_PROFILE_KEY) || "null"); } catch(e) { data = null; }
+            if (!data) return;
+            const form = document.getElementById("profileForm");
+            if (!form) return;
+            profileFormFields().forEach(function(fieldName) {
+                const el = form.querySelector(`[name='${fieldName}']`);
+                if (el && data[fieldName] !== undefined) el.value = data[fieldName];
+            });
+            const citySelect = document.getElementById("city_select");
+            const manualInput = document.getElementById("city_manual");
+            if (citySelect && data.city) citySelect.setAttribute("data-selected", data.city);
+            if (manualInput && data.city_manual) manualInput.value = data.city_manual;
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
+            restoreProfileFromDeviceIfNeeded();
             const countrySelect = document.getElementById("country_code");
             const citySelect = document.getElementById("city_select");
+            const form = document.getElementById("profileForm");
             if (countrySelect && citySelect) {
                 if (countrySelect.value) loadCitiesForCountry();
-                countrySelect.addEventListener("change", function() { citySelect.setAttribute("data-selected", ""); document.getElementById("city_manual").value = ""; loadCitiesForCountry(); });
-                citySelect.addEventListener("change", toggleManualCity);
+                countrySelect.addEventListener("change", function() { citySelect.setAttribute("data-selected", ""); document.getElementById("city_manual").value = ""; loadCitiesForCountry(); saveProfileToDevice(); });
+                citySelect.addEventListener("change", function(){ toggleManualCity(); saveProfileToDevice(); });
+            }
+            if (form) {
+                form.addEventListener("input", saveProfileToDevice);
+                form.addEventListener("change", saveProfileToDevice);
+                form.addEventListener("submit", saveProfileToDevice);
             }
         });
     </script></head>
@@ -6467,9 +6520,10 @@ PROFILE_HTML = r"""
 <div class="container">
     <h1>بياناتي الفلكية</h1>
     <div class="nav"><a href="/">الرئيسية</a><a href="/profile">بياناتي الفلكية</a><a href="/natal">قراءة الخريطة</a><a href="/life-path">مسارك في الحياة</a></div>
+    <div class="card muted">بعد حفظ البيانات ستبقى محفوظة في هذا المتصفح على نفس الجهاز لمدة طويلة، وتُستعاد تلقائيًا عند العودة للمنصة.</div>
     {% if saved %}<div class="success">تم حفظ البيانات. يمكنك الآن استخدام تطبيق قراءة الخريطة وبقية التطبيقات لاحقًا.</div>{% endif %}
     <div class="card">
-        <form method="post" action="/profile" autocomplete="off">
+        <form id="profileForm" method="post" action="/profile" autocomplete="off">
             <div class="grid2">
                 <div><label>الاسم</label><input name="name" value="{{ form.name }}" required></div>
                 <div><label>الجنس</label><select name="gender" required><option value="" disabled {% if not form.gender %}selected{% endif %}>اختر الجنس</option><option value="ذكر" {% if form.gender == "ذكر" %}selected{% endif %}>ذكر</option><option value="أنثى" {% if form.gender == "أنثى" %}selected{% endif %}>أنثى</option></select></div>
@@ -6527,6 +6581,14 @@ def ads_txt():
         mimetype="text/plain"
     )
 app.secret_key = os.environ.get("SECRET_KEY", "astrogate-platform-secret")
+# حفظ جلسة المستخدم داخل المتصفح لمدة طويلة حتى لا تختفي بيانات الميلاد بعد إغلاق المتصفح.
+app.permanent_session_lifetime = timedelta(days=int(os.environ.get("PROFILE_COOKIE_DAYS", "365")))
+
+
+@app.before_request
+def keep_profile_session_permanent():
+    # يجعل ملف تعريف المستخدم محفوظًا في كوكي دائمة بدل جلسة مؤقتة تنتهي عند إغلاق المتصفح.
+    session.permanent = True
 
 
 @app.after_request
@@ -6610,6 +6672,7 @@ def form_from_session() -> Dict[str, str]:
 
 
 def save_profile_from_form(form: Dict[str, str]) -> None:
+    session.permanent = True
     city_choice = form.get("city_select", "").strip()
     city_manual = form.get("city_manual", "").strip()
     city_input = city_manual if city_choice == "__manual__" else city_choice
@@ -7094,7 +7157,7 @@ def profile():
 @app.route("/clear-profile")
 def clear_profile():
     session.pop("astro_profile", None)
-    return redirect(url_for("profile"))
+    return """<!DOCTYPE html><html lang='ar' dir='rtl'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>مسح البيانات</title></head><body><script>try{localStorage.removeItem('astrogate_profile_v1');}catch(e){} window.location.href='/profile';</script><p>تم مسح البيانات من هذا المتصفح. <a href='/profile'>العودة</a></p></body></html>"""
 
 
 @app.route("/natal", methods=["GET", "POST"])
