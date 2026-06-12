@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-قراءة الخريطة الشخصية - V6.1.23 Remove Name Example Free Railway Final
+قراءة الخريطة الشخصية - V6.1.27 Pydroid Visitor Counter Ready
 
 ما الجديد في V1.2:
 - لم يعد التطبيق محصورًا بعدد قليل من الدول.
@@ -26,6 +26,7 @@ import json
 import os
 import sys
 import re
+import hashlib
 import urllib.request
 import urllib.parse
 import ssl
@@ -6574,6 +6575,12 @@ COMING_SOON_HTML = r"""
 app = Flask(__name__)
 
 
+@app.route("/favicon.ico")
+def favicon():
+    """يعرض أيقونة الموقع من مجلد static حتى لا يظهر خطأ favicon 404."""
+    return app.send_static_file("favicon.ico")
+
+
 @app.route("/ads.txt")
 def ads_txt():
     return app.response_class(
@@ -6597,6 +6604,231 @@ def add_no_cache_headers(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+# ============================================================
+# عداد الزوار الداخلي المخفي
+# لا يظهر للمستخدمين ولا يضيف أي عنصر في الواجهة العامة.
+# يعرض للمالك فقط عبر /owner/visitors?key=...
+# ============================================================
+VISITOR_COUNTER_FILE = os.environ.get("VISITOR_COUNTER_FILE", "visitor_counter.json")
+VISITOR_COUNTER_ENABLED = os.environ.get("VISITOR_COUNTER_ENABLED", "1").strip() not in {"0", "false", "False", "no", "NO"}
+OWNER_STATS_KEY = os.environ.get("OWNER_STATS_KEY", "12345").strip()  # كود تجريبي جاهز على Pydroid؛ غيّره من Railway عبر OWNER_STATS_KEY
+
+
+def _load_visitor_stats() -> dict:
+    base = {
+        "total_page_views": 0,
+        "total_unique_visitors": 0,
+        "unique_visitors": {},
+        "daily": {},
+        "monthly": {},
+        "paths": {},
+        "last_visits": [],
+    }
+    try:
+        if os.path.exists(VISITOR_COUNTER_FILE):
+            with open(VISITOR_COUNTER_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                for k, v in base.items():
+                    data.setdefault(k, v)
+                return data
+    except Exception:
+        pass
+    return base
+
+
+def _save_visitor_stats(data: dict) -> None:
+    try:
+        tmp_file = VISITOR_COUNTER_FILE + ".tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_file, VISITOR_COUNTER_FILE)
+    except Exception:
+        pass
+
+
+def _visitor_fingerprint() -> str:
+    """بصمة مجهولة للزائر؛ لا نخزن IP صريحًا."""
+    ip = request.headers.get("CF-Connecting-IP", "").strip()
+    if not ip:
+        forwarded = request.headers.get("X-Forwarded-For", "")
+        ip = forwarded.split(",")[0].strip() if forwarded else (request.remote_addr or "")
+    ua = request.headers.get("User-Agent", "")[:240]
+    lang = request.headers.get("Accept-Language", "")[:80]
+    raw = f"{ip}|{ua}|{lang}"
+    return hashlib.sha256(raw.encode("utf-8", errors="ignore")).hexdigest()[:24]
+
+
+def _should_count_visitor_request() -> bool:
+    if not VISITOR_COUNTER_ENABLED:
+        return False
+    if request.method not in {"GET", "HEAD"}:
+        return False
+    path = request.path or "/"
+    if path.startswith("/static/"):
+        return False
+    if path in {"/favicon.ico", "/ads.txt"}:
+        return False
+    if path.startswith("/api/") or path.startswith("/owner/"):
+        return False
+    if path.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".css", ".js", ".map")):
+        return False
+    return True
+
+
+@app.before_request
+def count_internal_visitors():
+    """عداد داخلي صامت للصفحات، لا يغير أي واجهة عامة."""
+    if not _should_count_visitor_request():
+        return None
+    try:
+        now = datetime.now()
+        day_key = now.strftime("%Y-%m-%d")
+        month_key = now.strftime("%Y-%m")
+        path = request.path or "/"
+        visitor_id = _visitor_fingerprint()
+
+        stats = _load_visitor_stats()
+        stats["total_page_views"] = int(stats.get("total_page_views", 0)) + 1
+
+        unique_visitors = stats.setdefault("unique_visitors", {})
+        if visitor_id not in unique_visitors:
+            unique_visitors[visitor_id] = {
+                "first_seen": now.strftime("%Y-%m-%d %H:%M:%S"),
+                "last_seen": now.strftime("%Y-%m-%d %H:%M:%S"),
+                "visits": 1,
+            }
+            stats["total_unique_visitors"] = int(stats.get("total_unique_visitors", 0)) + 1
+        else:
+            unique_visitors[visitor_id]["last_seen"] = now.strftime("%Y-%m-%d %H:%M:%S")
+            unique_visitors[visitor_id]["visits"] = int(unique_visitors[visitor_id].get("visits", 0)) + 1
+
+        daily = stats.setdefault("daily", {})
+        d = daily.setdefault(day_key, {"views": 0, "unique": []})
+        d["views"] = int(d.get("views", 0)) + 1
+        if visitor_id not in d.setdefault("unique", []):
+            d["unique"].append(visitor_id)
+
+        monthly = stats.setdefault("monthly", {})
+        m = monthly.setdefault(month_key, {"views": 0, "unique": []})
+        m["views"] = int(m.get("views", 0)) + 1
+        if visitor_id not in m.setdefault("unique", []):
+            m["unique"].append(visitor_id)
+
+        paths = stats.setdefault("paths", {})
+        paths[path] = int(paths.get(path, 0)) + 1
+
+        last_visits = stats.setdefault("last_visits", [])
+        last_visits.insert(0, {
+            "time": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "path": path,
+            "visitor": visitor_id[-6:],
+        })
+        stats["last_visits"] = last_visits[:150]
+
+        # تقليل حجم الملف بمرور الوقت: نحافظ على آخر 120 يومًا وآخر 36 شهرًا.
+        if len(daily) > 120:
+            for k in sorted(daily.keys())[:-120]:
+                daily.pop(k, None)
+        if len(monthly) > 36:
+            for k in sorted(monthly.keys())[:-36]:
+                monthly.pop(k, None)
+
+        _save_visitor_stats(stats)
+    except Exception:
+        # لا نسمح للعداد أن يعطل الموقع أبدًا.
+        return None
+    return None
+
+
+def _owner_stats_allowed() -> bool:
+    key = (request.args.get("key") or request.args.get("code") or "").strip()
+    if OWNER_STATS_KEY and key == OWNER_STATS_KEY:
+        return True
+    try:
+        if key and is_master_code(key):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _stats_summary() -> dict:
+    stats = _load_visitor_stats()
+    now = datetime.now()
+    day_key = now.strftime("%Y-%m-%d")
+    month_key = now.strftime("%Y-%m")
+    today = stats.get("daily", {}).get(day_key, {"views": 0, "unique": []})
+    month = stats.get("monthly", {}).get(month_key, {"views": 0, "unique": []})
+    top_paths = sorted(stats.get("paths", {}).items(), key=lambda kv: int(kv[1]), reverse=True)[:12]
+    recent_days = []
+    for k in sorted(stats.get("daily", {}).keys(), reverse=True)[:14]:
+        item = stats["daily"].get(k, {})
+        recent_days.append({
+            "date": k,
+            "views": int(item.get("views", 0)),
+            "unique": len(item.get("unique", [])),
+        })
+    return {
+        "total_page_views": int(stats.get("total_page_views", 0)),
+        "total_unique_visitors": int(stats.get("total_unique_visitors", 0)),
+        "today_views": int(today.get("views", 0)),
+        "today_unique": len(today.get("unique", [])),
+        "month_views": int(month.get("views", 0)),
+        "month_unique": len(month.get("unique", [])),
+        "top_paths": top_paths,
+        "recent_days": recent_days,
+        "last_visits": stats.get("last_visits", [])[:25],
+        "file": VISITOR_COUNTER_FILE,
+        "enabled": VISITOR_COUNTER_ENABLED,
+    }
+
+
+VISITOR_STATS_HTML = r'''
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>عداد الزوار الداخلي</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body{font-family:Tahoma,Arial,sans-serif;background:#f4f1ea;margin:0;color:#2d2926;line-height:1.8}
+        .container{max-width:1100px;margin:0 auto;padding:18px}
+        .card{background:#fffdf8;border:1px solid #ded4c4;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+        h1,h2{margin-top:0;color:#3b2f2f}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{background:#faf6ef;border:1px solid #e6dccb;border-radius:14px;padding:14px;text-align:center}.num{font-size:30px;font-weight:bold;color:#6f4e37}.label{color:#6d6259}table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden}th,td{border:1px solid #eadfce;padding:8px;text-align:right}th{background:#efe4d1}.muted{color:#6d6259;font-size:13px}@media(max-width:800px){.grid{grid-template-columns:1fr}.num{font-size:24px}}
+    </style>
+</head>
+<body><div class="container">
+    <div class="card"><h1>عداد الزوار الداخلي</h1><p class="muted">هذه الصفحة خاصة بالمالك وغير مرتبطة بأي زر ظاهر للمستخدمين.</p></div>
+    <div class="grid">
+        <div class="stat"><div class="num">{{ s.total_page_views }}</div><div class="label">إجمالي الزيارات</div></div>
+        <div class="stat"><div class="num">{{ s.total_unique_visitors }}</div><div class="label">إجمالي الزوار المميزين</div></div>
+        <div class="stat"><div class="num">{{ s.today_views }}</div><div class="label">زيارات اليوم</div></div>
+        <div class="stat"><div class="num">{{ s.today_unique }}</div><div class="label">زوار اليوم</div></div>
+        <div class="stat"><div class="num">{{ s.month_views }}</div><div class="label">زيارات الشهر</div></div>
+        <div class="stat"><div class="num">{{ s.month_unique }}</div><div class="label">زوار الشهر</div></div>
+    </div>
+    <div class="card"><h2>أكثر الصفحات زيارة</h2><table><tr><th>الصفحة</th><th>العدد</th></tr>{% for path,count in s.top_paths %}<tr><td>{{ path }}</td><td>{{ count }}</td></tr>{% endfor %}</table></div>
+    <div class="card"><h2>آخر 14 يومًا</h2><table><tr><th>التاريخ</th><th>الزيارات</th><th>الزوار</th></tr>{% for d in s.recent_days %}<tr><td>{{ d.date }}</td><td>{{ d.views }}</td><td>{{ d.unique }}</td></tr>{% endfor %}</table></div>
+    <div class="card"><h2>آخر الزيارات</h2><table><tr><th>الوقت</th><th>الصفحة</th><th>رمز زائر مجهول</th></tr>{% for v in s.last_visits %}<tr><td>{{ v.time }}</td><td>{{ v.path }}</td><td>{{ v.visitor }}</td></tr>{% endfor %}</table><p class="muted">لا يتم عرض IP الزائر هنا؛ يتم استخدام بصمة مجهولة للعد فقط.</p></div>
+</div></body></html>
+'''
+
+
+@app.route("/owner/visitors")
+def owner_visitors():
+    if not _owner_stats_allowed():
+        return "الصفحة غير موجودة", 404
+    return render_template_string(VISITOR_STATS_HTML, s=_stats_summary())
+
+
+@app.route("/owner/visitors.json")
+def owner_visitors_json():
+    if not _owner_stats_allowed():
+        return jsonify({"error": "not_found"}), 404
+    return jsonify(_stats_summary())
 
 
 
@@ -12605,6 +12837,6 @@ def cosmic_events_engine_page():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    print("تشغيل تطبيق قراءة الخريطة الشخصية V6.1.8 Railway Final")
+    print("تشغيل تطبيق قراءة الخريطة الشخصية V6.1.27 Pydroid Visitor Counter Ready")
     print(f"افتح الرابط المحلي: http://127.0.0.1:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
